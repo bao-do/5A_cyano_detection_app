@@ -1,0 +1,11 @@
+button.my-btn {
+    background-color: orange !important;
+    color: white !important;
+    border-radius: 8px !important;
+    padding: 10px 20px !important;
+    font-weight: bold !important;
+}
+
+button.my-btn:hover {
+    background-color: darkorange !important;
+}
