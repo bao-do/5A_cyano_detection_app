@@ -102,7 +102,7 @@ def training_loop(
                                             mode='bilinear',
                                             align_corners=False)
                     drawn_gt_train.append(img_with_bb_gt.to("cpu"))
-                    
+
                 drawn_pred_train = torch.cat(drawn_pred_train, dim=0)
                 drawn_gt_train = torch.cat(drawn_gt_train, dim=0)
                 # Log images of validation set
@@ -217,11 +217,13 @@ if __name__ == "__main__":
 
 
     # Create dataset and loader
-    train_dataset = VOCDataset(os.path.join(abs_path, args.images_train),
-                                os.path.join(abs_path,args.annotations_train))
-    val_dataset = VOCDataset(os.path.join(abs_path, args.images_val),
-                                os.path.join(abs_path,args.annotations_val))
-    print(len(train_dataset), len(val_dataset))
+    # train_dataset = VOCDataset(os.path.join(abs_path, args.images_train),
+    #                             os.path.join(abs_path,args.annotations_train))
+    # val_dataset = VOCDataset(os.path.join(abs_path, args.images_val),
+    #                             os.path.join(abs_path,args.annotations_val))
+    # print(len(train_dataset), len(val_dataset))
+    train_dataset = VOCDataset(args.images_train, args.annotations_train)
+    val_dataset = VOCDataset(args.images_val, args.annotations_val)
 
     if args.dataset_size is not None:
         print(f"Using only the first {min(args.dataset_size, len(train_dataset))} images from the training set")
@@ -245,7 +247,7 @@ if __name__ == "__main__":
     logger.save_freq = freq
     logger.val_epoch_freq = freq
     logger.log_loss_freq = 5
-    logger.log_image_freq = 10
+    logger.log_image_freq = 200
 
     optim_config = OptimizationConfig()
     optimizer = optim_config.get_optimizer(model)
