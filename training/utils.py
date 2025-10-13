@@ -328,8 +328,8 @@ class LoggingConfig:
                     creation_time = os.path.getctime(checkpoint)
                     checkpoints_metrics.append((checkpoint, creation_time))
                 
-            descending = True if self.monitor_mode == 'max' else False 
-            checkpoints_metrics.sort(key=lambda x: x[1], descending=descending)
+            reverse = True if self.monitor_mode == 'max' else False 
+            checkpoints_metrics.sort(key=lambda x: x[1], reverse=reverse)
             for checkpoint, _ in checkpoints_metrics[self.max_checkpoint:]:
                 os.remove(checkpoint)
     
