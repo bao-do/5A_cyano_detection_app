@@ -421,7 +421,8 @@ def move_to_device(images: list, targets: list, device="cpu"):
     for t in targets:
         new_targets.append({
             'boxes': t['boxes'].to(device),
-            'labels': torch.tensor(t['labels'], dtype=torch.int64, device=device)
+            'labels': torch.tensor(t['labels'], dtype=torch.int64, device=device),
+            'scores': torch.tensor(t['scores'], dtype=torch.float32, device=device)
         })
     targets = new_targets
     return images, new_targets

@@ -169,18 +169,20 @@ if __name__ == "__main__":
     import argparse  
 
 
-    model = fasterrcnn_resnet50_fpn_v2(weights=None,
-                                    progress=True,
-                                    num_classes = 21,
-                                    weights_backbone= ResNet50_Weights.DEFAULT,
-                                    trainable_backbone_layers=1)
-    
-    model = fasterrcnn_mobilenet_v3_large_320_fpn(weights=None,
-                                    progress=True,
-                                    num_classes = 21,
-                                    weights_backbone= MobileNet_V3_Large_Weights.DEFAULT,
-                                    trainable_backbone_layers=1)
-    # (weights=FasterRCNN_MobileNet_V3_Large_320_FPN_Weights.DEFAULT)
+    # model = fasterrcnn_resnet50_fpn_v2(weights=None,
+    #                                 progress=True,
+    #                                 num_classes = 21,
+    #                                 weights_backbone= ResNet50_Weights.DEFAULT,
+    #                                 trainable_backbone_layers=1)
+    model_kwargs = dict(
+        weights=None,
+        progress=True,
+        num_classes = 21,
+        weights_backbone= MobileNet_V3_Large_Weights.DEFAULT,
+        trainable_backbone_layers=1
+    )
+
+    model = fasterrcnn_mobilenet_v3_large_320_fpn(**model_kwargs)
     
     print("Number of trainable parameters: ", sum([p.numel() for p in model.parameters() if p.requires_grad]))
     print("Number of parameters: ", sum([p.numel() for p in model.parameters()]))

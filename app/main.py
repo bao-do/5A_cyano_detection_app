@@ -1,26 +1,103 @@
 #%%
+import sys
+sys.path.append('./../')
+from training import move_to_device
+from dataset import VOCDataset
 import gradio as gr
 from PIL import Image, ImageOps, ImageDraw, ImageFont
 import numpy as np
+import os
+import torch
+from torchvision import transforms
+from torchvision.transforms import v2
+from torchvision.io import decode_image
+from torchvision.utils import draw_bounding_boxes
+
+# Define dataset
+
+
+
+# Define device on which model will process
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Example top prediction
 cyano_bac_ex = {'class': 'mycrocystis', 'prob': 0.78}
 
 # Dummy exemplar database
-ds_dir = "./../dataset/LaboCDD31_CyaonBacteries/"
+abs_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+ds_dir = "./../data/LaboCDD31_CyaonBacteries/"
 exemplar_db = {
     "mycrocystis": [ds_dir+"116011 Microcystis.bmp",ds_dir+"116011 Microcystis.bmp",ds_dir+"116011 Microcystis.bmp",ds_dir+"116011 Microcystis.bmp",ds_dir+"116011 Microcystis.bmp"],
     "aphanizomenon": [ds_dir+"116014 Aphanizomenon.bmp",ds_dir+"116014 Aphanizomenon.bmp",ds_dir+"116014 Aphanizomenon.bmp",ds_dir+"116014 Aphanizomenon.bmp",ds_dir+"116014 Aphanizomenon.bmp"],
     "woronichinia": [ds_dir+"116014 Woronichinia.bmp",ds_dir+"116014 Woronichinia.bmp",ds_dir+"116014 Woronichinia.bmp",ds_dir+"116014 Woronichinia.bmp",ds_dir+"116014 Woronichinia.bmp"],
 }
 
+# Define the same model as training
+from torchvision.models.detection import fasterrcnn_mobilenet_v3_large_320_fpn
+from torchvision.models import MobileNet_V3_Large_Weights
+
+model_kwargs = dict(
+    weights=None,
+    progress=True,
+    num_classes = 21,
+    weights_backbone= MobileNet_V3_Large_Weights.DEFAULT,
+    trainable_backbone_layers=1
+)
+ck_dir = os.path.join(abs_path, 'exp/fasterrcnn_fpn/checkpoints/epoch_499_avg_loss_0.3784.pth')
+state = torch.load(ck_dir)
+
+model = fasterrcnn_mobilenet_v3_large_320_fpn(**model_kwargs)
+model.load_state_dict(state['model_state_dict'])
+model = model.to(device)
+model.eval()
+
+transform = v2.Compose([
+    v2.ToImage(), v2.ToDtype(torch.float32, scale=True)
+])
+to_pil = transforms.ToPILImage()
+
 #%%
 def show_images(image_path):
     if image_path is None:
         return None
-    image = Image.open(image_path)
-    return image
+    image = decode_image(image_path).to(device)
+    image = transform(image.unsqueeze(0))
+    targets_pred = model(image)
+    if device == torch.device("cuda"):
+        image, targets_pred = move_to_device(image, targets_pred, "cpu")
+    
+    drawn_pred = draw_bounding_boxes(image[0], targets_pred[0]['boxes'], colors='red')
+    drawn_pred_pil = to_pil(drawn_pred)
 
+    zoomed_objs = []
+    try:
+        font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", size=40)
+    except:
+        font = ImageFont.load_default()
+        
+    for i in range(len(targets_pred[0]['boxes'])):
+        x1, y1, x2, y2 = targets_pred[0]['boxes'][i].tolist()
+        x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
+        zoomed_obj = to_pil(image[0][:, y1:y2, x1:x2])
+        size = (x2 - x1)/10.
+        try:
+            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", size=size)
+        except:
+            font = ImageFont.load_default(size=size)
+        label = targets_pred[0]['labels'][i]
+        cls = VOCDataset.voc_cls[label]
+
+        score = targets_pred[0]['scores'][i]
+
+        draw = ImageDraw.Draw(zoomed_obj)
+
+        pos = tuple([x / 15.0 for x in zoomed_obj.size])
+        draw.text(pos, f"{cls}: {score:.2f}", fill="red", font=font)
+        zoomed_objs.append(zoomed_obj)
+    return drawn_pred_pil, zoomed_objs
+
+
+#%%
 def generate_variants(image_path):
     if image_path is None:
         return []
@@ -152,8 +229,8 @@ with gr.Blocks(title="Cyanobacteria Visual Tool", css_paths="style.css") as demo
             )
             process_btn = gr.Button("Process Image", elem_classes="my-btn")
 
-            process_btn.click(fn=show_images, inputs=image_component, outputs=image_component)
-            process_btn.click(fn=generate_variants, inputs=image_component, outputs=image_gallery)
+            process_btn.click(fn=show_images, inputs=image_component, outputs=[image_component, image_gallery])
+            # process_btn.click(fn=generate_variants, inputs=image_component, outputs=image_gallery)
 
     with gr.Row():
         exemplar_gallery = gr.Gallery(label="Exemplar Images", show_label=True, height=300, columns=5)
