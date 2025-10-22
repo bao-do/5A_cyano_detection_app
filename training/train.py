@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torchvision.utils import draw_bounding_boxes
 from tqdm import tqdm
-from utils import OptimizationConfig, TrainingConfig, LoggingConfig, OnlineMovingAverage, ema_avg_fn,move_to_device
+from utils import OptimizationConfig, TrainingConfig, LoggingConfig, OnlineMovingAverage, ema_avg_fn, move_to_device
 from typing import Callable
 from torch.optim.swa_utils import AveragedModel
 import os
