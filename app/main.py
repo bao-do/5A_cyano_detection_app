@@ -60,41 +60,38 @@ to_pil = transforms.ToPILImage()
 def show_images(image_path):
     if image_path is None:
         return None
+    # Load and preprocess
     image = decode_image(image_path).to(device)
     image = transform(image.unsqueeze(0))
+    
+    # Run model
     targets_pred = model(image)
     if device == torch.device("cuda"):
         image, targets_pred = move_to_device(image, targets_pred, "cpu")
     
+    # Draw bounding boxes on full image
     drawn_pred = draw_bounding_boxes(image[0], targets_pred[0]['boxes'], colors='red')
     drawn_pred_pil = to_pil(drawn_pred)
 
-    zoomed_objs = []
-    try:
-        font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", size=40)
-    except:
-        font = ImageFont.load_default()
-        
+    obj_cap = []
+    captions = []  # New: captions for gallery
+
     for i in range(len(targets_pred[0]['boxes'])):
         x1, y1, x2, y2 = targets_pred[0]['boxes'][i].tolist()
         x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
+        
+        # Crop object
         zoomed_obj = to_pil(image[0][:, y1:y2, x1:x2])
-        size = (x2 - x1)/10.
-        try:
-            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", size=size)
-        except:
-            font = ImageFont.load_default(size=size)
-        label = targets_pred[0]['labels'][i]
+
+        # Create caption
+        label = int(targets_pred[0]['labels'][i])
         cls = VOCDataset.voc_cls[label]
+        score = float(targets_pred[0]['scores'][i])
+        obj_cap.append((zoomed_obj,f"{cls}: {score:.2f}"))
 
-        score = targets_pred[0]['scores'][i]
+    # Return full image and cropped objects with captions
+    return drawn_pred_pil, obj_cap
 
-        draw = ImageDraw.Draw(zoomed_obj)
-
-        pos = tuple([x / 15.0 for x in zoomed_obj.size])
-        draw.text(pos, f"{cls}: {score:.2f}", fill="red", font=font)
-        zoomed_objs.append(zoomed_obj)
-    return drawn_pred_pil, zoomed_objs
 
 
 #%%
@@ -200,13 +197,7 @@ with gr.Blocks(title="Cyanobacteria Visual Tool", css_paths="style.css") as demo
 
     with gr.Row():
         with gr.Column(scale=1):
-            image_gallery = gr.Gallery(
-                label="Generated Variants",
-                show_label=True,
-                height=400,            
-                columns=1,            
-                object_fit="contain"  
-            )
+            image_gallery = gr.Gallery(label="Zoomed objects", show_label=True, height=400, columns=1, object_fit="contain")
             top3_radio = gr.Radio(label="Select Correct Class", choices=[])
             submit_btn = gr.Button("Submit Correction")
             # submit_btn.click(
