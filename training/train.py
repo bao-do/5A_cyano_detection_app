@@ -72,7 +72,18 @@ def training_loop(
             pb.set_description(f"Avg_loss: {avg_loss.mean:.3e}")
             
             if ((logger.global_step + 1) % logger.log_loss_freq == 0) or (logger.global_step == 0):
+                loss_test = 0
+                num_sample_test = 0
+                for images_test, targets_test in val_loader:
+                    images_test, targets_test = move_to_device(images_test, targets_test, config.device)
+
+                    loss_test_dict = model(images_test, targets_test)
+
+                    num_sample_test += images_test.shape[0]
+                    loss_test += sum(loss for loss in loss_test_dict.values())
+                
                 metrics = {
+                    "avg_loss": loss_test.item()/num_sample_test,
                     "avg_loss": avg_loss.mean,
                     "lr": optimizer.param_groups[0]["lr"],
                     "max_grad_norm": grad_norm.max()
@@ -241,7 +252,7 @@ if __name__ == "__main__":
     train_loader = data.DataLoader(train_dataset, batch_size=args.batch_size, collate_fn=collate_fn,
                                    shuffle=shuffle, pin_memory=True, sampler=sampler, drop_last=False,
                                    num_workers=8)
-    val_loader = data.DataLoader(val_dataset, batch_size=logger.num_log_images, shuffle=True, collate_fn=collate_fn)
+    val_loader = data.DataLoader(val_dataset, batch_size=logger.num_log_images, shuffle=True, collate_fn=collate_fn, drop_last=False)
 
     # Save checkpoint every 200 steps
     num_step_per_epoch = max(len(train_loader), 1)
