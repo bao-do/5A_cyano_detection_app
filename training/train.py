@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torchvision.utils import draw_bounding_boxes
 from tqdm import tqdm
-from utils import OptimizationConfig, TrainingConfig, LoggingConfig, OnlineMovingAverage, ema_avg_fn, move_to_device
+from .utils import OptimizationConfig, TrainingConfig, LoggingConfig, OnlineMovingAverage, ema_avg_fn, move_to_device
 from typing import Callable
 from torch.optim.swa_utils import AveragedModel
 import os
@@ -68,7 +68,7 @@ def training_loop(
             if logger.global_step > swa_start and logger.global_step % 5 == 0:
                 ema_model.update_parameters(model)
             
-            avg_loss.update(losses.item())
+            avg_loss.update(losses.item()/len(images))
             pb.set_description(f"Avg_loss: {avg_loss.mean:.3e}")
             
             if ((logger.global_step + 1) % logger.log_loss_freq == 0) or (logger.global_step == 0):
@@ -79,7 +79,7 @@ def training_loop(
 
                     loss_test_dict = model(images_test, targets_test)
 
-                    num_sample_test += images_test.shape[0]
+                    num_sample_test += len(images_test)
                     loss_test += sum(loss for loss in loss_test_dict.values())
                 
                 metrics = {

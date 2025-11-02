@@ -21,3 +21,4 @@ def make_json_safe(obj):
     if isinstance(obj, (list, tuple)):
         return [make_json_safe(v) for v in obj]
     return obj
+
