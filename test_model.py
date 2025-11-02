@@ -25,32 +25,24 @@ abs_path = os.path.abspath(os.path.dirname(__file__))
 
 # Define the same model as training
 #%%
-from torchvision.models.detection import fasterrcnn_mobilenet_v3_large_320_fpn, fasterrcnn_resnet50_fpn
-from torchvision.models import MobileNet_V3_Large_Weights, ResNet50_Weights
+from torchvision.models.detection import fasterrcnn_mobilenet_v3_large_320_fpn
+from torchvision.models import MobileNet_V3_Large_Weights
 
-# ck_dir = os.path.join(abs_path, 'exp/fasterrcnn_fpn/checkpoints/epoch_499_avg_loss_0.3784.pth')
-# state = torch.load(ck_dir)
+ck_dir = os.path.join(abs_path, 'exp/fasterrcnn_fpn/checkpoints/epoch_499_avg_loss_0.3784.pth')
+state = torch.load(ck_dir)
 
-# model_kwargs = dict(
-#     weights=None,
-#     progress=True,
-#     num_classes = 21,
-#     weights_backbone= MobileNet_V3_Large_Weights.DEFAULT,
-#     trainable_backbone_layers=1
-# )
-# model = fasterrcnn_mobilenet_v3_large_320_fpn(**model_kwargs)
-# model.load_state_dict(state['model_state_dict'])
-# model = model.to(device)
-# model.eval()
 model_kwargs = dict(
     weights=None,
     progress=True,
     num_classes = 21,
-    weights_backbone= ResNet50_Weights.DEFAULT,
+    weights_backbone= MobileNet_V3_Large_Weights.DEFAULT,
     trainable_backbone_layers=1
-    )
+)
+model = fasterrcnn_mobilenet_v3_large_320_fpn(**model_kwargs)
+model.load_state_dict(state['model_state_dict'])
+model = model.to(device)
+model.eval()
 
-model = fasterrcnn_resnet50_fpn(**model_kwargs)
 
 print("Number of trainable parameters: ", sum([p.numel() for p in model.parameters() if p.requires_grad]))
 print("Number of parameters: ", sum([p.numel() for p in model.parameters()]))
