@@ -74,14 +74,15 @@ def training_loop(
             if ((logger.global_step + 1) % logger.log_loss_freq == 0) or (logger.global_step == 0):
                 loss_test = 0
                 num_sample_test = 0
-                for images_test, targets_test in val_loader:
-                    images_test, targets_test = move_to_device(images_test, targets_test, config.device)
-                    print("image_test_len", len(images_test))
-                    loss_test_dict = model(images_test, targets_test)
+                with torch.no_grad():
+                    for images_test, targets_test in val_loader:
+                        images_test, targets_test = move_to_device(images_test, targets_test, config.device)
+                        print("image_test_len", len(images_test))
+                        loss_test_dict = model(images_test, targets_test)
 
-                    num_sample_test += len(images_test)
-                    loss_test += sum(loss for loss in loss_test_dict.values())
-                
+                        num_sample_test += len(images_test)
+                        loss_test += sum(loss for loss in loss_test_dict.values())
+            
                 metrics = {
                     "validation_loss": loss_test.item()/num_sample_test,
                     "train_loss": avg_loss.mean,
