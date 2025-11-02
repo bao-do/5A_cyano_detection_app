@@ -89,6 +89,7 @@ class VOCDataset(torch.utils.data.Dataset):
                'bus', 'car', 'cat', 'chair', 'cow', 'diningtable',
                'dog', 'horse', 'motorbike', 'person', 'pottedplant',
                'sheep', 'sofa', 'train', 'tvmonitor']
+    
 
     cls_to_id = {name: i+1 for i, name in enumerate(voc_cls)}
 

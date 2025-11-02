@@ -1,7 +1,7 @@
 #%%
 import sys
 sys.path.append('./../')
-from training import move_to_device
+from training import move_to_device, LoggingConfig
 from dataset import VOCDataset
 import gradio as gr
 from PIL import Image, ImageOps, ImageDraw, ImageFont
@@ -20,6 +20,9 @@ from torchvision.utils import draw_bounding_boxes
 # Define device on which model will process
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+logger = LoggingConfig(project_dir="./../exp/object_detection", exp_name="VOC_fasterrcnn_resnet50_fpn_v2_2000")
+logger.monitor_metric = "avg_loss"
+logger.monitor_mode = "min"
 # Example top prediction
 cyano_bac_ex = {'class': 'mycrocystis', 'prob': 0.78}
 
@@ -43,8 +46,7 @@ model_kwargs = dict(
     weights_backbone= MobileNet_V3_Large_Weights.DEFAULT,
     trainable_backbone_layers=1
 )
-ck_dir = os.path.join(abs_path, 'exp/fasterrcnn_fpn/checkpoints/epoch_499_avg_loss_0.3784.pth')
-state = torch.load(ck_dir)
+state = logger.load_checkpoint()
 
 model = fasterrcnn_mobilenet_v3_large_320_fpn(**model_kwargs)
 model.load_state_dict(state['model_state_dict'])
@@ -67,14 +69,13 @@ def show_images(image_path):
     # Run model
     targets_pred = model(image)
     if device == torch.device("cuda"):
-        image, targets_pred = move_to_device(image, targets_pred, "cpu")
+        image, targets_pred = move_to_device(image, targets_pred, "cpu", has_scores=True)
     
     # Draw bounding boxes on full image
     drawn_pred = draw_bounding_boxes(image[0], targets_pred[0]['boxes'], colors='red')
     drawn_pred_pil = to_pil(drawn_pred)
 
     obj_cap = []
-    captions = []  # New: captions for gallery
 
     for i in range(len(targets_pred[0]['boxes'])):
         x1, y1, x2, y2 = targets_pred[0]['boxes'][i].tolist()
@@ -85,7 +86,7 @@ def show_images(image_path):
 
         # Create caption
         label = int(targets_pred[0]['labels'][i])
-        cls = VOCDataset.voc_cls[label]
+        cls = VOCDataset.voc_cls[label-1]
         score = float(targets_pred[0]['scores'][i])
         obj_cap.append((zoomed_obj,f"{cls}: {score:.2f}"))
 
