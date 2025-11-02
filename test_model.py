@@ -28,7 +28,7 @@ abs_path = os.path.abspath(os.path.dirname(__file__))
 from torchvision.models.detection import fasterrcnn_mobilenet_v3_large_320_fpn
 from torchvision.models import MobileNet_V3_Large_Weights
 
-ck_dir = os.path.join(abs_path, 'exp/fasterrcnn_fpn/checkpoints/epoch_499_avg_loss_0.3784.pth')
+ck_dir = os.path.join(abs_path, 'exp/object_detection/VOC_fasterrcnn_mobilenet_v3_large_320_fpn_2000/checkpoints/epoch_1199_avg_loss_0.2755.pth')
 state = torch.load(ck_dir)
 
 model_kwargs = dict(

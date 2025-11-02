@@ -76,7 +76,7 @@ def training_loop(
                 num_sample_test = 0
                 for images_test, targets_test in val_loader:
                     images_test, targets_test = move_to_device(images_test, targets_test, config.device)
-
+                    print("image_test_len", len(images_test))
                     loss_test_dict = model(images_test, targets_test)
 
                     num_sample_test += len(images_test)
