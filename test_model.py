@@ -25,7 +25,7 @@ abs_path = os.path.abspath(os.path.dirname(__file__))
 
 # Define the same model as training
 #%%
-from torchvision.models.detection import fasterrcnn_mobilenet_v3_large_320_fpn, fasterrcnn_resnet50_fpn_v2
+from torchvision.models.detection import fasterrcnn_mobilenet_v3_large_320_fpn, fasterrcnn_resnet50_fpn
 from torchvision.models import MobileNet_V3_Large_Weights, ResNet50_Weights
 
 # ck_dir = os.path.join(abs_path, 'exp/fasterrcnn_fpn/checkpoints/epoch_499_avg_loss_0.3784.pth')
@@ -50,7 +50,7 @@ model_kwargs = dict(
     trainable_backbone_layers=1
     )
 
-model = fasterrcnn_resnet50_fpn_v2(**model_kwargs)
+model = fasterrcnn_resnet50_fpn(**model_kwargs)
 
 print("Number of trainable parameters: ", sum([p.numel() for p in model.parameters() if p.requires_grad]))
 print("Number of parameters: ", sum([p.numel() for p in model.parameters()]))

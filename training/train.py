@@ -174,7 +174,7 @@ if __name__ == "__main__":
     import sys
     sys.path.append("./../")
     from dataset import VOCDataset, collate_fn
-    from torchvision.models.detection import fasterrcnn_resnet50_fpn_v2, fasterrcnn_mobilenet_v3_large_320_fpn
+    from torchvision.models.detection import fasterrcnn_resnet50_fpn, fasterrcnn_mobilenet_v3_large_320_fpn
     from torchvision.models import ResNet50_Weights, ResNet18_Weights, MobileNet_V3_Large_Weights
     import torch.utils.data as data
     import argparse  
@@ -187,7 +187,7 @@ if __name__ == "__main__":
     trainable_backbone_layers=1
     )
 
-    model = fasterrcnn_resnet50_fpn_v2(**model_kwargs)
+    model = fasterrcnn_resnet50_fpn(**model_kwargs)
     
     # model_kwargs = dict(
     #     weights=None,
