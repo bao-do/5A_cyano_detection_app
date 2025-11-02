@@ -83,8 +83,8 @@ def training_loop(
                     loss_test += sum(loss for loss in loss_test_dict.values())
                 
                 metrics = {
-                    "avg_loss": loss_test.item()/num_sample_test,
-                    "avg_loss": avg_loss.mean,
+                    "validation_loss": loss_test.item()/num_sample_test,
+                    "train_loss": avg_loss.mean,
                     "lr": optimizer.param_groups[0]["lr"],
                     "max_grad_norm": grad_norm.max()
                 }
@@ -197,7 +197,8 @@ if __name__ == "__main__":
     parser.add_argument("--annotations_train", type=str, default='data/VOC/VOCtrainval_06-Nov-2007/VOCdevkit/VOC2007/Annotations', help="Annotations to use for training")
     parser.add_argument("--images_val", type=str, default='data/VOC/VOCtest_06-Nov-2007/VOCdevkit/VOC2007/JPEGImages', help="Dataset to use for validation")
     parser.add_argument("--annotations_val", type=str, default='data/VOC/VOCtest_06-Nov-2007/VOCdevkit/VOC2007/Annotations', help="Dataset to use for validation")
-    parser.add_argument("--dataset_size", type=int, default=None, help="Number of images used for training")
+    parser.add_argument("--train_dataset_size", type=int, default=None, help="Number of images used for training")
+    parser.add_argument("--test_dataset_size", type=int, default=None, help="Number of images used for validation")
     parser.add_argument("--num_epochs", type=int, default=300, help="Numeber of training epochs")
     parser.add_argument("--batch_size", type=int, default=128, help="Batch size for training")
     parser.add_argument("--save_dir", type=str, help="Saved directory",
@@ -214,7 +215,7 @@ if __name__ == "__main__":
     abs_path = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     # Create logging configuration
     logger = LoggingConfig(project_dir=os.path.join(abs_path,'exp/object_detection'),
-                           exp_name=f"VOC_fasterrcnn_resnet50_fpn_v2_{args.dataset_size}")
+                           exp_name=f"VOC_fasterrcnn_resnet50_fpn_v2_{args.train_dataset_size}")
     logger.monitor_metric = "avg_loss"
     logger.monitor_mode = "min"
     logger.initialize()
@@ -232,10 +233,16 @@ if __name__ == "__main__":
     train_dataset = VOCDataset(args.images_train, args.annotations_train)
     val_dataset = VOCDataset(args.images_val, args.annotations_val)
 
-    if args.dataset_size is not None:
-        print(f"Using only the first {min(args.dataset_size, len(train_dataset))} images from the training set")
-        train_dataset = data.Subset(train_dataset, range(min(args.dataset_size, len(train_dataset))))
+    if args.train_dataset_size is not None:
+        print(f"Using only the first {min(args.train_dataset_size, len(train_dataset))} images from the training set")
+        train_dataset = data.Subset(train_dataset, range(min(args.train_dataset_size, len(train_dataset))))
+
     
+    if args.test_dataset_size is not None:
+        print(f"Using only the first {min(args.test_dataset_size, len(val_dataset))} images as validation set")
+        train_dataset = data.Subset(val_dataset, range(min(args.test_dataset_size, len(val_dataset))))
+
+
     if len(train_dataset) < args.batch_size:
         sampler = data.RandomSampler(train_dataset, replacement=True, num_samples=args.batch_size)
         shuffle = False
@@ -246,7 +253,7 @@ if __name__ == "__main__":
     train_loader = data.DataLoader(train_dataset, batch_size=args.batch_size, collate_fn=collate_fn,
                                    shuffle=shuffle, pin_memory=True, sampler=sampler, drop_last=False,
                                    num_workers=8)
-    val_loader = data.DataLoader(val_dataset, batch_size=logger.num_log_images, shuffle=True, collate_fn=collate_fn, drop_last=False)
+    val_loader = data.DataLoader(val_dataset, batch_size=max(logger.num_log_images, args.batch_size), shuffle=True, collate_fn=collate_fn, drop_last=False)
 
     # Save checkpoint every 200 steps
     num_step_per_epoch = max(len(train_loader), 1)
