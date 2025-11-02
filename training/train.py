@@ -174,30 +174,20 @@ if __name__ == "__main__":
     import sys
     sys.path.append("./../")
     from dataset import VOCDataset, collate_fn
-    from torchvision.models.detection import fasterrcnn_resnet50_fpn, fasterrcnn_mobilenet_v3_large_320_fpn
-    from torchvision.models import ResNet50_Weights, ResNet18_Weights, MobileNet_V3_Large_Weights
+    from torchvision.models.detection import fasterrcnn_mobilenet_v3_large_320_fpn
+    from torchvision.models import  MobileNet_V3_Large_Weights
     import torch.utils.data as data
     import argparse  
-
+    
     model_kwargs = dict(
-    weights=None,
-    progress=True,
-    num_classes = 21,
-    weights_backbone= ResNet50_Weights.DEFAULT,
-    trainable_backbone_layers=1
+        weights=None,
+        progress=True,
+        num_classes = 21,
+        weights_backbone= MobileNet_V3_Large_Weights.DEFAULT,
+        trainable_backbone_layers=1
     )
 
-    model = fasterrcnn_resnet50_fpn(**model_kwargs)
-    
-    # model_kwargs = dict(
-    #     weights=None,
-    #     progress=True,
-    #     num_classes = 21,
-    #     weights_backbone= MobileNet_V3_Large_Weights.DEFAULT,
-    #     trainable_backbone_layers=1
-    # )
-
-    # model = fasterrcnn_mobilenet_v3_large_320_fpn(**model_kwargs)
+    model = fasterrcnn_mobilenet_v3_large_320_fpn(**model_kwargs)
     
     print("Number of trainable parameters: ", sum([p.numel() for p in model.parameters() if p.requires_grad]))
     print("Number of parameters: ", sum([p.numel() for p in model.parameters()]))
