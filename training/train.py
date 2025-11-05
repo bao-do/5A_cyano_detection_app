@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torchvision.utils import draw_bounding_boxes
+from torchvision.transforms import v2
 from tqdm import tqdm
 from utils import OptimizationConfig, TrainingConfig, LoggingConfig, OnlineMovingAverage, ema_avg_fn, move_to_device
 from typing import Callable
@@ -11,6 +12,7 @@ import os
 import sys
 import h5py
 import numpy as np
+
 # %%
 def training_loop(
     model: nn.Module,
@@ -18,6 +20,7 @@ def training_loop(
     lr_scheduler: torch.optim.lr_scheduler,
     train_loader: torch.utils.data.DataLoader,
     val_loader: torch.utils.data.DataLoader,
+    transform: v2,
     config: TrainingConfig,
     logger: LoggingConfig,
 ):
@@ -77,14 +80,14 @@ def training_loop(
                 with torch.no_grad():
                     for images_test, targets_test in val_loader:
                         images_test, targets_test = move_to_device(images_test, targets_test, config.device)
-                        print("image_test_len", len(images_test))
                         loss_test_dict = model(images_test, targets_test)
 
                         num_sample_test += len(images_test)
-                        loss_test += sum(loss for loss in loss_test_dict.values())
-            
+                        loss_test += sum(loss.detach().cpu().item() for loss in loss_test_dict.values())
+                        del images_test, targets_test, loss_test_dict
+                        torch.cuda.empty_cache()
                 metrics = {
-                    "validation_loss": loss_test.item()/num_sample_test,
+                    "validation_loss": loss_test/num_sample_test,
                     "train_loss": avg_loss.mean,
                     "lr": optimizer.param_groups[0]["lr"],
                     "max_grad_norm": grad_norm.max()
@@ -241,7 +244,7 @@ if __name__ == "__main__":
     
     if args.test_dataset_size is not None:
         print(f"Using only the first {min(args.test_dataset_size, len(val_dataset))} images as validation set")
-        train_dataset = data.Subset(val_dataset, range(min(args.test_dataset_size, len(val_dataset))))
+        val_dataset = data.Subset(val_dataset, range(min(args.test_dataset_size, len(val_dataset))))
 
 
     if len(train_dataset) < args.batch_size:
@@ -268,7 +271,11 @@ if __name__ == "__main__":
     optimizer = optim_config.get_optimizer(model)
     lr_scheduler = optim_config.get_scheduler(optimizer)
     
-    training_loop(model, optimizer, lr_scheduler, train_loader, val_loader, training_config, logger)
+    transform = v2.Compose([
+                            v2.ToImage(),
+                            v2.ToDtype(torch.float32, scale=True)
+                        ])
+    training_loop(model, optimizer, lr_scheduler, train_loader, val_loader, transform, training_config, logger)
 
 
 

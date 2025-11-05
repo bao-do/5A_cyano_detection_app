@@ -46,6 +46,8 @@ model.eval()
 
 print("Number of trainable parameters: ", sum([p.numel() for p in model.parameters() if p.requires_grad]))
 print("Number of parameters: ", sum([p.numel() for p in model.parameters()]))
+
+
 #%%
 transform = v2.Compose([
     v2.ToImage(), v2.ToDtype(torch.float32, scale=True)
@@ -54,9 +56,17 @@ to_pil = transforms.ToPILImage()
 
 #%%
 
-test_img_path ='/home/qbao/Work/self_learning/deep_learning/object_dectection/yolo/data/pascal_voc/voctrainval_06-nov-2007/VOCdevkit/VOC2007/JPEGImages/000005.jpg'
-image = decode_image(test_img_path).to(device)
-image = transform(image.unsqueeze(0))
+test_img_path1 ='/home/qbao/Work/self_learning/deep_learning/object_dectection/yolo/data/pascal_voc/voctrainval_06-nov-2007/VOCdevkit/VOC2007/JPEGImages/000005.jpg'
+test_img_path2 ='/home/qbao/Work/self_learning/deep_learning/object_dectection/yolo/data/pascal_voc/voctrainval_06-nov-2007/VOCdevkit/VOC2007/JPEGImages/000007.jpg'
+
+image1 = decode_image(test_img_path1).to(device)
+image2 = decode_image(test_img_path2).to(device)
+images = [image1, image2]
+images_transformed = [transform(image) for image in images]
+targets_pred = model(images_transformed)
+
+print(type(targets_pred['boxes']), type(targets_pred['labels']), type(targets_pred['scores']))
+#%%
 # Extract features & proposals
 with torch.no_grad():
     images_list, _ = model.transform(image)
@@ -106,3 +116,98 @@ for i in range(len(targets_pred[0]['boxes'])):
     pos = tuple([x / 15.0 for x in zoomed_obj.size])
     draw.text(pos, f"{cls}: {score:.2f}", fill="red", font=font)
     # display(zoomed_obj)
+
+#%%
+from NNModels import FasterRCNNMobile
+from training import LoggingConfig
+
+# device = "cuda" if torch.cuda.is_available() else "cpu"
+device = "cpu"
+ckpath = '/home/qbao/School/5A/research_project/5A_cyano_detection_app/exp/object_detection/VOC_fasterrcnn_mobilenet_v3_large_320_fpn_2000/checkpoints/epoch_1199_avg_loss_0.2755.pth'
+# model = FasterRCNNMobile(ckpath=ckpath, device=device)
+model = FasterRCNNMobile(device=device)
+logger = LoggingConfig(project_dir="exp/object_detection", exp_name='VOC_fasterrcnn_mobilenet_v3_large_320_fpn_2000')
+logger.monitor_metric = "avg_loss"
+logger.monitor_mode = "min"
+
+state = logger.load_checkpoint()
+model.model.load_state_dict(state_dict=state['model_state_dict'])
+
+test_img_path1 ='/home/qbao/Work/self_learning/deep_learning/object_dectection/yolo/data/pascal_voc/voctrainval_06-nov-2007/VOCdevkit/VOC2007/JPEGImages/000005.jpg'
+test_img_path2 ='/home/qbao/Work/self_learning/deep_learning/object_dectection/yolo/data/pascal_voc/voctrainval_06-nov-2007/VOCdevkit/VOC2007/JPEGImages/000007.jpg'
+
+image1 = decode_image(test_img_path1).to(device)
+image2 = decode_image(test_img_path2).to(device)
+
+images = [image1, image2]
+targets_pred = model.predict(images)
+
+# %%
+import torch.nn.functional as F
+from torchvision.transforms import v2
+from torchvision.utils import draw_bounding_boxes
+import matplotlib.pyplot as plt
+import matplotlib.font_manager as fm
+
+font_path = fm.findfont("DejaVuSans")  # common default on most systems
+def images_with_bboxes(images: list[torch.Tensor],
+                       predictions: list[dict],
+                       label_str: list[str],
+                       max_pixel: int=255,
+                       image_size = 3,
+                       ncol: int=None):
+
+    if ncol is None:
+        ncol = len(images)
+        nrow = 1
+    nrow = int(len(images) *1.0/ ncol)
+    fig, ax = plt.subplots(ncols=ncol, nrows=nrow, figsize=(ncol*image_size, nrow*image_size))
+    ax = ax.flatten()
+
+    for i in range(len(images)):
+        if label_str is not None:
+            labels_idx = torch.tensor(predictions[i]['labels'])
+            labels_idx = (labels_idx-1).tolist()
+            labels = np.array(label_str)[labels_idx]
+            
+            
+        resize_image = F.interpolate(
+                                draw_bounding_boxes(
+                                    images[i].detach().cpu()/max_pixel,
+                                    predictions[i]['boxes'].detach().cpu(),
+                                    labels=labels if labels is not None else None,
+                                    width=3,
+                                    colors='red',
+                                    font = font_path,
+                                    font_size=10
+                                    ).unsqueeze(0),
+                                size=(256,256),
+                                mode='bilinear',
+                                align_corners=False)
+        ax[i].imshow(resize_image.squeeze(0).permute(1,2,0).numpy())
+        ax[i].axis('off')
+
+    plt.tight_layout()
+    plt.show()
+
+# %%
+from dataset import VOCDataset
+images_train_dir ='data/VOC/VOCtrainval_06-Nov-2007/VOCdevkit/VOC2007/JPEGImages'
+annotations_train_dir='data/VOC/VOCtrainval_06-Nov-2007/VOCdevkit/VOC2007/Annotations'
+images_val_dir='data/VOC/VOCtest_06-Nov-2007/VOCdevkit/VOC2007/JPEGImages'
+annotations_val_dir='data/VOC/VOCtest_06-Nov-2007/VOCdevkit/VOC2007/Annotations'
+train_dataset = VOCDataset(images_val_dir, annotations_val_dir)
+
+#%%
+indices = np.random.randint(0,100,(2,))
+train_img1, pred1 = train_dataset[indices[0]]
+train_img2, pred2 = train_dataset[indices[1]]
+
+train_images = [train_img1, train_img2]
+pred_gt = [pred1, pred2]
+pred = model.predict([image.to(device) for image in train_images])
+
+images_with_bboxes(train_images, pred, max_pixel=1, label_str=VOCDataset.voc_cls, image_size=5)
+images_with_bboxes(train_images, pred_gt, max_pixel=1, label_str=VOCDataset.voc_cls, image_size=5)
+
+# %%
