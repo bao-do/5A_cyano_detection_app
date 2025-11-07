@@ -443,3 +443,25 @@ from utils import images_with_bboxes
 images_with_bboxes(imgs, preds, max_pixel=1.0, label_str=VOCDataset.voc_cls)
 
 # %%
+save_dir = 'model_backend/label-studio-ml-backend/my_ml_backend/data/validation_data'
+target_image_dir = os.path.join(save_dir, 'JPEGImages')
+target_annot_dir = os.path.join(save_dir, 'Annotations')
+os.makedirs(target_image_dir, exist_ok=True)
+os.makedirs(target_annot_dir, exist_ok=True)
+
+source_image_dir = 'data/VOC/VOCtest_06-Nov-2007/VOCdevkit/VOC2007/JPEGImages'
+source_annot_dir = 'data/VOC/VOCtest_06-Nov-2007/VOCdevkit/VOC2007/Annotations'
+
+size = 200
+import os
+import shutil
+os.makedirs(save_dir, exist_ok=True)
+for i in range(size):
+    img_filename = os.listdir(source_image_dir)[i]
+    annot_filename = img_filename.replace('.jpg', '.xml')
+    shutil.copy(os.path.join(source_image_dir, img_filename),
+                os.path.join(target_image_dir, img_filename))
+    shutil.copy(os.path.join(source_annot_dir, annot_filename),
+                os.path.join(target_annot_dir, annot_filename))
+
+# %%

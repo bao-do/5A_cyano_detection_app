@@ -9,7 +9,7 @@ import numpy as np
 import os
 import warnings
 
-def create_dir_df(img_dir: str, annot_dir: str):
+def create_dir_df(img_dir: str, annot_dir: str, size: int=None):
     """
     Create a DataFrame that maps images to their corresponding annotation files.
 
@@ -33,6 +33,10 @@ def create_dir_df(img_dir: str, annot_dir: str):
     if imgs is None:
         warnings.warn("The respository does not cointain any images.")
     annots = [f.replace('.jpg', '.xml') for f in imgs]
+    
+    if size is not None:
+        imgs = imgs[:size]
+        annots = annots[:size]
     img_paths = [os.path.join(img_dir,f) for f in imgs]
     annot_paths = [os.path.join(annot_dir,f) for f in annots]
 

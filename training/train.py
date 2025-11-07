@@ -11,7 +11,6 @@ from typing import Callable
 from torch.optim.swa_utils import AveragedModel
 import os
 import sys
-import h5py
 import numpy as np
 
 # %%
