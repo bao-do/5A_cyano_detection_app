@@ -4,6 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torchvision.utils import draw_bounding_boxes
 from torchvision.transforms import v2
+from torchmetrics.detection.mean_ap import MeanAveragePrecision
 from tqdm import tqdm
 from utils import OptimizationConfig, TrainingConfig, LoggingConfig, OnlineMovingAverage, ema_avg_fn, move_to_device
 from typing import Callable
@@ -20,7 +21,6 @@ def training_loop(
     lr_scheduler: torch.optim.lr_scheduler,
     train_loader: torch.utils.data.DataLoader,
     val_loader: torch.utils.data.DataLoader,
-    transform: v2,
     config: TrainingConfig,
     logger: LoggingConfig,
 ):
@@ -48,9 +48,7 @@ def training_loop(
     for epoch in range(start_epoch, config.num_epochs):
         pb = tqdm(train_loader, desc=f"Epoch {epoch+1}/{config.num_epochs}", mininterval=10)
         for images, targets in pb:
-            # print(type(images), type(targets))
             model.train()
-
             # Move batch to device
             images, targets = move_to_device(images, targets, config.device)
 
@@ -77,21 +75,58 @@ def training_loop(
             if ((logger.global_step + 1) % logger.log_loss_freq == 0) or (logger.global_step == 0):
                 loss_test = 0
                 num_sample_test = 0
+                # Compute validation loss and Mean Average Precision (mAP) using torchmetrics
+                # Create a fresh metric instance for this evaluation snapshot
+                val_map = MeanAveragePrecision()
+                
                 with torch.no_grad():
                     for images_test, targets_test in val_loader:
                         images_test, targets_test = move_to_device(images_test, targets_test, config.device)
+                        model.train()
                         loss_test_dict = model(images_test, targets_test)
 
                         num_sample_test += len(images_test)
                         loss_test += sum(loss.detach().cpu().item() for loss in loss_test_dict.values())
-                        del images_test, targets_test, loss_test_dict
+
+                        # get predictions (list[dict]) from model(images)
+                        model.eval()
+                        preds = model(images_test)
+                        val_map.update(preds, targets_test)
+
+                        del preds,  loss_test_dict, images_test, targets_test
+                        torch.cuda.empty_cache()    
+                val_results = val_map.compute()
+                
+                
+                train_map = MeanAveragePrecision()
+                num_sample_train = 0
+                with torch.no_grad():
+                    model.eval()
+                    while num_sample_train <= 100:
+                        images_train, targets_train = next(iter(train_loader))
+                        images_train, targets_train = move_to_device(images_train, targets_train, config.device)
+                        
+                        preds_train = model(images_train)
+                        train_map.update(preds_train, targets_train)
+                        num_sample_train += len(images_train)
+
+                        del preds_train, images_train, targets_train
                         torch.cuda.empty_cache()
+                
+                train_map_results = train_map.compute() 
+
+
                 metrics = {
                     "validation_loss": loss_test/num_sample_test,
+                    "map_val": val_results['map'].item(),
                     "train_loss": avg_loss.mean,
+                    "map_train": train_map_results['map'].item(),
                     "lr": optimizer.param_groups[0]["lr"],
                     "max_grad_norm": grad_norm.max()
                 }
+
+
+
                 logger.log_metrics(metrics, logger.global_step)
                 logger.log_histogram(grad_norm, "grad_norm", logger.global_step)
             if ((logger.global_step+1) % logger.log_image_freq == 0) or (logger.global_step == 0):
@@ -206,7 +241,7 @@ if __name__ == "__main__":
     parser.add_argument("--num_epochs", type=int, default=300, help="Numeber of training epochs")
     parser.add_argument("--batch_size", type=int, default=128, help="Batch size for training")
     parser.add_argument("--save_dir", type=str, help="Saved directory",
-                        default='/home/qbao/School/5A/research_project/bacteria_detection_app/exp/default')
+                        default='/home/bao/School/5A/research_project/bacteria_detection_app/exp/default')
     args = parser.parse_args()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -270,12 +305,8 @@ if __name__ == "__main__":
     optim_config = OptimizationConfig()
     optimizer = optim_config.get_optimizer(model)
     lr_scheduler = optim_config.get_scheduler(optimizer)
-    
-    transform = v2.Compose([
-                            v2.ToImage(),
-                            v2.ToDtype(torch.float32, scale=True)
-                        ])
-    training_loop(model, optimizer, lr_scheduler, train_loader, val_loader, transform, training_config, logger)
+
+    training_loop(model, optimizer, lr_scheduler, train_loader, val_loader, training_config, logger)
 
 
 

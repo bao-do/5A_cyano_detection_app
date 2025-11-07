@@ -89,6 +89,8 @@ class VOCDataset(torch.utils.data.Dataset):
                'bus', 'car', 'cat', 'chair', 'cow', 'diningtable',
                'dog', 'horse', 'motorbike', 'person', 'pottedplant',
                'sheep', 'sofa', 'train', 'tvmonitor']
+
+
     
 
     cls_to_id = {name: i+1 for i, name in enumerate(voc_cls)}
@@ -138,5 +140,5 @@ class VOCDataset(torch.utils.data.Dataset):
         boxes = tv_tensors.BoundingBoxes(boxes, format="XYXY", canvas_size=img.shape[-2:])
         img, boxes = self.transform(img, boxes)
 
-        return img, {'boxes': boxes, 'labels':labels}
+        return img, {'boxes': boxes, 'labels':torch.tensor(labels)}
     

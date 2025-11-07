@@ -415,22 +415,25 @@ class LoggingConfig:
 
 
 
-def move_to_device(images: list, targets: list, device="cpu", has_scores: bool=False):
-    images = [img.to(device) for img in images]
-    new_targets = []
-    for t in targets:
-        if has_scores:
-            new_targets.append({
-                'boxes': t['boxes'].to(device),
-                'labels': torch.tensor(t['labels'], dtype=torch.int64, device=device),
-                'scores': torch.tensor(t['scores'], dtype=torch.float32, device=device)
-            })
-        else:
-            new_targets.append({
-                'boxes': t['boxes'].to(device),
-                'labels': torch.tensor(t['labels'], dtype=torch.int64, device=device),
-            })
-    targets = new_targets
+def move_to_device(images: list=None, targets: list=None, device="cpu", has_scores: bool=False):
+    if images is not None:
+        images = [img.to(device) for img in images]
+    
+    if targets is not None:
+        new_targets = []
+        for t in targets:
+            if has_scores:
+                new_targets.append({
+                    'boxes': t['boxes'].to(device),
+                    'labels': t['labels'].to(device),
+                    'scores': t['scores'].to(device),
+                })
+            else:
+                new_targets.append({
+                    'boxes': t['boxes'].to(device),
+                    'labels': t['labels'].to(device),
+                })
+        targets = new_targets
     return images, new_targets
 
         

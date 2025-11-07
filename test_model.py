@@ -56,41 +56,41 @@ to_pil = transforms.ToPILImage()
 
 #%%
 
-test_img_path1 ='/home/qbao/Work/self_learning/deep_learning/object_dectection/yolo/data/pascal_voc/voctrainval_06-nov-2007/VOCdevkit/VOC2007/JPEGImages/000005.jpg'
-test_img_path2 ='/home/qbao/Work/self_learning/deep_learning/object_dectection/yolo/data/pascal_voc/voctrainval_06-nov-2007/VOCdevkit/VOC2007/JPEGImages/000007.jpg'
+test_img_path1 ='/home/bao/Work/self_learning/deep_learning/object_dectection/yolo/data/pascal_voc/voctrainval_06-nov-2007/VOCdevkit/VOC2007/JPEGImages/000005.jpg'
+test_img_path2 ='/home/bao/Work/self_learning/deep_learning/object_dectection/yolo/data/pascal_voc/voctrainval_06-nov-2007/VOCdevkit/VOC2007/JPEGImages/000007.jpg'
 
 image1 = decode_image(test_img_path1).to(device)
 image2 = decode_image(test_img_path2).to(device)
 images = [image1, image2]
 images_transformed = [transform(image) for image in images]
-targets_pred = model(images_transformed)
+targets_pred = model(images_transformed)[0]
 
 print(type(targets_pred['boxes']), type(targets_pred['labels']), type(targets_pred['scores']))
 #%%
-# Extract features & proposals
-with torch.no_grad():
-    images_list, _ = model.transform(image)
-    features = model.backbone(images_list.tensors)
-    proposals, _ = model.rpn(images_list, features)
+# # Extract features & proposals
+# with torch.no_grad():
+#     images_list, _ = model.transform(image)
+#     features = model.backbone(images_list.tensors)
+#     proposals, _ = model.rpn(images_list, features)
 
-    # pick one feature map level (depends on FPN output)
-    box_features = model.roi_heads.box_roi_pool(features, proposals, images_list.image_sizes)
+#     # pick one feature map level (depends on FPN output)
+#     box_features = model.roi_heads.box_roi_pool(features, proposals, images_list.image_sizes)
     
-    # Pass through the box head (two fc layers)
-    box_features = model.roi_heads.box_head(box_features)
+#     # Pass through the box head (two fc layers)
+#     box_features = model.roi_heads.box_head(box_features)
     
-    # Now we can manually get class logits
-    class_logits = model.roi_heads.box_predictor.cls_score(box_features)
-    box_regression = model.roi_heads.box_predictor.bbox_pred(box_features)
+#     # Now we can manually get class logits
+#     class_logits = model.roi_heads.box_predictor.cls_score(box_features)
+#     box_regression = model.roi_heads.box_predictor.bbox_pred(box_features)
 
-# Compute softmax probabilities
-import torch.nn.functional as F
-probs = F.softmax(class_logits, dim=1)
-print(probs.shape)  # [num_proposals, num_classes]
+# # Compute softmax probabilities
+# import torch.nn.functional as F
+# probs = F.softmax(class_logits, dim=1)
+# print(probs.shape)  # [num_proposals, num_classes]
 
 # %%
 from IPython.display import display
-test_img_path ='/home/qbao/Work/self_learning/deep_learning/object_dectection/yolo/data/pascal_voc/voctrainval_06-nov-2007/VOCdevkit/VOC2007/JPEGImages/000005.jpg'
+test_img_path ='/home/bao/Work/self_learning/deep_learning/object_dectection/yolo/data/pascal_voc/voctrainval_06-nov-2007/VOCdevkit/VOC2007/JPEGImages/000005.jpg'
 image = decode_image(test_img_path).to(device)
 image = transform(image.unsqueeze(0))
 targets_pred = model(image)
@@ -123,7 +123,7 @@ from training import LoggingConfig
 
 # device = "cuda" if torch.cuda.is_available() else "cpu"
 device = "cpu"
-ckpath = '/home/qbao/School/5A/research_project/5A_cyano_detection_app/exp/object_detection/VOC_fasterrcnn_mobilenet_v3_large_320_fpn_2000/checkpoints/epoch_1199_avg_loss_0.2755.pth'
+ckpath = '/home/bao/School/5A/research_project/5A_cyano_detection_app/exp/object_detection/VOC_fasterrcnn_mobilenet_v3_large_320_fpn_2000/checkpoints/epoch_1199_avg_loss_0.2755.pth'
 # model = FasterRCNNMobile(ckpath=ckpath, device=device)
 model = FasterRCNNMobile(device=device)
 logger = LoggingConfig(project_dir="exp/object_detection", exp_name='VOC_fasterrcnn_mobilenet_v3_large_320_fpn_2000')
@@ -133,8 +133,8 @@ logger.monitor_mode = "min"
 state = logger.load_checkpoint()
 model.model.load_state_dict(state_dict=state['model_state_dict'])
 
-test_img_path1 ='/home/qbao/Work/self_learning/deep_learning/object_dectection/yolo/data/pascal_voc/voctrainval_06-nov-2007/VOCdevkit/VOC2007/JPEGImages/000005.jpg'
-test_img_path2 ='/home/qbao/Work/self_learning/deep_learning/object_dectection/yolo/data/pascal_voc/voctrainval_06-nov-2007/VOCdevkit/VOC2007/JPEGImages/000007.jpg'
+test_img_path1 ='/home/bao/Work/self_learning/deep_learning/object_dectection/yolo/data/pascal_voc/voctrainval_06-nov-2007/VOCdevkit/VOC2007/JPEGImages/000005.jpg'
+test_img_path2 ='/home/bao/Work/self_learning/deep_learning/object_dectection/yolo/data/pascal_voc/voctrainval_06-nov-2007/VOCdevkit/VOC2007/JPEGImages/000007.jpg'
 
 image1 = decode_image(test_img_path1).to(device)
 image2 = decode_image(test_img_path2).to(device)
@@ -197,7 +197,8 @@ annotations_train_dir='data/VOC/VOCtrainval_06-Nov-2007/VOCdevkit/VOC2007/Annota
 images_val_dir='data/VOC/VOCtest_06-Nov-2007/VOCdevkit/VOC2007/JPEGImages'
 annotations_val_dir='data/VOC/VOCtest_06-Nov-2007/VOCdevkit/VOC2007/Annotations'
 train_dataset = VOCDataset(images_val_dir, annotations_val_dir)
-
+from torchmetrics.detection.mean_ap import MeanAveragePrecision
+map_metric = MeanAveragePrecision()
 #%%
 indices = np.random.randint(0,100,(2,))
 train_img1, pred1 = train_dataset[indices[0]]
@@ -205,9 +206,16 @@ train_img2, pred2 = train_dataset[indices[1]]
 
 train_images = [train_img1, train_img2]
 pred_gt = [pred1, pred2]
-pred = model.predict([image.to(device) for image in train_images])
+train_images, pred_gt = move_to_device(train_images, pred_gt, device=device)
+pred = model.predict([image for image in train_images])
 
 images_with_bboxes(train_images, pred, max_pixel=1, label_str=VOCDataset.voc_cls, image_size=5)
 images_with_bboxes(train_images, pred_gt, max_pixel=1, label_str=VOCDataset.voc_cls, image_size=5)
 
+# %%
+
+
+map_metric.update(pred, pred_gt)
+map_result = map_metric.compute()
+print(map_result)
 # %%
