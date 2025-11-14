@@ -54,14 +54,19 @@ class FasterRCNNMobile(torch.nn.Module):
         self.model.eval()
         if isinstance(input, torch.Tensor) and input.ndim == 3:
             input = input.unsqueeze(0)
-        input_transformed = [self.transform(img.to(self.device)) for img in input]
-        return self.model(self.transform(input_transformed))
+        input_transformed = [self.transform(img).to(self.device) for img in input]
+        return self.model(input_transformed)
     
-    def predict(self, input):
+    def predict(self, input, iou_threshold=None, score_threshold=None):
+        if iou_threshold is None:
+            iou_threshold = self.iou_threshold
+        if score_threshold is None:
+            score_threshold = self.score_threshold
+
         raw_predictions = self.forward(input)
         predictions = []
         for raw_prediction in raw_predictions:
-            score_mask = raw_prediction['scores'] >= self.score_threshold
+            score_mask = raw_prediction['scores'] >= score_threshold
             boxes = raw_prediction['boxes'][score_mask]
             labels = raw_prediction['labels'][score_mask]
             scores = raw_prediction['scores'][score_mask]
@@ -83,9 +88,10 @@ class FasterRCNNMobile(torch.nn.Module):
                     break
                     
                 ious = iou(chosen_box, boxes[1:], box_format='corners')
-                mask = (labels[1:] != chosen_label) | (ious < self.iou_threshold)
+                mask = (labels[1:] != chosen_label) | (ious < iou_threshold)
                 boxes, labels, scores = boxes[1:][mask], labels[1:][mask], scores[1:][mask]
             
+
             predictions.append({
                 'boxes': torch.cat(boxes_after_nms, dim=0),
                 'labels': torch.tensor(labels_after_nms),

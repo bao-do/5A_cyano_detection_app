@@ -20,7 +20,6 @@ def parse_ls_detection_tasks(tasks: list[dict], value: str="image" ):
                 x1, y1 = x1*image_width/100, y1*image_height/100
                 x2, y2 = x2*image_width/100, y2*image_height/100
 
-
                 boxes.append([int(x1), int(y1), int(x2), int(y2)])
 
                 label_id = ann["value"]["rectanglelabels"][0]
@@ -395,6 +394,15 @@ from torch.utils.data import Dataset
 from torchvision import tv_tensors
 from PIL import Image
 
+
+transform = v2.Compose([
+    v2.ToImage(),
+    v2.ToDtype(torch.float32, scale=True),
+    v2.RandomHorizontalFlip(p=0.5),
+    v2.RandomCrop(size=(224, 224)),
+    v2.RandomGrayscale(p=0.5)
+])
+
 class LSDetectionDataset(Dataset):
     def __init__(self, raw_data: list[dict], classes: list[str]=VOCDataset.voc_cls, transform: v2=None):
         super().__init__()
@@ -402,11 +410,11 @@ class LSDetectionDataset(Dataset):
         self.classes = classes
         self.cls_to_id = cls_to_id
         self.raw_data = raw_data
-        if transform is None:
-            transform= v2.Compose([
-                v2.ToImage(),
-                v2.ToDtype(torch.float32, scale=True),
-            ])
+        # if transform is None:
+        #     transform= v2.Compose([
+        #         v2.ToImage(),
+        #         v2.ToDtype(torch.float32, scale=True),
+        #     ])
         self.transform = transform
 
     def __len__(self):
@@ -416,26 +424,24 @@ class LSDetectionDataset(Dataset):
         chosen_data = self.raw_data[index]
 
         img_path = chosen_data["image_path"]
-        img = Image.open(img_path).convert("RGB")
-
+        img = v2.ToTensor()(Image.open(img_path).convert("RGB"))
         boxes = chosen_data["annotation"]["boxes"]
         boxes = tv_tensors.BoundingBoxes(boxes,
                                          format="XYXY",
-                                         canvas_size=(chosen_data['original_width'],
-                                                      chosen_data['original_height']))
+                                         canvas_size=img.shape[-2:])
         
-        img, boxes = self.transform(img, boxes)
-        
-        labels = [self.cls_to_id[label] for label in chosen_data["annotation"]["labels"]]
+        labels = torch.tensor([self.cls_to_id[label] for label in chosen_data["annotation"]["labels"]])
+        if self.transform is not None:
+          img, boxes, labels = self.transform(img, boxes, labels)
         
         return img, {'boxes':boxes, 'labels': labels}
 #%%
-ls_ds = LSDetectionDataset(raw_data=dataset)
-ls_ds[0]
-# %%
+dataset = parse_ls_detection_tasks(tasks)
+ls_ds = LSDetectionDataset(raw_data=dataset, transform=transform)
+
 img1, pred1 = ls_ds[0]
 img2, pred2 = ls_ds[1]
-
+#%%
 imgs = [img1, img2]
 preds = [pred1, pred2]
 
@@ -465,3 +471,5 @@ for i in range(size):
                 os.path.join(target_annot_dir, annot_filename))
 
 # %%
+
+

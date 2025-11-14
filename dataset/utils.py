@@ -106,10 +106,10 @@ class VOCDataset(torch.utils.data.Dataset):
     def __init__(self, images_dir: str, annotation_dir: str, transform: transforms=None):
         super().__init__()
         self.df = create_dir_df(images_dir, annotation_dir)
-        if transform is None:
-            transform = v2.Compose([
-                v2.ToImage(), v2.ToDtype(torch.float32, scale=True)
-            ])
+        # if transform is None:
+        #     transform = v2.Compose([
+        #         v2.ToImage(), v2.ToDtype(torch.float32, scale=True)
+        #     ])
         self.transform = transform
 
     def __len__(self):
@@ -142,7 +142,8 @@ class VOCDataset(torch.utils.data.Dataset):
 
 
         boxes = tv_tensors.BoundingBoxes(boxes, format="XYXY", canvas_size=img.shape[-2:])
-        img, boxes = self.transform(img, boxes)
+        if self.transform is not None:
+            img, boxes = self.transform(img, boxes)
 
         return img, {'boxes': boxes, 'labels':torch.tensor(labels)}
     

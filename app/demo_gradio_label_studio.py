@@ -23,6 +23,7 @@ import os
 from label_studio_sdk import LabelStudio
 from PIL import Image
 
+
 abs_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 ds_dir = os.path.join(abs_path, "data/raw_images")
 
