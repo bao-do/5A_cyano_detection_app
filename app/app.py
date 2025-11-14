@@ -90,8 +90,6 @@ def debug_print(*args):
 def corrd_to_tab_column(coord):
     return coord.upper()
 
-def time_passed(start=0):
-    return round(time.mktime(time.localtime()) - start)
 
 def format_float(f):
     return "%.2f" %(float(f),)
@@ -108,47 +106,6 @@ def shape_to_table_row(sh):
 
 
 
-def table_row_to_shape(tr):
-    return{
-        "editable": True,
-        "xref": "x",
-        "yref": "y",
-        "layer": "above",
-        "opacity": 1,
-        "line": {
-            "color": color_dict[tr["Type"]],
-            "width": 4,
-            "dash": "solid",
-        },
-        "fillcolor": "rgba(0,0,0,0)",
-        "fillrule": "evenodd",
-        "type": "rect",
-        "x0": tr["X0"],
-        "y0": tr["Y0"],
-        "x1": tr["X1"],
-        "y1": tr["Y1"],
-    }
-
-def shape_cmp(sh1, sh2):
-    """ Compare two shapes for equality """
-    keys = ["x0", "y0", "x1", "y1"]
-    for k in keys:
-        if sh1[k] != sh2[k]:
-            return False
-    if sh1["line"]["color"] != sh2["line"]["color"]:
-        return False
-    return True
-
-def shape_in(se):
-    """ Check if a shape is in list (done this way to use custom compare)  """
-    return lambda sh: any(shape_cmp(sh, s_) for s_ in se)
-
-def index_of_shape(shapes, shape):
-    for i, shapes_item in enumerate(shapes):
-        if shape_cmp(shapes_item, shape):
-            return i
-    raise ValueError("Shape not found in list")
-
 def annotations_table_shape_resize(annotations_table_data, fig_data):
     """ Extract the shape that was resized (its index) and store the resized coordinates"""
     debug_print("fig_data", fig_data)
@@ -164,12 +121,7 @@ def annotations_table_shape_resize(annotations_table_data, fig_data):
     
     return annotations_table_data
 
-def shape_data_remove_timestamp(shape):
-    """ go.Figure complains if we include the 'timestamp' key when updating the figure """
-    new_shape = dict()
-    for k in shape.keys()-set(["timestamp"]):
-        new_shape[k] = shape[k]
-    return new_shape
+
 
 def empty_fig():
     fig = go.Figure()
@@ -445,7 +397,7 @@ def display_uploaded_image(contents):
         # Show graph and remove button, hide upload
         graph_style = {"display": "block"}
         upload_style = {"display": "none"}
-        return fig, graph_style, upload_style, img_array
+        return (fig, graph_style, upload_style, img_array)
 
     # Nothing uploaded
     return empty_fig(), {"display": "none"}, {"display": "block"}, dash.no_update
@@ -467,9 +419,7 @@ def remove_image(n_clicks):
 # get prediction callback
 @app.callback(
     [
-        # Output("graph", "figure"),
         Output("annotations-table","data"),
-        # Output("annotations-store", "data"),
     ],
     [Input("get-pred-btn", "n_clicks")],
     [
@@ -484,8 +434,7 @@ def remove_image(n_clicks):
 def get_prediction(n_clicks, iou_threshold, score_threshold, image_array, figdict, new_shape_cls):
     debug_print("get_prediction callback")
     if image_array is None:
-        # return dash.no_update, dash.no_update, dash.no_update
-        return dash.no_update
+        raise PreventUpdate
     image_numpy = np.array(image_array, dtype=np.float32)
     image_torch = torch.from_numpy(image_numpy).permute(2,0,1).float()
     max_pixel = image_torch.max()
@@ -493,15 +442,7 @@ def get_prediction(n_clicks, iou_threshold, score_threshold, image_array, figdic
     with torch.no_grad():
         targets_pred_single = MODEL.predict(image_torch, iou_threshold, score_threshold)[0]
     rows = []
-    # shapes=[]
-    # fig = go.Figure(figdict)
-    # fig.update_layout(
-    #     dragmode="drawrect",
-    #     newshape=dict(line_color=color_dict[new_shape_cls],
-    #                   line_width = 2,
-    #                   fillcolor=color_dict[new_shape_cls].replace("rgb", "rgba").replace(")", ",0.2)"),
-    #                   )
-    # )    
+
     for box, label_id, score in zip(*targets_pred_single.values()):
         x0, y0, x1, y1 = box.tolist()
         label_id = int(label_id.item())
@@ -516,15 +457,6 @@ def get_prediction(n_clicks, iou_threshold, score_threshold, image_array, figdic
                     "Score": format_float(score)
                     })
         
-        # shapes.append(dict(type="rect",
-        #                     x0=x0, y0=y0, x1=x1, y1=y1,
-        #                     line= dict(color=color_dict[label], width=2),
-        #                     fillcolor=color_dict[label].replace("rgb", "rgba").replace(")", ",0.2)"),
-        #                     # opacity=0.3,
-        #                     editable=True)
-        #             )
-    # fig.update_layout(shapes=shapes)
-    # return fig, rows, rows
     return (rows,)
     
 
@@ -539,8 +471,8 @@ def table_to_graph(current_class, table_data, figdict):
     debug_print("table_to_graph callback")
     cbcontext = [p["prop_id"] for p in dash.callback_context.triggered][0]
     debug_print(f"Callback is triggered by {cbcontext}")
-    if figdict is None:
-        return dash.no_update
+    if (figdict is None) or (table_data is None):
+        raise PreventUpdate
     
     if cbcontext == "annotation-type-dropdown.value":
         shapes = figdict.get("layout", {}).get("shapes", [])
