@@ -21,6 +21,18 @@ import torch
 import colorsys
 import random
 from dash.exceptions import PreventUpdate
+from uuid import uuid4
+
+from label_studio_sdk import LabelStudio
+
+LABEL_STUDIO_URL="http://localhost:8080"
+LABEL_STUDIO_API_KEY= "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6ODA3MDUxNzQyNywiaWF0IjoxNzYzMzE3NDI3LCJqdGkiOiI4ZTE0MWI1ZjAxZjA0NTE4ODcxMjgxZDE1YjFlYmJiNSIsInVzZXJfaWQiOjF9.398QTAIU5nMK21YiHxbASw5R9_MTtSCM9Bqe1IoTrDU"
+PROJECT_ID = 1
+
+ls = LabelStudio(
+    base_url=LABEL_STUDIO_URL,
+    api_key=LABEL_STUDIO_API_KEY
+)
 
 def generate_colors(n, seed=1337):
     random.seed(seed)
@@ -40,6 +52,7 @@ def hex_to_rgb(hex_color):
 
 file_dir = os.path.dirname(os.path.abspath(__file__))
 project_dir = os.path.join(file_dir, "..")
+source_storage_dir = os.path.join(project_dir, "data/ls_data/source_storage", str(PROJECT_ID))
 exp_dir = os.path.join(project_dir,"exp/object_detection")
 
 #Model configuration
@@ -71,15 +84,15 @@ DEFAULT_FIG_MODE = "layout"
 CLASSES = VOCDataset.voc_cls
 DEFAULT_CLASS = CLASSES[0]
 CLASS_TO_ID = VOCDataset.cls_to_id
-ANNOTATION_COLORMAP = px.colors.qualitative.Light24
-# ANNOTATION_COLORMAP = generate_colors(len(CLASSES))
+# ANNOTATION_COLORMAP = px.colors.qualitative.Light24
+ANNOTATION_COLORMAP = generate_colors(len(CLASSES))
 
 
 # prepare bijective type<->color mapping
 typ_col_pairs = list(zip(CLASSES, ANNOTATION_COLORMAP))
 # types to colors
-color_dict = {typ: hex_to_rgb(col) for typ, col in typ_col_pairs}
-type_dict  = {hex_to_rgb(col): typ for typ, col in typ_col_pairs}
+color_dict = {typ: col for typ, col in typ_col_pairs}
+type_dict  = {col: typ for typ, col in typ_col_pairs}
 #%%
 COLUMNS = ["Class", "X0", "Y0", "X1", "Y1", "Score"]
 
@@ -232,6 +245,7 @@ image_annotation_card = dbc.Card(
                     # style={"position": "relative"},
                 ),
                 dcc.Store(id="uploaded-image-store", data=None),
+                dcc.Store(id="inf-container", data=None),
             ]
         ),
         dbc.CardFooter(
@@ -340,25 +354,45 @@ annotation_table_card = dbc.Card(
             ]
         ),
         dbc.CardFooter(
-            [
-                html.Div(
-                    [
-                        html.A(
-                            id="download",
-                            download="annotations.json",
-                            style={"display": "none"},
-                        ),
-                        dbc.Button(
-                            "Dowload annotations", id="download-button", outline=True,
-                        ),
-                        html.Div(id="dummy", style={"display":"none"}),
-                        dbc.Tooltip(
-                            "You can download the annotated data in a .json format by clicking this button.",
-                            target="download-button"
-                        )
-                    ]
-                )
-            ]
+            dbc.Row(
+                dbc.Col(
+                    html.Div(
+                        [
+                            html.A(
+                                id="download",
+                                download="annotations.json",
+                                style={"display": "none"},
+                            ),
+
+                            dbc.Button(
+                                "Download annotations",
+                                id="download-button",
+                                outline=True,
+                                color="primary",
+                                className="me-2",
+                            ),
+
+                            dbc.Button(
+                                "Submit correction",
+                                id="submit-to-ls",
+                                outline=True,
+                                color="success",
+                            ),
+
+                            html.Div(id="dummy", style={"display":"none"}),
+                            html.Div(id="submit-ls-status", style={"display":"none"}),
+
+                            dbc.Tooltip(
+                                "You can download the annotated data in a .json format by clicking this button.",
+                                target="download-button"
+                            ),
+                        ],
+                        className="d-flex justify-content-center"
+                    ),
+                    width="auto"     # <-- THIS MAKES THE FOOTER CONTENT SHRINK TO THE BUTTONS
+                ),
+                justify="center"     # <-- center only the column, not the whole container
+            ),
         )
     ]
 )
@@ -372,6 +406,7 @@ annotation_table_card = dbc.Card(
     Output("graph", "style", allow_duplicate=True),
     Output("upload-div", "style", allow_duplicate=True),
     Output("uploaded-image-store", "data", allow_duplicate=True),
+    Output("inf-container", "data", allow_duplicate=True),
     Input("upload-image", "contents"),
     prevent_initial_call=True,
 )
@@ -382,7 +417,19 @@ def display_uploaded_image(contents):
         content_type, content_string = contents.split(",")
         decoded = base64.b64decode(content_string)
         pil_image = Image.open(io.BytesIO(decoded))
+
+        # Save image to source storage to import to ls after
+        image_name = f"{str(uuid4())[:8]}.png"
+        pil_image.save(os.path.join(source_storage_dir, image_name))
+        task = ls.tasks.create(
+            project=PROJECT_ID,
+            data={
+                "image": f"/data/local-files/?d=source_storage/{PROJECT_ID}/{image_name}"
+            }
+        )
+
         img_array = np.array(pil_image)
+        inf = {"id": task.id, "height": img_array.shape[0], "width": img_array.shape[1]}
 
         # Create figure with image
         fig = go.Figure()
@@ -397,10 +444,12 @@ def display_uploaded_image(contents):
         # Show graph and remove button, hide upload
         graph_style = {"display": "block"}
         upload_style = {"display": "none"}
-        return (fig, graph_style, upload_style, img_array)
+
+        return fig, graph_style, upload_style, img_array, inf
+    
 
     # Nothing uploaded
-    return empty_fig(), {"display": "none"}, {"display": "block"}, dash.no_update
+    return empty_fig(), {"display": "none"}, {"display": "block"}, dash.no_update, dash.no_update
 
 # remove image callback
 @app.callback(
@@ -409,12 +458,13 @@ def display_uploaded_image(contents):
     Output("uploaded-image-store", "data"),
     Output("annotations-table","data", allow_duplicate=True),
     Output("annotations-store", "data", allow_duplicate=True),
+    Output("inf-container", "data"),
     Input("remove-image", "n_clicks"),
     prevent_initial_call=True,
 )
 def remove_image(n_clicks):
     debug_print("remove image callback")
-    return {"display": "none"}, None, {"display": "block"}, None, None
+    return {"display": "none"}, None, {"display": "block"}, None, None, None
 
 # get prediction callback
 @app.callback(
@@ -471,10 +521,10 @@ def table_to_graph(current_class, table_data, figdict):
     debug_print("table_to_graph callback")
     cbcontext = [p["prop_id"] for p in dash.callback_context.triggered][0]
     debug_print(f"Callback is triggered by {cbcontext}")
-    if (figdict is None) or (table_data is None):
-        raise PreventUpdate
     
     if cbcontext == "annotation-type-dropdown.value":
+        if figdict is None:
+            PreventUpdate
         shapes = figdict.get("layout", {}).get("shapes", [])
         fig = go.Figure(figdict)
         fig.update_layout(
@@ -486,6 +536,9 @@ def table_to_graph(current_class, table_data, figdict):
                         )
         )    
         return fig
+    
+    if (figdict is None) or (table_data is None):
+        raise PreventUpdate
     
     fig = go.Figure(figdict)
     shapes = []
@@ -533,6 +586,66 @@ def graph_to_table(relayout_data, table_data, figdict):
         raise PreventUpdate
     else:
         return table_data
+    
+    
+app.clientside_callback(
+    """
+function(the_store_data) {
+    let s = JSON.stringify(the_store_data);
+    let b = new Blob([s],{type: 'text/plain'});
+    let url = URL.createObjectURL(b);
+    return url;
+}
+""",
+    Output("download", "href"),
+    [Input("annotations-table", "data")],
+)
+
+# click on download link via button
+app.clientside_callback(
+    """
+function(download_button_n_clicks)
+{
+    let download_a=document.getElementById("download");
+    download_a.click();
+    return '';
+}
+""",
+    Output("dummy", "children"),
+    [Input("download-button", "n_clicks")],
+)
+
+@app.callback(
+    Input("submit-to-ls", "n_clicks"),
+    State("inf-container", "data"),
+    State("annotations-table","data"),
+    prevent_initila_call=True
+)
+def submit_to_ls(n_clicks, inf, annotations):
+    if  (inf is not None) and (annotations is not None):
+        task_id, img_height, img_width = inf.values()
+        result = []
+        for row in annotations:
+            print(row["Class"])
+            x0, y0, x1, y1 = float(row["X0"]), float(row["Y0"]), float(row["X1"]), float(row["Y1"])
+            result.append({
+                "from_name": "label",
+                "to_name": "image",
+                "source": "$image",
+                "type": "rectanglelabels",
+                "value": {
+                    "height":(y1 - y0)*100 / img_height,
+                    "width": (x1 - x0)*100 / img_width,
+                    "x": x0 * 100 / img_width,
+                    "y": y0 * 100 / img_height,
+                    "rectanglelabels": [row["Class"]]
+                }
+            })
+        ls.predictions.create(
+            model_version="user_correction",
+            result=result,
+            task=task_id
+        )
     
     
 
