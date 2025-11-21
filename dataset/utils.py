@@ -29,24 +29,32 @@ def create_dir_df(img_dir: str, annot_dir: str, size: int=None):
     -------
     pandas.DataFrame with following columns: `image`, `annotation`, `image_path`, `annotation_path`
     """
-    imgs = sorted([f for f in os.listdir(img_dir) if f.endswith('.jpg')])
-    if imgs is None:
-        warnings.warn("The respository does not cointain any images.")
-    annots = [f.replace('.jpg', '.xml') for f in imgs]
+    try:
+        imgs = sorted([f for f in os.listdir(img_dir) if f.endswith('.jpg')])
+    except FileNotFoundError:
+        print("There is no such directory")
+        imgs = None
     
-    if size is not None:
-        imgs = imgs[:size]
-        annots = annots[:size]
-    img_paths = [os.path.join(img_dir,f) for f in imgs]
-    annot_paths = [os.path.join(annot_dir,f) for f in annots]
 
-    df = pd.DataFrame({
-        'image': imgs,
-        'annotatation': annots,
-        'image_path': img_paths,
-        'annotation_path': annot_paths
-    }) 
-    return df
+    if (imgs is None) or len(imgs) == 0:
+        warnings.warn("The respository does not cointain any images.")
+        return None
+    else:
+        annots = [f.replace('.jpg', '.xml') for f in imgs]
+        
+        if size is not None:
+            imgs = imgs[:size]
+            annots = annots[:size]
+        img_paths = [os.path.join(img_dir,f) for f in imgs]
+        annot_paths = [os.path.join(annot_dir,f) for f in annots]
+
+        df = pd.DataFrame({
+            'image': imgs,
+            'annotatation': annots,
+            'image_path': img_paths,
+            'annotation_path': annot_paths
+        }) 
+        return df
 
 def parse_annotation(df: pd.DataFrame):
     """
@@ -98,18 +106,18 @@ class VOCDataset(torch.utils.data.Dataset):
 # bicycle
 # bird
 # boat
-# bottle,
+# bottle
 # bus
 # car
 # cat
 # chair
 # cow
-# diningtable,
+# diningtable
 # dog
 # horse
 # motorbike
 # person
-# pottedplant,
+# pottedplant
 # sheep
 # sofa
 # train
@@ -132,7 +140,10 @@ class VOCDataset(torch.utils.data.Dataset):
         self.transform = transform
 
     def __len__(self):
-        return len(self.df)
+        if self.df is None:
+            return 0
+        else:
+            return len(self.df)
     
     def __getitem__(self, index: int):
         img_path = self.df.loc[index, 'image_path']

@@ -6,7 +6,7 @@ from torchvision.utils import draw_bounding_boxes
 from torchvision.transforms import v2
 from torchmetrics.detection.mean_ap import MeanAveragePrecision
 from tqdm import tqdm
-from .utils import OptimizationConfig, TrainingConfig, LoggingConfig, OnlineMovingAverage, ema_avg_fn, move_to_device
+from utils import OptimizationConfig, TrainingConfig, LoggingConfig, OnlineMovingAverage, ema_avg_fn, move_to_device
 from typing import Callable
 from torch.optim.swa_utils import AveragedModel
 import os
@@ -29,7 +29,7 @@ def training_loop(
     model = model.to(config.device)
     ema_model = AveragedModel(model, avg_fn=ema_avg_fn, use_buffers=True)
     ema_model = ema_model.to(config.device)
-    state = logger.load_checkpoint()
+    state = logger.load_lastest_checkpoint()
     if state is not None:
         model.load_state_dict(state['model_state_dict'])
         optimizer.load_state_dict(state['optimizer_state_dict'])
@@ -43,10 +43,11 @@ def training_loop(
     
     logger.global_step = global_step
     train_avg_loss = OnlineMovingAverage(size=5000)
-    test_avg_loss = OnlineMovingAverage(size=1000)
-
     train_avg_map = OnlineMovingAverage(size=1000)
-    test_avg_map = OnlineMovingAverage(size=1000)
+
+    if test_loader is not None:
+        test_avg_loss = OnlineMovingAverage(size=1000)
+        test_avg_map = OnlineMovingAverage(size=1000)
 
     for epoch in range(start_epoch, config.num_epochs):
         pb = tqdm(train_loader, desc=f"Epoch {epoch+1}/{config.num_epochs}", mininterval=10)
@@ -77,28 +78,28 @@ def training_loop(
             ################## Calcul and Log metrics ##########################
             if ((logger.global_step + 1) % logger.log_loss_freq == 0) or (logger.global_step == 0):
                 
-                # update loss and map on test set
-                test_map = MeanAveragePrecision()
-                with torch.no_grad():
-                    images_test, targets_test = next(iter(test_loader))
-                    images_test, targets_test = move_to_device(images_test, targets_test, config.device)
+                if test_loader is not None:
+                    # update loss and map on test set
+                    test_map = MeanAveragePrecision()
+                    with torch.no_grad():
+                        images_test, targets_test = next(iter(test_loader))
+                        images_test, targets_test = move_to_device(images_test, targets_test, config.device)
 
-                    # loss
-                    model.train()
-                    loss_test_dict = model(images_test, targets_test)
+                        # loss
+                        model.train()
+                        loss_test_dict = model(images_test, targets_test)
 
-                    num_sample_test += len(images_test)
-                    loss_test = sum(loss.detach().item() for loss in loss_test_dict.values())
-                    test_avg_loss.update(loss_test/len(images_test))
+                        loss_test = sum(loss.detach().item() for loss in loss_test_dict.values())
+                        test_avg_loss.update(loss_test/len(images_test))
 
-                    # map
-                    model.eval()
-                    preds = model(images_test)
-                    test_map.update(preds, targets_test)
-                    test_avg_map.update(test_map.compute()['map'].item())
+                        # map
+                        model.eval()
+                        preds = model(images_test)
+                        test_map.update(preds, targets_test)
+                        test_avg_map.update(test_map.compute()['map'].item())
 
-                    del preds,  loss_test_dict, images_test, targets_test
-                    torch.cuda.empty_cache()    
+                        del preds,  loss_test_dict, images_test, targets_test
+                        torch.cuda.empty_cache()    
                 
                 # update map on train set
                 train_map = MeanAveragePrecision()
@@ -116,8 +117,8 @@ def training_loop(
                 
                 # log metric
                 metrics = {
-                    "validation_loss": test_avg_loss.mean,
-                    "map_val": test_avg_map.mean,
+                    "validation_loss": None if test_loader is None else test_avg_loss.mean,
+                    "map_val": None if test_loader is None else test_avg_map.mean ,
                     "train_loss": train_avg_loss.mean,
                     "map_train": train_avg_map.mean,
                     "lr": optimizer.param_groups[0]["lr"],
@@ -138,14 +139,14 @@ def training_loop(
                 drawn_pred_train = []
                 for idx in range(num_log_images):
                     img_with_bb_pred = F.interpolate(
-                                            draw_bounding_boxes(images_train[idx], targets_pred_train[idx]['boxes'], colors='red').unsqueeze(0),
+                                            draw_bounding_boxes(images_train[idx], targets_pred_train[idx]['boxes'], colors='red').unsqueeze(0) if targets_pred_train[idx]['boxes'].shape[0] != 0 else images_train[idx].unsqueeze(0),
                                             size = logger.image_size,
                                             mode='bilinear',
                                             align_corners=False)
                     drawn_pred_train.append(img_with_bb_pred.to("cpu"))
 
                     img_with_bb_gt = F.interpolate(
-                                            draw_bounding_boxes(images_train[idx], targets[idx]['boxes'], colors='red').unsqueeze(0),
+                                            draw_bounding_boxes(images_train[idx], targets[idx]['boxes'], colors='red').unsqueeze(0) if targets[idx]['boxes'].shape[0] != 0 else images_train[idx].unsqueeze(0),
                                             size = logger.image_size,
                                             mode='bilinear',
                                             align_corners=False)
@@ -154,44 +155,46 @@ def training_loop(
                 drawn_pred_train = torch.cat(drawn_pred_train, dim=0)
                 drawn_gt_train = torch.cat(drawn_gt_train, dim=0)
 
-                # Log images of validation set
-                images_test, targets_test = next(iter(test_loader))
-                images_test = images_test[:num_log_images]
-                targets_test = targets_test[:num_log_images]
-                images_test, targets_test = move_to_device(images_test, targets_test, config.device)
-                targets_pred_test = model(images_test)
-                drawn_gt_test = []
-                drawn_pred_test = []
-                for idx in range(num_log_images):
-                    img_with_bb_pred = F.interpolate(
-                                            draw_bounding_boxes(images_test[idx], targets_pred_test[idx]['boxes'], colors='red').unsqueeze(0),
-                                            size = logger.image_size,
-                                            mode='bilinear',
-                                            align_corners=False
-                                            )
-                    drawn_pred_test.append(img_with_bb_pred.to("cpu"))
+                # Log images of test set
+                if test_loader is not None:
+                    images_test, targets_test = next(iter(test_loader))
+                    images_test = images_test[:num_log_images]
+                    targets_test = targets_test[:num_log_images]
+                    images_test, targets_test = move_to_device(images_test, targets_test, config.device)
+                    targets_pred_test = model(images_test)
+                    drawn_gt_test = []
+                    drawn_pred_test = []
+                    for idx in range(num_log_images):
+                        img_with_bb_pred = F.interpolate(
+                                                draw_bounding_boxes(images_test[idx], targets_pred_test[idx]['boxes'], colors='red').unsqueeze(0) if targets_pred_test[idx]['boxes'].shape[0] != 0 else images_test[idx].unsqueeze(0),
+                                                size = logger.image_size,
+                                                mode='bilinear',
+                                                align_corners=False
+                                                )
+                        drawn_pred_test.append(img_with_bb_pred.to("cpu"))
 
-                    img_with_bb_gt = F.interpolate(
-                                            draw_bounding_boxes(images_test[idx], targets_test[idx]['boxes'], colors='red').unsqueeze(0),
-                                            size = logger.image_size,
-                                            mode='bilinear',
-                                            align_corners=False)
-                    drawn_gt_test.append(img_with_bb_gt.to("cpu"))
-                drawn_pred_test = torch.cat(drawn_pred_test, dim=0)
-                drawn_gt_test = torch.cat(drawn_gt_test, dim=0)
+                        img_with_bb_gt = F.interpolate(
+                                                draw_bounding_boxes(images_test[idx], targets_test[idx]['boxes'], colors='red').unsqueeze(0) if targets_test[idx]['boxes'].shape[0] != 0 else images_test[idx].unsqueeze(0),
+                                                size = logger.image_size,
+                                                mode='bilinear',
+                                                align_corners=False)
+                        drawn_gt_test.append(img_with_bb_gt.to("cpu"))
+                    drawn_pred_test = torch.cat(drawn_pred_test, dim=0)
+                    drawn_gt_test = torch.cat(drawn_gt_test, dim=0)
 
                 logger.log_images({
                     'x_train': images_train,
                     'train_gt': drawn_gt_train,
                     'train_pred': drawn_pred_train,
-                    'x_val': images_test,
-                    'val_gt': drawn_gt_test,
-                    'val_pred': drawn_pred_test
+                    'x_test': None if test_loader is None else images_test,
+                    'test_gt': None if test_loader is None else drawn_gt_test,
+                    'test_pred': None if test_loader is None else drawn_pred_test
                 }, logger.global_step)
 
+            ##################### UPDATE GLOBAL STEP #########################3
             logger.global_step += 1
 
-        # Save checkpoint
+        ######################### SAVE CHECKPOINT #########################
         if ((epoch + 1) == config.num_epochs) or (epoch % logger.save_freq == 0):
             state = {
                 "model_state_dict": model.state_dict(),
@@ -202,7 +205,11 @@ def training_loop(
                 "scheduler_state_dict": lr_scheduler.state_dict() if lr_scheduler is not None else None
             }
 
-            logger.save_checkpoint(state, epoch, metric_value=test_avg_map.mean)
+            if test_loader is not None:
+                logger.save_checkpoint(state, epoch, metric_value=test_avg_map.mean)
+            else:
+                logger.save_checkpoint(state, epoch, metric_value=train_avg_map.mean)
+                
             if  epoch % logger.save_freq == 0:
                 logger.clean_old_checkpoint()
 
@@ -254,18 +261,14 @@ if __name__ == "__main__":
 
 
     ############################## DEFINE DATASET ###########################################
-    train_dataset = VOCDataset(args.images_train, args.annotations_train)
-    val_dataset = VOCDataset(args.images_val, args.annotations_val)
+    transform = v2.Compose([
+        v2.ToImage(), v2.ToDtype(torch.float32, scale=True)
+    ])
+    train_dataset = VOCDataset(args.images_train, args.annotations_train, transform)
 
     if args.train_dataset_size is not None:
-        print(f"Using only the first {min(args.train_dataset_size, len(train_dataset))} images from the training set")
+        print(f"Using the first {min(args.train_dataset_size, len(train_dataset))} images from the training set")
         train_dataset = data.Subset(train_dataset, range(min(args.train_dataset_size, len(train_dataset))))
-
-    
-    if args.test_dataset_size is not None:
-        print(f"Using only the first {min(args.test_dataset_size, len(val_dataset))} images as validation set")
-        val_dataset = data.Subset(val_dataset, range(min(args.test_dataset_size, len(val_dataset))))
-
 
     if len(train_dataset) < args.batch_size:
         sampler = data.RandomSampler(train_dataset, replacement=True, num_samples=args.batch_size)
@@ -277,7 +280,15 @@ if __name__ == "__main__":
     train_loader = data.DataLoader(train_dataset, batch_size=args.batch_size, collate_fn=collate_fn,
                                    shuffle=shuffle, pin_memory=True, sampler=sampler, drop_last=False,
                                    num_workers=8)
-    test_loader = data.DataLoader(val_dataset, batch_size=args.batch_size, shuffle=True, collate_fn=collate_fn, drop_last=False)
+    
+    val_dataset = VOCDataset(args.images_val, args.annotations_val, transform)
+    if len(val_dataset) == 0:
+        test_loader=None
+    if (test_loader is not None):
+        if args.test_dataset_size is not None:
+           print(f"Using the first {min(args.test_dataset_size, len(val_dataset))} images as validation set")
+           val_dataset = data.Subset(val_dataset, range(min(args.test_dataset_size, len(val_dataset))))
+        test_loader = data.DataLoader(val_dataset, batch_size=args.batch_size, shuffle=True, collate_fn=collate_fn, drop_last=False)
 
 
     ################################ Training and Saving Configuration #####################
@@ -286,7 +297,7 @@ if __name__ == "__main__":
 
     logger = LoggingConfig(project_dir=os.path.join(abs_path,'exp/object_detection'),
                            exp_name=f"VOC_fasterrcnn_resnet50_fpn_v2_{args.train_dataset_size}")
-    logger.monitor_metric = "val_avg_map"
+    logger.monitor_metric = "val_avg_map" if test_loader is not None else "train_avg_map"
     logger.monitor_mode = "min"
     logger.initialize()
     logger.log_hyperparameters(vars(args), main_key="training_config")

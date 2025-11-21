@@ -237,7 +237,7 @@ class LoggingConfig:
         
         return checkpoint_path
     
-    def load_checkpoint(self, checkpoint_path=None, verbose=True):
+    def load_latest_checkpoint(self, checkpoint_path=None, verbose=True):
         """Load a checkpoint and return the training state. if no checkpoint_path is provide,
         load the most recent checkpoint. If no checkpoint exists, return None.
 
@@ -276,6 +276,57 @@ class LoggingConfig:
             print(f"Resuming from epoch {self.epoch}")
         
         return state
+    
+    def load_best_checkpoint(self, chekpoint_path: str=None, metric:str=None, mode:str=None, verbose: bool=True):
+        """
+        Load a checkpoint file (optionally selecting the best one by a monitored metric)
+        according to the requested mode ("min" or "max").
+
+        Parameters
+        ----------
+        chekpoint_path : str or None
+            Path to a specific checkpoint file to load.
+        metric : str or None, optional
+            Name of the metric used to find matching checkpoint files.
+        mode : {"min", "max"} or None, optional
+        verbose : bool, optional
+        
+        Returns
+        -------
+        dict or None
+        """
+        metric = self.monitor_metric if metric is None else metric
+        mode = self.monitor_mode if ((mode is None) or (mode not in ["min","max"])) else mode
+        if chekpoint_path is None:
+            checkpoints = glob.glob(os.path.join(self.checkpoint_dir, f"{metric}_*.pth"))
+            if not checkpoints:
+                warnings.warn("No checkpoint found in the experiment directory.")
+                return None
+            else:
+                def get_metric_value(checkpoint_path):
+                    match = re.search(rf"{metric}_([0-9]+(?:\.[0-9]+)?)", checkpoint_path)
+                    if match:
+                        return float(match.group(1))
+                    else:
+                        return float("inf") if mode=="min" else float("-inf")
+                if mode == "min":
+                    checkpoint_path = min(checkpoints, key=get_metric_value)
+                else:
+                    checkpoint_path = max(checkpoints, key=get_metric_value)
+        else:
+            if not os.path.exists(checkpoint_path):
+                warnings.warn(f"Checkpoint {checkpoint_path} does not exist.")
+                return None
+            
+        state = torch.load(checkpoint_path)
+        self.global_step = state.get("global_step",0) + 1 
+        self.epoch = state.get("epoch", 0) + 1
+        self.best_metric = state.get("best_metric", self.best_metric)
+
+        if verbose:
+            print(f"Loaded checkpoint from: {checkpoint_path}")
+        return state
+
     
     def log_metrics(self, metrics, step="None", prefix="train"):
         """

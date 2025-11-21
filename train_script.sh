@@ -1,0 +1,1 @@
+PYTHONPATH=./ python3 ./training/train.py --dataset_size 2000 --num_epochs 500 --batch_size 16

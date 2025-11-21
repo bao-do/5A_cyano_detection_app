@@ -42,20 +42,17 @@ class FasterRCNNMobile(torch.nn.Module):
                                     v2.ToImage(),
                                     v2.ToDtype(torch.float32, scale=True)
                                 ])
-    def train_forward(self, images, labels, is_transform_needed=False):
+    def train_forward(self, images, labels):
         self.model.train()
         if images is torch.Tensor and input.ndim == 3:
             images = images.unsqueeze(0)
-        if is_transform_needed:
-            images = self.transform(images)
         return self.model(images, labels)
 
     def forward(self, input):
         self.model.eval()
         if isinstance(input, torch.Tensor) and input.ndim == 3:
             input = input.unsqueeze(0)
-        input_transformed = [self.transform(img).to(self.device) for img in input]
-        return self.model(input_transformed)
+        return self.model(input)
     
     def predict(self, input, iou_threshold=None, score_threshold=None):
         if iou_threshold is None:

@@ -1,0 +1,52 @@
+version: "3.8"
+
+services:
+  ml-backend:
+    container_name: ml-backend
+    image: humansignal/ml-backend:v0
+    build:
+      context: /home/bao/School/5A/research_project/5A_cyano_detection_app
+      dockerfile: model_backend/label-studio-ml-backend/my_ml_backend/Dockerfile
+      args:
+        TEST_ENV: ${TEST_ENV}
+    environment:
+      # specify these parameters if you want to use basic auth for the model server
+      # - BASIC_AUTH_USER=
+      # - BASIC_AUTH_PASS=
+      # set the log level for the model server
+      - LOG_LEVEL=DEBUG
+      # any other parameters that you want to pass to the model server
+      # - ANY=PARAMETER
+      # specify the number of workers and threads for the model server
+      - WORKERS=1
+      - THREADS=8
+      # specify the model directory (likely you don't need to change this)
+      - MODEL_DIR=/data/models
+
+      # Specify the Label Studio URL and API key to access
+      # uploaded, local storage and cloud storage files.
+      # Do not use 'localhost' as it does not work within Docker containers.
+      # Use prefix 'http://' or 'https://' for the URL always.
+      # Determine the actual IP using 'ifconfig' (Linux/Mac) or 'ipconfig' (Windows).
+      - LABEL_STUDIO_URL=http://localhost:8080
+      - LABEL_STUDIO_API_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6ODA3MDk2NTE4MiwiaWF0IjoxNzYzNzY1MTgyLCJqdGkiOiIyMjc1ZDhjZjE5MGU0Y2M0YmMzYWJiN2VkYjRhMDEyMSIsInVzZXJfaWQiOjF9.pAMcDVKI7yCDvkYvP6mxJtoCN8GCeOAPGzd_i2fb-tc
+      - NVIDIA_VISIBLE_DEVICES=all
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    ports:
+      - "9000:9000"
+    volumes:
+      - "./data/server:/data/server"
+      - "/home/bao/School/5A/research_project/5A_cyano_detection_app/data/ml-backend/fasterrcnn:/data/model"
+      - "/home/bao/School/5A/research_project/5A_cyano_detection_app/data/ls_data:/label-studio/data"
+      # - "/home/bao/School/5A/research_project/5A_cyano_detection_app/data/local_source:/data/local_source"
+      - "./prompt.txt:/app/prompt.txt"
+      - "./model.py:/app/model.py"
+      - "/home/bao/School/5A/research_project/5A_cyano_detection_app/exp:/data/model/exp"
+
+#http://172.17.0.1:9000
