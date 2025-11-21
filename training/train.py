@@ -19,7 +19,7 @@ def training_loop(
     optimizer: torch.optim.Optimizer,
     lr_scheduler: torch.optim.lr_scheduler,
     train_loader: torch.utils.data.DataLoader,
-    val_loader: torch.utils.data.DataLoader,
+    test_loader: torch.utils.data.DataLoader,
     config: TrainingConfig,
     logger: LoggingConfig,
 ):
@@ -42,13 +42,16 @@ def training_loop(
         start_epoch = 0
     
     logger.global_step = global_step
-    avg_loss = OnlineMovingAverage(size=5000)
+    train_avg_loss = OnlineMovingAverage(size=5000)
+    test_avg_loss = OnlineMovingAverage(size=1000)
+
+    train_avg_map = OnlineMovingAverage(size=1000)
+    test_avg_map = OnlineMovingAverage(size=1000)
 
     for epoch in range(start_epoch, config.num_epochs):
         pb = tqdm(train_loader, desc=f"Epoch {epoch+1}/{config.num_epochs}", mininterval=10)
         for images, targets in pb:
             model.train()
-            # Move batch to device
             images, targets = move_to_device(images, targets, config.device)
 
             loss_dict = model(images, targets)
@@ -68,66 +71,62 @@ def training_loop(
             if logger.global_step > swa_start and logger.global_step % 5 == 0:
                 ema_model.update_parameters(model)
             
-            avg_loss.update(losses.item()/len(images))
-            pb.set_description(f"Avg_loss: {avg_loss.mean:.3e}")
+            train_avg_loss.update(losses.item()/len(images))
+            pb.set_description(f"Avg_loss: {train_avg_loss.mean:.3e}")
             
+            ################## Calcul and Log metrics ##########################
             if ((logger.global_step + 1) % logger.log_loss_freq == 0) or (logger.global_step == 0):
-                loss_test = 0
-                num_sample_test = 0
-                # Compute validation loss and Mean Average Precision (mAP) using torchmetrics
-                # Create a fresh metric instance for this evaluation snapshot
-                val_map = MeanAveragePrecision()
                 
+                # update loss and map on test set
+                test_map = MeanAveragePrecision()
                 with torch.no_grad():
-                    for images_test, targets_test in val_loader:
-                        images_test, targets_test = move_to_device(images_test, targets_test, config.device)
-                        model.train()
-                        loss_test_dict = model(images_test, targets_test)
+                    images_test, targets_test = next(iter(test_loader))
+                    images_test, targets_test = move_to_device(images_test, targets_test, config.device)
 
-                        num_sample_test += len(images_test)
-                        loss_test += sum(loss.detach().cpu().item() for loss in loss_test_dict.values())
+                    # loss
+                    model.train()
+                    loss_test_dict = model(images_test, targets_test)
 
-                        # get predictions (list[dict]) from model(images)
-                        model.eval()
-                        preds = model(images_test)
-                        val_map.update(preds, targets_test)
+                    num_sample_test += len(images_test)
+                    loss_test = sum(loss.detach().item() for loss in loss_test_dict.values())
+                    test_avg_loss.update(loss_test/len(images_test))
 
-                        del preds,  loss_test_dict, images_test, targets_test
-                        torch.cuda.empty_cache()    
-                val_results = val_map.compute()
+                    # map
+                    model.eval()
+                    preds = model(images_test)
+                    test_map.update(preds, targets_test)
+                    test_avg_map.update(test_map.compute()['map'].item())
+
+                    del preds,  loss_test_dict, images_test, targets_test
+                    torch.cuda.empty_cache()    
                 
-                
+                # update map on train set
                 train_map = MeanAveragePrecision()
-                num_sample_train = 0
                 with torch.no_grad():
                     model.eval()
-                    while num_sample_train <= 100:
-                        images_train, targets_train = next(iter(train_loader))
-                        images_train, targets_train = move_to_device(images_train, targets_train, config.device)
-                        
-                        preds_train = model(images_train)
-                        train_map.update(preds_train, targets_train)
-                        num_sample_train += len(images_train)
+                    images_train, targets_train = next(iter(train_loader))
+                    images_train, targets_train = move_to_device(images_train, targets_train, config.device)
+                    
+                    preds_train = model(images_train)
+                    train_map.update(preds_train, targets_train)
+                    train_avg_map.update(train_map.compute()['map'].item())
 
-                        del preds_train, images_train, targets_train
-                        torch.cuda.empty_cache()
+                    del preds_train, images_train, targets_train
+                    torch.cuda.empty_cache()
                 
-                train_map_results = train_map.compute() 
-
-
+                # log metric
                 metrics = {
-                    "validation_loss": loss_test/num_sample_test,
-                    "map_val": val_results['map'].item(),
-                    "train_loss": avg_loss.mean,
-                    "map_train": train_map_results['map'].item(),
+                    "validation_loss": test_avg_loss.mean,
+                    "map_val": test_avg_map.mean,
+                    "train_loss": train_avg_loss.mean,
+                    "map_train": train_avg_map.mean,
                     "lr": optimizer.param_groups[0]["lr"],
                     "max_grad_norm": grad_norm.max()
                 }
-
-
-
                 logger.log_metrics(metrics, logger.global_step)
                 logger.log_histogram(grad_norm, "grad_norm", logger.global_step)
+
+            ############################ LOG IMAGES ####################################3
             if ((logger.global_step+1) % logger.log_image_freq == 0) or (logger.global_step == 0):
                 model.eval()
                 num_log_images = logger.num_log_images
@@ -154,39 +153,40 @@ def training_loop(
 
                 drawn_pred_train = torch.cat(drawn_pred_train, dim=0)
                 drawn_gt_train = torch.cat(drawn_gt_train, dim=0)
+
                 # Log images of validation set
-                images_val, targets_val = next(iter(val_loader))
-                images_val = images_val[:num_log_images]
-                targets_val = targets_val[:num_log_images]
-                images_val, targets_val = move_to_device(images_val, targets_val, config.device)
-                targets_pred_val = model(images_val)
-                drawn_gt_val = []
-                drawn_pred_val = []
+                images_test, targets_test = next(iter(test_loader))
+                images_test = images_test[:num_log_images]
+                targets_test = targets_test[:num_log_images]
+                images_test, targets_test = move_to_device(images_test, targets_test, config.device)
+                targets_pred_test = model(images_test)
+                drawn_gt_test = []
+                drawn_pred_test = []
                 for idx in range(num_log_images):
                     img_with_bb_pred = F.interpolate(
-                                            draw_bounding_boxes(images_val[idx], targets_pred_val[idx]['boxes'], colors='red').unsqueeze(0),
+                                            draw_bounding_boxes(images_test[idx], targets_pred_test[idx]['boxes'], colors='red').unsqueeze(0),
                                             size = logger.image_size,
                                             mode='bilinear',
                                             align_corners=False
                                             )
-                    drawn_pred_val.append(img_with_bb_pred.to("cpu"))
+                    drawn_pred_test.append(img_with_bb_pred.to("cpu"))
 
                     img_with_bb_gt = F.interpolate(
-                                            draw_bounding_boxes(images_val[idx], targets_val[idx]['boxes'], colors='red').unsqueeze(0),
+                                            draw_bounding_boxes(images_test[idx], targets_test[idx]['boxes'], colors='red').unsqueeze(0),
                                             size = logger.image_size,
                                             mode='bilinear',
                                             align_corners=False)
-                    drawn_gt_val.append(img_with_bb_gt.to("cpu"))
-                drawn_pred_val = torch.cat(drawn_pred_val, dim=0)
-                drawn_gt_val = torch.cat(drawn_gt_val, dim=0)
+                    drawn_gt_test.append(img_with_bb_gt.to("cpu"))
+                drawn_pred_test = torch.cat(drawn_pred_test, dim=0)
+                drawn_gt_test = torch.cat(drawn_gt_test, dim=0)
 
                 logger.log_images({
                     'x_train': images_train,
                     'train_gt': drawn_gt_train,
                     'train_pred': drawn_pred_train,
-                    'x_val': images_val,
-                    'val_gt': drawn_gt_val,
-                    'val_pred': drawn_pred_val
+                    'x_val': images_test,
+                    'val_gt': drawn_gt_test,
+                    'val_pred': drawn_pred_test
                 }, logger.global_step)
 
             logger.global_step += 1
@@ -202,7 +202,7 @@ def training_loop(
                 "scheduler_state_dict": lr_scheduler.state_dict() if lr_scheduler is not None else None
             }
 
-            logger.save_checkpoint(state, epoch, metric_value=avg_loss.mean)
+            logger.save_checkpoint(state, epoch, metric_value=test_avg_map.mean)
             if  epoch % logger.save_freq == 0:
                 logger.clean_old_checkpoint()
 
@@ -216,20 +216,9 @@ if __name__ == "__main__":
     from torchvision.models import  MobileNet_V3_Large_Weights
     import torch.utils.data as data
     import argparse  
-    
-    model_kwargs = dict(
-        weights=None,
-        progress=True,
-        num_classes = 21,
-        weights_backbone= MobileNet_V3_Large_Weights.DEFAULT,
-        trainable_backbone_layers=1
-    )
 
-    model = fasterrcnn_mobilenet_v3_large_320_fpn(**model_kwargs)
-    
-    print("Number of trainable parameters: ", sum([p.numel() for p in model.parameters() if p.requires_grad]))
-    print("Number of parameters: ", sum([p.numel() for p in model.parameters()]))
 
+    ######################## Training arguments ############################################
     parser = argparse.ArgumentParser(description="Training script for fasterrcnn_resnet50_fpn_v2")
     parser.add_argument("--images_train", type=str, default='data/VOC/VOCtrainval_06-Nov-2007/VOCdevkit/VOC2007/JPEGImages', help="Images to use for training")
     parser.add_argument("--annotations_train", type=str, default='data/VOC/VOCtrainval_06-Nov-2007/VOCdevkit/VOC2007/Annotations', help="Annotations to use for training")
@@ -246,28 +235,25 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     dtype = torch.float32
 
-    # Create training configuration
-    training_config = TrainingConfig()
-    training_config.update(**vars(args))
-
     abs_path = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-    # Create logging configuration
-    logger = LoggingConfig(project_dir=os.path.join(abs_path,'exp/object_detection'),
-                           exp_name=f"VOC_fasterrcnn_resnet50_fpn_v2_{args.train_dataset_size}")
-    logger.monitor_metric = "avg_loss"
-    logger.monitor_mode = "min"
-    logger.initialize()
-    logger.log_hyperparameters(vars(args), main_key="training_config")
 
+
+    #################################### DEFINE MODEL #########################
+    model_kwargs = dict(
+        weights=None,
+        progress=True,
+        num_classes = 21,
+        weights_backbone= MobileNet_V3_Large_Weights.DEFAULT,
+        trainable_backbone_layers=1
+    )
+
+    model = fasterrcnn_mobilenet_v3_large_320_fpn(**model_kwargs)
     
+    print("Number of trainable parameters: ", sum([p.numel() for p in model.parameters() if p.requires_grad]))
+    print("Number of parameters: ", sum([p.numel() for p in model.parameters()]))
 
 
-    # Create dataset and loader
-    # train_dataset = VOCDataset(os.path.join(abs_path, args.images_train),
-    #                             os.path.join(abs_path,args.annotations_train))
-    # val_dataset = VOCDataset(os.path.join(abs_path, args.images_val),
-    #                             os.path.join(abs_path,args.annotations_val))
-    # print(len(train_dataset), len(val_dataset))
+    ############################## DEFINE DATASET ###########################################
     train_dataset = VOCDataset(args.images_train, args.annotations_train)
     val_dataset = VOCDataset(args.images_val, args.annotations_val)
 
@@ -291,7 +277,19 @@ if __name__ == "__main__":
     train_loader = data.DataLoader(train_dataset, batch_size=args.batch_size, collate_fn=collate_fn,
                                    shuffle=shuffle, pin_memory=True, sampler=sampler, drop_last=False,
                                    num_workers=8)
-    val_loader = data.DataLoader(val_dataset, batch_size=max(logger.num_log_images, args.batch_size), shuffle=True, collate_fn=collate_fn, drop_last=False)
+    test_loader = data.DataLoader(val_dataset, batch_size=args.batch_size, shuffle=True, collate_fn=collate_fn, drop_last=False)
+
+
+    ################################ Training and Saving Configuration #####################
+    training_config = TrainingConfig()
+    training_config.update(**vars(args))
+
+    logger = LoggingConfig(project_dir=os.path.join(abs_path,'exp/object_detection'),
+                           exp_name=f"VOC_fasterrcnn_resnet50_fpn_v2_{args.train_dataset_size}")
+    logger.monitor_metric = "val_avg_map"
+    logger.monitor_mode = "min"
+    logger.initialize()
+    logger.log_hyperparameters(vars(args), main_key="training_config")
 
     # Save checkpoint every 200 steps
     num_step_per_epoch = max(len(train_loader), 1)
@@ -305,7 +303,8 @@ if __name__ == "__main__":
     optimizer = optim_config.get_optimizer(model)
     lr_scheduler = optim_config.get_scheduler(optimizer)
 
-    training_loop(model, optimizer, lr_scheduler, train_loader, val_loader, training_config, logger)
+    ########################### LANCE TRAINING LOOP ##############################################
+    training_loop(model, optimizer, lr_scheduler, train_loader, test_loader, training_config, logger)
 
 
 
