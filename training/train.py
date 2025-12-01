@@ -6,7 +6,7 @@ from torchvision.utils import draw_bounding_boxes
 from torchvision.transforms import v2
 from torchmetrics.detection.mean_ap import MeanAveragePrecision
 from tqdm import tqdm
-from utils import OptimizationConfig, TrainingConfig, LoggingConfig, OnlineMovingAverage, ema_avg_fn, move_to_device
+from .utils import OptimizationConfig, TrainingConfig, LoggingConfig, OnlineMovingAverage, ema_avg_fn, move_to_device
 from typing import Callable
 from torch.optim.swa_utils import AveragedModel
 import os
@@ -212,6 +212,8 @@ def training_loop(
                 
             if  epoch % logger.save_freq == 0:
                 logger.clean_old_checkpoint()
+        
+        logger.clean_old_tensorboard_events()
 
                 
 
@@ -298,7 +300,7 @@ if __name__ == "__main__":
     logger = LoggingConfig(project_dir=os.path.join(abs_path,'exp/object_detection'),
                            exp_name=f"VOC_fasterrcnn_resnet50_fpn_v2_{args.train_dataset_size}")
     logger.monitor_metric = "val_avg_map" if test_loader is not None else "train_avg_map"
-    logger.monitor_mode = "min"
+    logger.monitor_mode = "max"
     logger.initialize()
     logger.log_hyperparameters(vars(args), main_key="training_config")
 

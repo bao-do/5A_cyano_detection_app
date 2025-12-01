@@ -360,6 +360,42 @@ class LoggingConfig:
             step = self.global_step if step is None else step
             self.writer.add_histogram(name, values, step)
     
+    
+    def clean_old_tensorboard_events(self,keep=5):
+        """
+        Keeps only the `keep` most recent TensorBoard event files in `log_dir`.
+        Deletes older ones.
+        """
+        # Match TensorBoard event files
+        event_files = glob.glob(os.path.join(self.tensorboard_dir, "events.out.tfevents.*"))
+
+        if len(event_files) <= keep:
+            print(f"Only {len(event_files)} event files, nothing to delete.")
+            return
+
+        def get_timestamp(file):
+            base = os.path.basename(file)
+            try:
+                ts = int(base.split(".")[2])
+            except Exception:
+                ts = 0  # fallback
+            return ts
+
+        event_files_sorted = sorted(event_files, key=get_timestamp, reverse=True)
+
+        # Keep latest `keep` files
+        to_delete = event_files_sorted[keep:]
+
+        for file in to_delete:
+            try:
+                os.remove(file)
+                print(f"Deleted old event file: {file}")
+            except Exception as e:
+                print(f"Failed to delete {file}: {e}")
+
+        print(f"Kept {keep} latest event files.")
+
+    
     def clean_old_checkpoint(self):
         """
         Keep only the top checkpoints based on the monitored metric

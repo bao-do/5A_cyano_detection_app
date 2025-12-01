@@ -471,5 +471,21 @@ for i in range(size):
                 os.path.join(target_annot_dir, annot_filename))
 
 # %%
+from label_studio_sdk import LabelStudio, Client
+MAIN_PROJECT_ID = 1
 
 
+LABEL_STUDIO_HOST = 'http://0.0.0.0:8080'
+LABEL_STUDIO_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6ODA3MDk2NTE4MiwiaWF0IjoxNzYzNzY1MTgyLCJqdGkiOiIyMjc1ZDhjZjE5MGU0Y2M0YmMzYWJiN2VkYjRhMDEyMSIsInVzZXJfaWQiOjF9.pAMcDVKI7yCDvkYvP6mxJtoCN8GCeOAPGzd_i2fb-tc"
+VAL_PROJECT_ID = 2
+
+ls = LabelStudio(base_url=LABEL_STUDIO_HOST, api_key=LABEL_STUDIO_API_KEY)
+# ls = Client(url=LABEL_STUDIO_HOST, api_key=LABEL_STUDIO_API_KEY)
+main_project = ls.projects.get(id=MAIN_PROJECT_ID)
+# tasks_train = main_project.tasks
+
+
+
+# %%
+from utils import make_json_safe
+# %%

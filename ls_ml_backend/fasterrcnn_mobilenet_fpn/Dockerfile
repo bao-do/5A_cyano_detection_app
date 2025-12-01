@@ -21,24 +21,24 @@ RUN --mount=type=cache,target="/var/cache/apt",sharing=locked \
     apt-get autoremove -y
 
 # install base requirements
-COPY model_backend/label-studio-ml-backend/my_ml_backend/requirements-base.txt .
+COPY ls_ml_backend/fasterrcnn_mobilenet_fpn/requirements-base.txt .
 RUN --mount=type=cache,target=${PIP_CACHE_DIR},sharing=locked \
     pip install -r requirements-base.txt
 
 # install custom requirements
-COPY model_backend/label-studio-ml-backend/my_ml_backend/requirements.txt .
+COPY ls_ml_backend/fasterrcnn_mobilenet_fpn/requirements.txt .
 RUN --mount=type=cache,target=${PIP_CACHE_DIR},sharing=locked \
     pip install -r requirements.txt
 
 # install test requirements if needed
-COPY model_backend/label-studio-ml-backend/my_ml_backend/requirements-test.txt .
+COPY ls_ml_backend/fasterrcnn_mobilenet_fpn/requirements-test.txt .
 # build only when TEST_ENV="true"
 RUN --mount=type=cache,target=${PIP_CACHE_DIR},sharing=locked \
     if [ "$TEST_ENV" = "true" ]; then \
       pip install -r requirements-test.txt; \
     fi
 
-COPY model_backend/label-studio-ml-backend/my_ml_backend/ .
+COPY ls_ml_backend/fasterrcnn_mobilenet_fpn .
 COPY training /app/training
 COPY dataset /app/dataset
 COPY utils /app/utils

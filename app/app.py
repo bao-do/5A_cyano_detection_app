@@ -1,8 +1,10 @@
 #%%
 import sys, os
-sys.path.append("..")
-from training import LoggingConfig
+folders = [f for f in os.listdir("/app")]
+print("folder list: ", folders)
+# sys.path.append("..")
 from dataset import VOCDataset
+from training import LoggingConfig
 from NNModels import FasterRCNNMobile
 import dash
 from dash.dependencies import Input, Output, State
@@ -25,8 +27,11 @@ from uuid import uuid4
 
 from label_studio_sdk import LabelStudio
 
-LABEL_STUDIO_URL="http://localhost:8080"
-LABEL_STUDIO_API_KEY= "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6ODA3MDk2NTE4MiwiaWF0IjoxNzYzNzY1MTgyLCJqdGkiOiIyMjc1ZDhjZjE5MGU0Y2M0YmMzYWJiN2VkYjRhMDEyMSIsInVzZXJfaWQiOjF9.pAMcDVKI7yCDvkYvP6mxJtoCN8GCeOAPGzd_i2fb-tc"
+# LABEL_STUDIO_URL="http://localhost:8080"
+# LABEL_STUDIO_API_KEY= "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6ODA3MDk2NTE4MiwiaWF0IjoxNzYzNzY1MTgyLCJqdGkiOiIyMjc1ZDhjZjE5MGU0Y2M0YmMzYWJiN2VkYjRhMDEyMSIsInVzZXJfaWQiOjF9.pAMcDVKI7yCDvkYvP6mxJtoCN8GCeOAPGzd_i2fb-tc"
+LABEL_STUDIO_URL = os.getenv('LABEL_STUDIO_URL','http://label-studio:8080')
+LABEL_STUDIO_API_KEY= os.getenv('LABEL_STUDIO_API_KEY','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6ODA3MDk2NTE4MiwiaWF0IjoxNzYzNzY1MTgyLCJqdGkiOiIyMjc1ZDhjZjE5MGU0Y2M0YmMzYWJiN2VkYjRhMDEyMSIsInVzZXJfaWQiOjF9.pAMcDVKI7yCDvkYvP6mxJtoCN8GCeOAPGzd_i2fb-tc')
+
 PROJECT_ID = 1
 
 ls = LabelStudio(
@@ -51,7 +56,8 @@ def hex_to_rgb(hex_color):
     return f"rgb({r},{g},{b})"
 
 file_dir = os.path.dirname(os.path.abspath(__file__))
-project_dir = os.path.join(file_dir, "..")
+# project_dir = os.path.join(file_dir, "..")/
+project_dir = file_dir
 source_storage_dir = os.path.join(project_dir, "data/ls_data/source_storage", str(PROJECT_ID))
 exp_dir = os.path.join(project_dir,"exp/object_detection")
 
@@ -70,7 +76,7 @@ MODEL = FasterRCNNMobile(score_threshold=DEFAULT_SCORE_THRESHOLD,
                          device=DEVICE)
 
 # Load checkpoint
-state = LOGGER.load_checkpoint()
+state = LOGGER.load_latest_checkpoint()
 MODEL.model.load_state_dict(state['model_state_dict'])
 
 
@@ -486,7 +492,7 @@ def get_prediction(n_clicks, iou_threshold, score_threshold, image_array, figdic
     if image_array is None:
         raise PreventUpdate
     image_numpy = np.array(image_array, dtype=np.float32)
-    image_torch = torch.from_numpy(image_numpy).permute(2,0,1).float()
+    image_torch = torch.from_numpy(image_numpy).permute(2,0,1).float().to(DEVICE)
     max_pixel = image_torch.max()
     image_torch = image_torch/max_pixel
     with torch.no_grad():
@@ -673,4 +679,4 @@ app.layout = dbc.Container(
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=5000,debug=True)

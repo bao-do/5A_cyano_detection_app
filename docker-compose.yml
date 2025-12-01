@@ -1,0 +1,88 @@
+services:
+  label-studio:
+    container_name: label-studio
+    image: heartexlabs/label-studio:latest
+    ports:
+      - 8080:8080
+    environment:
+      - LABEL_STUDIO_LOCAL_FILES_SERVING_ENABLED=true
+      - LABEL_STUDIO_LOCAL_FILES_DOCUMENT_ROOT=/label-studio/data
+    volumes:
+      - ./data/ls_data:/label-studio/data
+      - ./data/ls_data/source_storage:/label-studio/data/source_storage
+      - ./data/ls_data/target_storage:/label-studio/data/target_storage
+    stdin_open: true
+    tty: true
+
+
+  ml-backend:
+    container_name: ml-backend-fasterrcnn
+    build: 
+      context: .
+      dockerfile: ls_ml_backend/fasterrcnn_mobilenet_fpn/Dockerfile
+      args:
+        TEST_ENV: ${TEST_ENV}
+    environment:
+      - LOG_LEVEL=DEBUG
+      - WORKERS=1
+      - THREADS=8
+      - MODEL_DIR=/data/model
+      - LABEL_STUDIO_URL=http://label-studio:8080
+      - LABEL_STUDIO_API_KEY=${LABEL_STUDIO_API_KEY}
+      - NVIDIA_VISIBLE_DEVICES=all
+    gpus: all
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+    ports:
+      - "9000:9000"
+    volumes:
+      - ./data/server:/data/server
+      - ./data/ml-backend/fasterrcnn:/data/model/fasterrcnn
+      - ./data/ls_data:/data/ls_data:ro
+      - ./ls_ml_backend/fasterrcnn_mobilenet_fpn/model.py:/app/model.py
+      - ./exp:/data/model/exp
+    depends_on:
+      - label-studio
+    
+  ui-app:
+    container_name: ui-app
+    build: 
+      context: .
+      dockerfile: app/Dockerfile
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./app/app.py:/app/app.py
+      - ./data/ls_data/source_storage/1:/app/data/ls_data/source_storage/1
+    environment:
+      - LABEL_STUDIO_URL=http://label-studio:8080
+      - LABEL_STUDIO_API_KEY=${LABEL_STUDIO_API_KEY}
+      - NVIDIA_VISIBLE_DEVICES=all
+    gpus: all
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+    depends_on:
+      - label-studio
+
+  reverse-proxy:
+    image: nginx:latest
+    container_name: reverse-proxy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - ui-app
+      - ml-backend
+      - label-studio

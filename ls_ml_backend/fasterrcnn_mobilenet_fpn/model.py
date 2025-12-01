@@ -6,8 +6,8 @@ from training import (LoggingConfig,
                       OptimizationConfig,
                       OnlineMovingAverage,
                       TrainingConfig,
-                      training_loop,
-                      move_to_device)
+                      training_loop
+                      )
 from dataset import VOCDataset, collate_fn
 from NNModels import FasterRCNNMobile
 from uuid import uuid4
@@ -18,20 +18,16 @@ from torchvision.models import MobileNet_V3_Large_Weights
 import torchvision.transforms as T
 from torchvision import tv_tensors
 from torchvision.transforms import v2
-from torchvision.io import decode_image
 from typing import List, Dict, Optional
 from label_studio_ml.model import LabelStudioMLBase
 from label_studio_ml.response import ModelResponse
 from label_studio_sdk import LabelStudio, Client
 from PIL import Image
 
-
-
 #%%
 MAIN_PROJECT_ID = 1
 
 VAL_PROJECT_ID = 2
-VAL_PROJECT_API = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6ODA3MDk2NTE4MiwiaWF0IjoxNzYzNzY1MTgyLCJqdGkiOiIyMjc1ZDhjZjE5MGU0Y2M0YmMzYWJiN2VkYjRhMDEyMSIsInVzZXJfaWQiOjF9.pAMcDVKI7yCDvkYvP6mxJtoCN8GCeOAPGzd_i2fb-tc"
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 DTYPE = torch.float32
@@ -39,6 +35,8 @@ NUM_STEPS = 1000
 BATCH_SIZE = 100
 NUM_EPOCHS = NUM_STEPS//BATCH_SIZE + 1
 FREQ = 200
+
+
 
 
 
@@ -51,8 +49,8 @@ CONFIG = LoggingConfig(project_dir='/data/model/exp/object_detection',
 
 
 logger = logging.getLogger(__name__)
-CONFIG.monitor_metric = "avg_loss"
-CONFIG.monitor_mode = "min"
+CONFIG.monitor_metric = "val_avg_map"
+CONFIG.monitor_mode = "max"
 CONFIG.save_freq = FREQ
 CONFIG.val_epoch_freq = FREQ
 CONFIG.log_loss_freq = 5
@@ -71,8 +69,8 @@ CONFIG.log_image_freq = 200
 MODEL = FasterRCNNMobile(score_threshold=0.8)
 TRANSFORM = MODEL.transform
 
-state = CONFIG.load_checkpoint()
-# if state is not None:
+state = CONFIG.load_latest_checkpoint()
+# if state is not None
 MODEL.model.load_state_dict(state['model_state_dict'])
 
 MODEL.eval()
@@ -116,8 +114,6 @@ class LSDetectionDataset(Dataset):
         return img, {'boxes':torch.tensor(boxes), 'labels': torch.tensor(labels)}
 
 
-
-
 class FasterRCNN(LabelStudioMLBase):
     """Custom ML Backend model
     """
@@ -125,7 +121,7 @@ class FasterRCNN(LabelStudioMLBase):
     def setup(self):
         """Configure any parameters of your model here
         """
-        self.LABEL_STUDIO_HOST = os.getenv('LABEL_STUDIO_URL','http://localhost:8080')
+        self.LABEL_STUDIO_HOST = os.getenv('LABEL_STUDIO_URL','http://label-studio:8080')
         self.LABEL_STUDIO_API_KEY = os.getenv('LABEL_STUDIO_API_KEY')
         self.START_TRAINING_EACH_N_UPDATES = 100
         self.set("model_version", f"{self.__class__.__name__}")
@@ -150,7 +146,7 @@ class FasterRCNN(LabelStudioMLBase):
             print("UPLOADED FILE")
             project_id = url.split("/")[-2]
             filename = os.path.basename(url)
-            filepath = os.path.join("/label-studio/data/media/upload",
+            filepath = os.path.join("/data/ls_data/media/upload",
                                     project_id,
                                     filename)
             print(f"file path: {filepath}")
@@ -162,7 +158,7 @@ class FasterRCNN(LabelStudioMLBase):
         # "/data/local-files/?d=local_source/000018.jpg"
         else:
             print("LOCAL STORAGE FILE")
-            filepath = os.path.join("/label-studio/data", url.split("?d=")[1])
+            filepath = os.path.join("/data/ls_data", url.split("?d=")[1])
             print(f"file path: {filepath}")
             if os.path.exists(filepath):
                 print(
@@ -294,32 +290,43 @@ class FasterRCNN(LabelStudioMLBase):
 
         # use cache to retrieve the data from the previous fit() runs
         model_version = self.get('model_version')
-        print(f'Old model version: {model_version}')
+        logger.debug(f'model version: {model_version}')
 
         if event not in ('ANNOTATION_CREATED', 'ANNOTATION_UPDATED', 'START_TRAINING'):
             logger.info(f"skip training: event {event} is not supported")
             return
         
-        project_id = (
+        project = (
             data.get("project") or
             data.get("annotation", {}).get("project") or
             data.get("task", {}).get("project")
         )
-
+        project_id = project['id']
         logger.debug(f"Project {project_id}")
+        if project_id != MAIN_PROJECT_ID:
+            logger.info("Skip training: fit method is only supported for the main project.")
+            return
+
+        logger.debug(f"host:{self.LABEL_STUDIO_HOST}")
+        logger.debug(f"API:{self.LABEL_STUDIO_API_KEY}")
 
         ls = Client(url=self.LABEL_STUDIO_HOST, api_key=self.LABEL_STUDIO_API_KEY)
-        project = ls.get_project(id=project_id)
-        tasks = project.get_labeled_tasks()
+        main_project = ls.get_project(id=MAIN_PROJECT_ID)
+        tasks_train = main_project.get_labeled_tasks()
+        
+        test_project = ls.get_project(id=VAL_PROJECT_ID)
+        tasks_test = test_project.get_labeled_tasks()
 
-        logger.debug(f"Downloaded {len(tasks)} labeled tasks from Label Studio")
-        logger.debug(f"First task example format: {tasks[0]}")
+        logger.debug(f"Train set size: {len(tasks_train)}")
+        logger.debug(f"Test set size: {len(tasks_test)}")
         
         # if len(tasks) % self.START_TRAINING_EACH_N_UPDATES != 0 and event != 'START_TRAINING':
         if event != 'START_TRAINING':
             logger.debug(f"skip training: the number of tasks is not divisible by {self.START_TRAINING_EACH_N_UPDATES}")
             return
         
+        label_config = main_project.get_label_config()
+
         train_config = {'device': DEVICE,
                      'dtype': DTYPE,
                      'num_epochs': NUM_EPOCHS,
@@ -332,9 +339,9 @@ class FasterRCNN(LabelStudioMLBase):
         
         from_name, to_name, value = self.get_first_tag_occurence('RectangleLabels', 'Image')
 
-        raw_dataset = self.parse_ls_detection_tasks(tasks, value=value)
+        raw_dataset_train = self.parse_ls_detection_tasks(tasks_train, value=value)
+        train_ds = LSDetectionDataset(raw_dataset_train, classes=VOCDataset.voc_cls, transform=TRANSFORM)
 
-        train_ds = LSDetectionDataset(raw_dataset, classes=VOCDataset.voc_cls, transform=TRANSFORM)
         if len(train_ds) < BATCH_SIZE:
             sampler = data.RandomSampler(train_ds, replacement=True, num_samples=BATCH_SIZE)
             shuffle = False
@@ -349,12 +356,12 @@ class FasterRCNN(LabelStudioMLBase):
                               drop_last=False,
                               collate_fn=collate_fn)
         
-        val_ds = VOCDataset(images_dir='/data/validation_data/JPEGImages',
-                            annotation_dir='/data/validation_data/Annotations')
+        raw_dataset_test = self.parse_ls_detection_tasks(tasks_test, value=value)
+        test_ds = LSDetectionDataset(raw_dataset_test, classes=VOCDataset.voc_cls, transform=TRANSFORM)
         
-        val_loader = DataLoader(val_ds,
-                                batch_size=BATCH_SIZE,
-                                shuffle=False,
+        test_loader = DataLoader(test_ds,
+                                batch_size=min(BATCH_SIZE, len(test_ds)),
+                                shuffle=True,
                                 pin_memory=True,
                                 drop_last=False,
                                 collate_fn=collate_fn)
@@ -363,14 +370,9 @@ class FasterRCNN(LabelStudioMLBase):
         optimizer = optim_config.get_optimizer(MODEL.model)
         lr_scheduler = optim_config.get_scheduler(optimizer)
 
-        training_loop(MODEL.model, optimizer, lr_scheduler, train_loader, val_loader, TRAIN_CONFIG, CONFIG)
-        
-        
+        CONFIG.initialize()
 
-
-        # store new data to the cache
-        self.set('model_version', 'my_new_model_version')
-        print(f'New model version: {self.get("model_version")}')
+        training_loop(MODEL.model, optimizer, lr_scheduler, train_loader, test_loader, TRAIN_CONFIG, CONFIG)
 
         print('fit() completed successfully.')
 
