@@ -29,7 +29,7 @@ def training_loop(
     model = model.to(config.device)
     ema_model = AveragedModel(model, avg_fn=ema_avg_fn, use_buffers=True)
     ema_model = ema_model.to(config.device)
-    state = logger.load_lastest_checkpoint()
+    state = logger.load_latest_checkpoint()
     if state is not None:
         model.load_state_dict(state['model_state_dict'])
         optimizer.load_state_dict(state['optimizer_state_dict'])
@@ -48,6 +48,7 @@ def training_loop(
     if test_loader is not None:
         test_avg_loss = OnlineMovingAverage(size=1000)
         test_avg_map = OnlineMovingAverage(size=1000)
+    
 
     for epoch in range(start_epoch, config.num_epochs):
         pb = tqdm(train_loader, desc=f"Epoch {epoch+1}/{config.num_epochs}", mininterval=10)
@@ -137,9 +138,10 @@ def training_loop(
                 targets_pred_train = model(images_train)
                 drawn_gt_train = []
                 drawn_pred_train = []
+                images_train = [(img*255).clamp(0,255).to(torch.uint8) for img in images_train]
                 for idx in range(num_log_images):
                     img_with_bb_pred = F.interpolate(
-                                            draw_bounding_boxes(images_train[idx], targets_pred_train[idx]['boxes'], colors='red').unsqueeze(0) if targets_pred_train[idx]['boxes'].shape[0] != 0 else images_train[idx].unsqueeze(0),
+                                            draw_bounding_boxes(images_train[idx],targets_pred_train[idx]['boxes'], colors='red').unsqueeze(0) if targets_pred_train[idx]['boxes'].shape[0] != 0 else images_train[idx].unsqueeze(0),
                                             size = logger.image_size,
                                             mode='bilinear',
                                             align_corners=False)
@@ -164,6 +166,7 @@ def training_loop(
                     targets_pred_test = model(images_test)
                     drawn_gt_test = []
                     drawn_pred_test = []
+                    images_test = [(img*255).clamp(0,255).to(torch.uint8) for img in images_test]
                     for idx in range(num_log_images):
                         img_with_bb_pred = F.interpolate(
                                                 draw_bounding_boxes(images_test[idx], targets_pred_test[idx]['boxes'], colors='red').unsqueeze(0) if targets_pred_test[idx]['boxes'].shape[0] != 0 else images_test[idx].unsqueeze(0),
@@ -213,7 +216,7 @@ def training_loop(
             if  epoch % logger.save_freq == 0:
                 logger.clean_old_checkpoint()
         
-        logger.clean_old_tensorboard_events()
+    logger.clean_old_tensorboard_events()
 
                 
 

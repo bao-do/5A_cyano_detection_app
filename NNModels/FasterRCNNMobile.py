@@ -90,9 +90,9 @@ class FasterRCNNMobile(torch.nn.Module):
             
 
             predictions.append({
-                'boxes': torch.cat(boxes_after_nms, dim=0),
-                'labels': torch.tensor(labels_after_nms),
-                'scores': torch.tensor(scores_after_nms)
+                'boxes': torch.cat(boxes_after_nms, dim=0) if len(boxes_after_nms) != 0 else boxes_after_nms,
+                'labels': torch.tensor(labels_after_nms) if len(labels_after_nms) != 0 else labels_after_nms,
+                'scores': torch.tensor(scores_after_nms) if len(scores_after_nms) != 0 else scores_after_nms
             })
         return predictions
             

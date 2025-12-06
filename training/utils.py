@@ -199,6 +199,15 @@ class LoggingConfig:
         with open(self.metadata_file, "w") as f:
             json.dump(metadata, f, indent=4)
     
+    def load_metadata(self):
+        """Load metadata about the training process"""
+        if os.path.exists(self.metadata_file):
+            with open(self.metadata_file, "r") as f:
+                metadata = json.load(f)
+            return metadata
+        else:
+            warnings.warn("No metadata file found, starting from scratch.")
+    
     def get_checkpoint_path(self, epoch, metric_value=None):
         """
         Return checkpoint path based on epoch and metric value

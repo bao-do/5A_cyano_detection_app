@@ -155,7 +155,9 @@ def empty_fig():
 
 
 externel_stylesheets = [dbc.themes.BOOTSTRAP]
-app = dash.Dash(__name__, external_stylesheets=externel_stylesheets)
+app = dash.Dash(__name__,
+                external_stylesheets=externel_stylesheets,
+                requests_pathname_prefix='/app/')
 
 server = app.server
 
@@ -679,4 +681,8 @@ app.layout = dbc.Container(
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000,debug=True)
+    app.run(host="0.0.0.0",
+            port=5000,
+            debug=False,
+            use_reloader=False,
+            dev_tools_hot_reload=False)

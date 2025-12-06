@@ -471,21 +471,106 @@ for i in range(size):
                 os.path.join(target_annot_dir, annot_filename))
 
 # %%
-from label_studio_sdk import LabelStudio, Client
+from label_studio_sdk import LabelStudio
 MAIN_PROJECT_ID = 1
 
 
 LABEL_STUDIO_HOST = 'http://0.0.0.0:8080'
-LABEL_STUDIO_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6ODA3MDk2NTE4MiwiaWF0IjoxNzYzNzY1MTgyLCJqdGkiOiIyMjc1ZDhjZjE5MGU0Y2M0YmMzYWJiN2VkYjRhMDEyMSIsInVzZXJfaWQiOjF9.pAMcDVKI7yCDvkYvP6mxJtoCN8GCeOAPGzd_i2fb-tc"
+LABEL_STUDIO_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6ODA3MjEyOTQyNiwiaWF0IjoxNzY0OTI5NDI2LCJqdGkiOiIxZmJlNDczNDljNzM0MzkzOTc5OTNkZWMxMmUwNmQzNSIsInVzZXJfaWQiOjF9.AsGLtLl9VehwHK1VeFPHfCOoYuUZ6oEG2DmRRG9uP6E"
 VAL_PROJECT_ID = 2
 
 ls = LabelStudio(base_url=LABEL_STUDIO_HOST, api_key=LABEL_STUDIO_API_KEY)
 # ls = Client(url=LABEL_STUDIO_HOST, api_key=LABEL_STUDIO_API_KEY)
-main_project = ls.projects.get(id=MAIN_PROJECT_ID)
-# tasks_train = main_project.tasks
-
+# main_project = ls.get_project(id=MAIN_PROJECT_ID)
+tasks= ls.tasks.list(project=MAIN_PROJECT_ID, only_annotated=True)
+tasks = list(tasks)
+# %%
+tasks_completed = []
+for t in tasks:
+    if len(t.annotations) > 0:
+        tasks_completed.append(t)
+print(len(tasks_completed))
 
 
 # %%
-from utils import make_json_safe
+def parse_ls_detection_tasks(tasks: list[dict], value: str="image" ):
+        dataset = []
+        for task in tasks:
+            if len(task.annotations) == 0:
+                continue
+            image_url = task.data['image']
+            result = task.annotations[0]['result']
+            image_width = result[0]["original_width"]
+            image_height = result[0]["original_height"]
+            boxes = []
+            labels = []
+            for ann in result:
+                x1, y1 = ann["value"]["x"], ann["value"]["y"]
+                width, height = ann["value"]["width"], ann["value"]["height"]
+                x2, y2 = min(100, x1 + width), min(100,y1 + height)
+
+                x1, y1 = x1*image_width/100, y1*image_height/100
+                x2, y2 = x2*image_width/100, y2*image_height/100
+
+
+                boxes.append([int(x1), int(y1), int(x2), int(y2)])
+
+                label_id = ann["value"]["rectanglelabels"][0]
+                labels.append(label_id)
+            dataset.append({
+                "original_width": image_width,
+                "original_height": image_height,
+                "image_path": image_url,
+                "annotation": {
+                    "boxes": boxes,
+                    "labels": labels
+                }
+            })
+        return dataset
+
+ds = parse_ls_detection_tasks(tasks)
+# %%
+class LSDetectionDataset(Dataset):
+    def __init__(self, raw_data: list[dict], classes: list[str]=VOCDataset.voc_cls):
+        cls_to_id = {name: i + 1 for i,name in enumerate(classes)}
+        self.classes = classes
+        self.cls_to_id = cls_to_id
+        self.raw_data = raw_data
+
+
+    def __len__(self):
+        return len(self.raw_data)
+
+
+    def __getitem__(self, index: int):
+        chosen_data = self.raw_data[index]
+
+        img_path = chosen_data["image_path"]
+        img = Image.open(img_path).convert("RGB")
+
+        boxes = chosen_data["annotation"]["boxes"]
+        boxes = tv_tensors.BoundingBoxes(boxes,
+                                         format="XYXY",
+                                         canvas_size=(chosen_data['original_width'],
+                                                      chosen_data['original_height']))
+        
+        if self.transform is not None:
+            img, boxes = self.transform(img, boxes)
+        else:
+            img = v2.ToTensor()(img)
+        
+        labels = [self.cls_to_id(label) for label in chosen_data["annotation"]["labels"]]
+        
+        return img, {'boxes':torch.tensor(boxes), 'labels': torch.tensor(labels)}
+    
+#%%
+from multiprocessing import Process
+
+def f():
+    print("Hello from child process")
+
+p = Process(target=f)
+p.start()   # starts a new process
+p.join()    # wait for it to finish
+
 # %%

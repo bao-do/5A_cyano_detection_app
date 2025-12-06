@@ -1,4 +1,6 @@
 #%%
+import torch.multiprocessing as mp
+mp.set_start_method("spawn", force=True)
 import os, sys
 abs_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../"))
 from utils import make_json_safe
@@ -21,7 +23,7 @@ from torchvision.transforms import v2
 from typing import List, Dict, Optional
 from label_studio_ml.model import LabelStudioMLBase
 from label_studio_ml.response import ModelResponse
-from label_studio_sdk import LabelStudio, Client
+from label_studio_sdk import LabelStudio
 from PIL import Image
 
 #%%
@@ -32,7 +34,7 @@ VAL_PROJECT_ID = 2
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 DTYPE = torch.float32
 NUM_STEPS = 1000
-BATCH_SIZE = 100
+BATCH_SIZE = 10
 NUM_EPOCHS = NUM_STEPS//BATCH_SIZE + 1
 FREQ = 200
 
@@ -56,20 +58,14 @@ CONFIG.val_epoch_freq = FREQ
 CONFIG.log_loss_freq = 5
 CONFIG.log_image_freq = 200
 
-# model_kwargs= dict(
-#         weights=None,
-#         progress=True,
-#         num_classes = 21,
-#         weights_backbone= MobileNet_V3_Large_Weights.DEFAULT,
-#         trainable_backbone_layers=1
-#     )
-
-# MODEL = fasterrcnn_mobilenet_v3_large_320_fpn(**model_kwargs)
+TRAIN_CONFIG.device = DEVICE
+TRAIN_CONFIG.dtype = DTYPE
 
 MODEL = FasterRCNNMobile(score_threshold=0.8)
+MODEL.to(TRAIN_CONFIG.device)
 TRANSFORM = MODEL.transform
 
-state = CONFIG.load_latest_checkpoint()
+state = CONFIG.load_best_checkpoint()
 # if state is not None
 MODEL.model.load_state_dict(state['model_state_dict'])
 
@@ -81,11 +77,7 @@ class LSDetectionDataset(Dataset):
         self.classes = classes
         self.cls_to_id = cls_to_id
         self.raw_data = raw_data
-        # if transform is None:
-        #     transform= v2.Compose([
-        #         v2.ToImage(),
-        #         v2.ToDtype(torch.float32, scale=True),
-        #     ])
+
         self.transform = transform
 
     def __len__(self):
@@ -109,7 +101,7 @@ class LSDetectionDataset(Dataset):
         else:
             img = v2.ToTensor()(img)
         
-        labels = [self.cls_to_id(label) for label in chosen_data["annotation"]["labels"]]
+        labels = [self.cls_to_id[label] for label in chosen_data["annotation"]["labels"]]
         
         return img, {'boxes':torch.tensor(boxes), 'labels': torch.tensor(labels)}
 
@@ -125,10 +117,11 @@ class FasterRCNN(LabelStudioMLBase):
         self.LABEL_STUDIO_API_KEY = os.getenv('LABEL_STUDIO_API_KEY')
         self.START_TRAINING_EACH_N_UPDATES = 100
         self.set("model_version", f"{self.__class__.__name__}")
+        self.device = TRAIN_CONFIG.device
 
     
     def get_local_path(self, url, project_dir=None, ls_host=None, ls_access_token=None, task_id=None, *args, **kwargs):
-        print(f"------------------Find local path of {url}" )
+        # print(f"------------------Find local path of {url}" )
         
 
         if url.startswith("upload") or url.startswith("/upload"):
@@ -139,31 +132,31 @@ class FasterRCNN(LabelStudioMLBase):
         project_id = url.split("/")[2]
         filename = os.path.basename(url)
 
-        print(f"is_uploaded_file? {is_uploaded_file}")
+        # print(f"is_uploaded_file? {is_uploaded_file}")
 
         # /data/upload/2/7377a21f-000012.jpg
         if is_uploaded_file:
-            print("UPLOADED FILE")
+            # print("UPLOADED FILE")
             project_id = url.split("/")[-2]
             filename = os.path.basename(url)
             filepath = os.path.join("/data/ls_data/media/upload",
                                     project_id,
                                     filename)
-            print(f"file path: {filepath}")
+            # print(f"file path: {filepath}")
             if os.path.exists(filepath):
-                print(f"Uploaded file: Path exists in image_dir: {filepath}")
+                # print(f"Uploaded file: Path exists in image_dir: {filepath}")
                 return filepath
             else:
                 raise FileNotFoundError(f"Uploaded file not found at {filepath}.")
         # "/data/local-files/?d=local_source/000018.jpg"
         else:
-            print("LOCAL STORAGE FILE")
+            # print("LOCAL STORAGE FILE")
             filepath = os.path.join("/data/ls_data", url.split("?d=")[1])
-            print(f"file path: {filepath}")
+            # print(f"file path: {filepath}")
             if os.path.exists(filepath):
-                print(
-                    f"Local Storage file path exists locally, use it as a local file: {filepath}"
-                )
+                # print(
+                #     f"Local Storage file path exists locally, use it as a local file: {filepath}"
+                # )
 
                 return filepath
             else:
@@ -179,23 +172,12 @@ class FasterRCNN(LabelStudioMLBase):
                 ModelResponse(predictions=predictions) with
                 predictions: [Predictions array in JSON format](https://labelstud.io/guide/export.html#Label-Studio-JSON-format-of-annotated-tasks)
         """
-        # print(f'''\
-        # Run prediction on {tasks}
-        # Received context: {context}
-        # Project ID: {self.project_id}
-        # Label config: {self.label_CONFIG}
-        # Parsed JSON Label config: {self.parsed_label_CONFIG}
-        # Extra params: {self.extra_params}''')
-
-        # example for resource downloading from Label Studio instance,
-        # you need to set env vars LABEL_STUDIO_URL and LABEL_STUDIO_API_KEY
         from_name, to_name, value = self.get_first_tag_occurence('RectangleLabels', 'Image')
         image_url = tasks[0]["data"][value]
         local_path = self.get_local_path(image_url)
-        image_tensor = TRANSFORM(Image.open(local_path).convert("RGB"))
+        image_tensor = TRANSFORM(Image.open(local_path).convert("RGB")).to(TRAIN_CONFIG.device)
         with torch.no_grad():
             targets_pred = MODEL.predict(image_tensor)[0]
-        
         results = []
         original_h, original_w = image_tensor.shape[-2:]
         print(f"Image of size: {original_h}x{original_w}")
@@ -241,11 +223,12 @@ class FasterRCNN(LabelStudioMLBase):
     def parse_ls_detection_tasks(self, tasks: list[dict], value: str="image" ):
             dataset = []
             for task in tasks:
-                
-                image_url = task["data"][value]
+                if len(task.annotations) == 0:
+                    continue
+                image_url = task.data[value]
                 image_path = self.get_local_path(image_url)
 
-                result = task["annotations"][0]["result"]
+                result = task.annotations[0]["result"]
                 image_width = result[0]["original_width"]
                 image_height = result[0]["original_height"]
                 boxes = []
@@ -290,19 +273,17 @@ class FasterRCNN(LabelStudioMLBase):
 
         # use cache to retrieve the data from the previous fit() runs
         model_version = self.get('model_version')
-        logger.debug(f'model version: {model_version}')
 
         if event not in ('ANNOTATION_CREATED', 'ANNOTATION_UPDATED', 'START_TRAINING'):
             logger.info(f"skip training: event {event} is not supported")
             return
-        
+
         project = (
             data.get("project") or
             data.get("annotation", {}).get("project") or
             data.get("task", {}).get("project")
         )
         project_id = project['id']
-        logger.debug(f"Project {project_id}")
         if project_id != MAIN_PROJECT_ID:
             logger.info("Skip training: fit method is only supported for the main project.")
             return
@@ -310,22 +291,17 @@ class FasterRCNN(LabelStudioMLBase):
         logger.debug(f"host:{self.LABEL_STUDIO_HOST}")
         logger.debug(f"API:{self.LABEL_STUDIO_API_KEY}")
 
-        ls = Client(url=self.LABEL_STUDIO_HOST, api_key=self.LABEL_STUDIO_API_KEY)
-        main_project = ls.get_project(id=MAIN_PROJECT_ID)
-        tasks_train = main_project.get_labeled_tasks()
-        
-        test_project = ls.get_project(id=VAL_PROJECT_ID)
-        tasks_test = test_project.get_labeled_tasks()
 
-        logger.debug(f"Train set size: {len(tasks_train)}")
-        logger.debug(f"Test set size: {len(tasks_test)}")
+        ls = LabelStudio(base_url=self.LABEL_STUDIO_HOST, api_key=self.LABEL_STUDIO_API_KEY)
+        tasks_train = list(ls.tasks.list(project=MAIN_PROJECT_ID))
+        tasks_test = list(ls.tasks.list(project=VAL_PROJECT_ID))
+        
         
         # if len(tasks) % self.START_TRAINING_EACH_N_UPDATES != 0 and event != 'START_TRAINING':
         if event != 'START_TRAINING':
             logger.debug(f"skip training: the number of tasks is not divisible by {self.START_TRAINING_EACH_N_UPDATES}")
             return
         
-        label_config = main_project.get_label_config()
 
         train_config = {'device': DEVICE,
                      'dtype': DTYPE,
@@ -337,10 +313,12 @@ class FasterRCNN(LabelStudioMLBase):
         CONFIG.log_hyperparameters(train_config, main_key='training_config')
 
         
-        from_name, to_name, value = self.get_first_tag_occurence('RectangleLabels', 'Image')
+        _, _, value = self.get_first_tag_occurence('RectangleLabels', 'Image')
 
         raw_dataset_train = self.parse_ls_detection_tasks(tasks_train, value=value)
         train_ds = LSDetectionDataset(raw_dataset_train, classes=VOCDataset.voc_cls, transform=TRANSFORM)
+        logger.debug(f"Train set size: {len(train_ds)}")
+
 
         if len(train_ds) < BATCH_SIZE:
             sampler = data.RandomSampler(train_ds, replacement=True, num_samples=BATCH_SIZE)
@@ -358,6 +336,7 @@ class FasterRCNN(LabelStudioMLBase):
         
         raw_dataset_test = self.parse_ls_detection_tasks(tasks_test, value=value)
         test_ds = LSDetectionDataset(raw_dataset_test, classes=VOCDataset.voc_cls, transform=TRANSFORM)
+        logger.debug(f"Test set size: {len(test_ds)}")
         
         test_loader = DataLoader(test_ds,
                                 batch_size=min(BATCH_SIZE, len(test_ds)),
@@ -365,6 +344,9 @@ class FasterRCNN(LabelStudioMLBase):
                                 pin_memory=True,
                                 drop_last=False,
                                 collate_fn=collate_fn)
+        
+        print(f"Train loader size: {len(train_loader)}")
+        print(f"Test loader size: {len(test_loader)}")
 
         optim_config = OptimizationConfig()
         optimizer = optim_config.get_optimizer(MODEL.model)
@@ -372,7 +354,14 @@ class FasterRCNN(LabelStudioMLBase):
 
         CONFIG.initialize()
 
-        training_loop(MODEL.model, optimizer, lr_scheduler, train_loader, test_loader, TRAIN_CONFIG, CONFIG)
+        metadata = CONFIG.load_metadata()
 
+        TRAIN_CONFIG.num_epochs = metadata.get("epoch", 0) + NUM_EPOCHS
+
+        print("Starting training loop...")
+        training_loop(MODEL.model, optimizer, lr_scheduler, train_loader, test_loader, TRAIN_CONFIG, CONFIG)
         print('fit() completed successfully.')
+        state = CONFIG.load_best_checkpoint()
+        # if state is not None
+        MODEL.model.load_state_dict(state['model_state_dict'])
 

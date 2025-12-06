@@ -46,4 +46,5 @@ COPY NNModels /app/NNModels
 
 EXPOSE 9090
 
-CMD gunicorn --preload --bind :$PORT --workers $WORKERS --threads $THREADS --timeout 0 _wsgi:app
+# CMD gunicorn --preload --bind :$PORT --workers $WORKERS --threads $THREADS --timeout 0 _wsgi:app
+CMD gunicorn --bind :$PORT --workers $WORKERS --threads $THREADS --timeout 0 _wsgi:app
