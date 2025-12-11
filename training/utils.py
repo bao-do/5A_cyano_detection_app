@@ -172,6 +172,10 @@ class LoggingConfig:
         if metadata is not None:
             self.global_step = metadata['global_step']
             self.epoch = metadata['epoch']
+        
+        else:
+            self.global_step = 0
+            self.epoch = 0
             
 
         for key, val in kwargs.items():
