@@ -26,49 +26,210 @@ from label_studio_ml.response import ModelResponse
 from label_studio_sdk import LabelStudio
 from PIL import Image
 
-#%%
-MAIN_PROJECT_ID = 1
+import redis
+from rq import Queue
 
+#%%
+# --------- REDIS SETUP -------------
+redis_host = os.getenv("REDIS_HOST", "localhost")
+redis_port = int(os.getenv("REDIS_PORT", 6379))
+redis_url = f'redis://{redis_host}:{redis_port}'
+redis_conn = redis.from_url(redis_url)
+q = Queue(connection=redis_conn)
+logger = logging.getLogger(__name__)
+
+def get_local_path(url):
+    if url.startswith("upload") or url.startswith("/upload"):
+        url = "/data" + ("" if url.startswith("/") else "/") + url
+
+    is_uploaded_file = url.startswith("/data/upload")
+
+    project_id = url.split("/")[2]
+    filename = os.path.basename(url)
+
+
+    if is_uploaded_file:
+        project_id = url.split("/")[-2]
+        filename = os.path.basename(url)
+        filepath = os.path.join("/data/ls_data/media/upload",
+                                project_id,
+                                filename)
+        if os.path.exists(filepath):
+            return filepath
+        else:
+            raise FileNotFoundError(f"Uploaded file not found at {filepath}.")
+    else:
+        filepath = os.path.join("/data/ls_data", url.split("?d=")[1])
+        if os.path.exists(filepath):
+            return filepath
+        else:
+            raise FileNotFoundError(f"Local storage file not found at {filepath}.")
+        
+        
+def parse_ls_detection_tasks(tasks: list[dict], value: str="image" ):
+    dataset = []
+    for task in tasks:
+        if len(task.annotations) == 0:
+            continue
+        image_url = task.data[value]
+        image_path = get_local_path(image_url)
+
+        result = task.annotations[0]["result"]
+        image_width = result[0]["original_width"]
+        image_height = result[0]["original_height"]
+        boxes = []
+        labels = []
+        for ann in result:
+            x1, y1 = ann["value"]["x"], ann["value"]["y"]
+            width, height = ann["value"]["width"], ann["value"]["height"]
+            x2, y2 = min(100, x1 + width), min(100,y1 + height)
+
+            x1, y1 = x1*image_width/100, y1*image_height/100
+            x2, y2 = x2*image_width/100, y2*image_height/100
+
+
+            boxes.append([int(x1), int(y1), int(x2), int(y2)])
+
+            label_id = ann["value"]["rectanglelabels"][0]
+            labels.append(label_id)
+        dataset.append({
+            "original_width": image_width,
+            "original_height": image_height,
+            "image_path": image_path,
+            "annotation": {
+                "boxes": boxes,
+                "labels": labels
+            }
+        })
+    return dataset
+
+
+def run_training_task(ls_url, ls_api_key, main_project_id, val_project_id):
+    print("=== WORKER: Starting Training Task ===")
+    
+    # Config setup
+    freq = 200
+    monitor_metric = "val_avg_map"
+    monitor_mode = "max"
+    save_freq = freq
+    val_epoch_freq = freq
+    log_loss_freq = 5
+    log_image_freq = 200
+
+    logger_args = dict(monitor_metric=monitor_metric,
+                       monitor_mode=monitor_mode,
+                       save_freq=save_freq,
+                       val_epoch_freq=val_epoch_freq,
+                       log_loss_freq=log_loss_freq,
+                       log_image_freq=log_image_freq)
+
+    logger_config = LoggingConfig(project_dir='/data/model/exp/object_detection',
+                           exp_name=f"VOC_fasterrcnn_mobilenet_v3_large_320_fpn_2000",
+                           **logger_args)
+    logger_config.initialize()
+
+
+
+    train_config = TrainingConfig() 
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    dtype = torch.float32
+    num_step = 1000
+    batch_size = 10
+    num_epochs = num_step//batch_size + 1
+    num_epochs = logger_config.epoch + num_epochs
+    
+    train_config_params = {'device': device,
+                     'dtype': dtype,
+                     'num_epochs': num_epochs,
+                     'batch_size': batch_size}
+    train_config.update(**train_config_params)
+    
+    # Initialize Model HERE (inside worker), not at module level
+    model = FasterRCNNMobile(score_threshold=0.8)
+    model.to(train_config.device)
+    
+    # Load data
+    ls = LabelStudio(base_url=ls_url, api_key=ls_api_key)
+    print(f"Worker: Fetching tasks for Project {main_project_id}...")
+    
+    tasks_train = list(ls.tasks.list(project=main_project_id))
+    tasks_test = list(ls.tasks.list(project=val_project_id))
+    
+    # Parse Data
+    # Note: We hardcode 'image' here, or pass it in args if it changes
+    raw_dataset_train = parse_ls_detection_tasks(tasks_train, value='image')
+    raw_dataset_test = parse_ls_detection_tasks(tasks_test, value='image')
+    
+    print(f"Worker: Found {len(raw_dataset_train)} train samples, {len(raw_dataset_test)} test samples")
+
+    # Create Datasets
+    # Assuming VOCDataset, TRANSFORM, collate_fn are imported/available
+    transform = model.transform
+    train_ds = LSDetectionDataset(raw_dataset_train, classes=VOCDataset.voc_cls, transform=transform)
+    test_ds = LSDetectionDataset(raw_dataset_test, classes=VOCDataset.voc_cls, transform=transform)
+
+    # Dataloaders
+    
+    # Sampler logic
+    if len(train_ds) < batch_size:
+        sampler = torch.utils.data.RandomSampler(train_ds, replacement=True, num_samples=batch_size)
+        shuffle = False
+    else:
+        sampler = None
+        shuffle = True
+
+    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=shuffle, 
+                              sampler=sampler, pin_memory=True, collate_fn=collate_fn)
+    test_loader = DataLoader(test_ds, batch_size=min(batch_size, len(test_ds)), 
+                             shuffle=True, pin_memory=True, collate_fn=collate_fn)
+
+
+    
+    optim_config = OptimizationConfig()
+    optimizer = optim_config.get_optimizer(model.model)
+    lr_scheduler = optim_config.get_scheduler(optimizer)
+
+    print("Worker: Starting Loop...")
+    training_loop(model.model, optimizer, lr_scheduler, train_loader, test_loader, train_config, logger_config)
+    
+    print("Worker: Training Finished successfully.")
+    return True
+
+
+# ----------- MODEL PREDICTION AND TRAINING SETUP  ----------------------
+MAIN_PROJECT_ID = 1
 VAL_PROJECT_ID = 2
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-DTYPE = torch.float32
-NUM_STEPS = 1000
-BATCH_SIZE = 10
-NUM_EPOCHS = NUM_STEPS//BATCH_SIZE + 1
-FREQ = 200
+# DTYPE = torch.float32
+# NUM_STEPS = 1000
+# BATCH_SIZE = 10
+# NUM_EPOCHS = NUM_STEPS//BATCH_SIZE + 1
+# FREQ = 200
+
+# TRAIN_CONFIG = TrainingConfig()
+LOGGER_CONFIG = LoggingConfig(project_dir='/data/model/exp/object_detection',
+                        exp_name=f"VOC_fasterrcnn_mobilenet_v3_large_320_fpn_2000",
+                        monitor_metric = "val_avg_map",
+                        monitor_mode = "max")
 
 
 
+# LOGGER_CONFIG.save_freq = FREQ
+# LOGGER_CONFIG.val_epoch_freq = FREQ
+# LOGGER_CONFIG.log_loss_freq = 5
+# LOGGER_CONFIG.log_image_freq = 200
 
-
-TRAIN_CONFIG = TrainingConfig()
-
-
-CONFIG = LoggingConfig(project_dir='/data/model/exp/object_detection',
-                        exp_name=f"VOC_fasterrcnn_mobilenet_v3_large_320_fpn_2000")
-
-
-
-logger = logging.getLogger(__name__)
-CONFIG.monitor_metric = "val_avg_map"
-CONFIG.monitor_mode = "max"
-CONFIG.save_freq = FREQ
-CONFIG.val_epoch_freq = FREQ
-CONFIG.log_loss_freq = 5
-CONFIG.log_image_freq = 200
-
-TRAIN_CONFIG.device = DEVICE
-TRAIN_CONFIG.dtype = DTYPE
+# TRAIN_CONFIG.device = DEVICE
+# TRAIN_CONFIG.dtype = DTYPE
 
 MODEL = FasterRCNNMobile(score_threshold=0.8)
-MODEL.to(TRAIN_CONFIG.device)
+# MODEL.to(TRAIN_CONFIG.device)
+MODEL.to(DEVICE)
 TRANSFORM = MODEL.transform
 
-state = CONFIG.load_best_checkpoint()
-# if state is not None
+state = LOGGER_CONFIG.load_best_checkpoint()
 MODEL.model.load_state_dict(state['model_state_dict'])
-
 MODEL.eval()
 
 class LSDetectionDataset(Dataset):
@@ -117,50 +278,13 @@ class FasterRCNN(LabelStudioMLBase):
         self.LABEL_STUDIO_API_KEY = os.getenv('LABEL_STUDIO_API_KEY')
         self.START_TRAINING_EACH_N_UPDATES = 100
         self.set("model_version", f"{self.__class__.__name__}")
-        self.device = TRAIN_CONFIG.device
+        # self.device = TRAIN_CONFIG.device
+        self.device = DEVICE
 
     
     def get_local_path(self, url, project_dir=None, ls_host=None, ls_access_token=None, task_id=None, *args, **kwargs):
-        # print(f"------------------Find local path of {url}" )
         
-
-        if url.startswith("upload") or url.startswith("/upload"):
-            url = "/data" + ("" if url.startswith("/") else "/") + url
-
-        is_uploaded_file = url.startswith("/data/upload")
-
-        project_id = url.split("/")[2]
-        filename = os.path.basename(url)
-
-        # print(f"is_uploaded_file? {is_uploaded_file}")
-
-        # /data/upload/2/7377a21f-000012.jpg
-        if is_uploaded_file:
-            # print("UPLOADED FILE")
-            project_id = url.split("/")[-2]
-            filename = os.path.basename(url)
-            filepath = os.path.join("/data/ls_data/media/upload",
-                                    project_id,
-                                    filename)
-            # print(f"file path: {filepath}")
-            if os.path.exists(filepath):
-                # print(f"Uploaded file: Path exists in image_dir: {filepath}")
-                return filepath
-            else:
-                raise FileNotFoundError(f"Uploaded file not found at {filepath}.")
-        # "/data/local-files/?d=local_source/000018.jpg"
-        else:
-            # print("LOCAL STORAGE FILE")
-            filepath = os.path.join("/data/ls_data", url.split("?d=")[1])
-            # print(f"file path: {filepath}")
-            if os.path.exists(filepath):
-                # print(
-                #     f"Local Storage file path exists locally, use it as a local file: {filepath}"
-                # )
-
-                return filepath
-            else:
-                raise FileNotFoundError(f"Local storage file not found at {filepath}.")
+        return get_local_path(url)
         
 
 
@@ -175,7 +299,7 @@ class FasterRCNN(LabelStudioMLBase):
         from_name, to_name, value = self.get_first_tag_occurence('RectangleLabels', 'Image')
         image_url = tasks[0]["data"][value]
         local_path = self.get_local_path(image_url)
-        image_tensor = TRANSFORM(Image.open(local_path).convert("RGB")).to(TRAIN_CONFIG.device)
+        image_tensor = TRANSFORM(Image.open(local_path).convert("RGB")).to(self.device)
         with torch.no_grad():
             targets_pred = MODEL.predict(image_tensor)[0]
         results = []
@@ -256,11 +380,8 @@ class FasterRCNN(LabelStudioMLBase):
                     }
                 })
             return dataset
-
-
-
-
     
+
     def fit(self, event, data, **kwargs):
         """
         This method is called each time an annotation is created or updated
@@ -270,10 +391,6 @@ class FasterRCNN(LabelStudioMLBase):
         :param event: event type can be ('ANNOTATION_CREATED', 'ANNOTATION_UPDATED', 'START_TRAINING')
         :param data: the payload received from the event (check [Webhook event reference](https://labelstud.io/guide/webhook_reference.html))
         """
-
-        # use cache to retrieve the data from the previous fit() runs
-        model_version = self.get('model_version')
-
         if event not in ('ANNOTATION_CREATED', 'ANNOTATION_UPDATED', 'START_TRAINING'):
             logger.info(f"skip training: event {event} is not supported")
             return
@@ -291,77 +408,85 @@ class FasterRCNN(LabelStudioMLBase):
         logger.debug(f"host:{self.LABEL_STUDIO_HOST}")
         logger.debug(f"API:{self.LABEL_STUDIO_API_KEY}")
 
+        print(f"Server: Received fit request for event {event}. Enqueueing...")
 
-        ls = LabelStudio(base_url=self.LABEL_STUDIO_HOST, api_key=self.LABEL_STUDIO_API_KEY)
-        tasks_train = list(ls.tasks.list(project=MAIN_PROJECT_ID))
-        tasks_test = list(ls.tasks.list(project=VAL_PROJECT_ID))
+        q.enqueue(run_training_task,
+                  args=(self.LABEL_STUDIO_HOST,
+                        self.LABEL_STUDIO_API_KEY,
+                        MAIN_PROJECT_ID,
+                        VAL_PROJECT_ID),
+                  job_timeout='2h')
+
+        # ls = LabelStudio(base_url=self.LABEL_STUDIO_HOST, api_key=self.LABEL_STUDIO_API_KEY)
+        # tasks_train = list(ls.tasks.list(project=MAIN_PROJECT_ID))
+        # tasks_test = list(ls.tasks.list(project=VAL_PROJECT_ID))
         
         
-        # if len(tasks) % self.START_TRAINING_EACH_N_UPDATES != 0 and event != 'START_TRAINING':
-        if event != 'START_TRAINING':
-            logger.debug(f"skip training: the number of tasks is not divisible by {self.START_TRAINING_EACH_N_UPDATES}")
-            return
+        # # if len(tasks) % self.START_TRAINING_EACH_N_UPDATES != 0 and event != 'START_TRAINING':
+        # if event != 'START_TRAINING':
+        #     logger.debug(f"skip training: the number of tasks is not divisible by {self.START_TRAINING_EACH_N_UPDATES}")
+        #     return
         
 
-        train_config = {'device': DEVICE,
-                     'dtype': DTYPE,
-                     'num_epochs': NUM_EPOCHS,
-                     'batch_size': BATCH_SIZE}
+        # train_config = {'device': DEVICE,
+        #              'dtype': DTYPE,
+        #              'num_epochs': NUM_EPOCHS,
+        #              'batch_size': BATCH_SIZE}
         
-        TRAIN_CONFIG.update(**train_config)
-        logger.debug(f"Training configuration: {TRAIN_CONFIG}")
-        CONFIG.log_hyperparameters(train_config, main_key='training_config')
+        # TRAIN_CONFIG.update(**train_config)
+        # logger.debug(f"Training configuration: {TRAIN_CONFIG}")
+        # LOGGER_CONFIG.log_hyperparameters(train_config, main_key='training_config')
 
         
-        _, _, value = self.get_first_tag_occurence('RectangleLabels', 'Image')
+        # _, _, value = self.get_first_tag_occurence('RectangleLabels', 'Image')
 
-        raw_dataset_train = self.parse_ls_detection_tasks(tasks_train, value=value)
-        train_ds = LSDetectionDataset(raw_dataset_train, classes=VOCDataset.voc_cls, transform=TRANSFORM)
-        logger.debug(f"Train set size: {len(train_ds)}")
+        # raw_dataset_train = self.parse_ls_detection_tasks(tasks_train, value=value)
+        # train_ds = LSDetectionDataset(raw_dataset_train, classes=VOCDataset.voc_cls, transform=TRANSFORM)
+        # logger.debug(f"Train set size: {len(train_ds)}")
 
 
-        if len(train_ds) < BATCH_SIZE:
-            sampler = data.RandomSampler(train_ds, replacement=True, num_samples=BATCH_SIZE)
-            shuffle = False
-        else:
-            sampler = None
-            shuffle = True
-        train_loader = DataLoader(train_ds,
-                              batch_size=BATCH_SIZE,
-                              shuffle=shuffle,
-                              sampler=sampler,
-                              pin_memory=True,
-                              drop_last=False,
-                              collate_fn=collate_fn)
+        # if len(train_ds) < BATCH_SIZE:
+        #     sampler = data.RandomSampler(train_ds, replacement=True, num_samples=BATCH_SIZE)
+        #     shuffle = False
+        # else:
+        #     sampler = None
+        #     shuffle = True
+        # train_loader = DataLoader(train_ds,
+        #                       batch_size=BATCH_SIZE,
+        #                       shuffle=shuffle,
+        #                       sampler=sampler,
+        #                       pin_memory=True,
+        #                       drop_last=False,
+        #                       collate_fn=collate_fn)
         
-        raw_dataset_test = self.parse_ls_detection_tasks(tasks_test, value=value)
-        test_ds = LSDetectionDataset(raw_dataset_test, classes=VOCDataset.voc_cls, transform=TRANSFORM)
-        logger.debug(f"Test set size: {len(test_ds)}")
+        # raw_dataset_test = self.parse_ls_detection_tasks(tasks_test, value=value)
+        # test_ds = LSDetectionDataset(raw_dataset_test, classes=VOCDataset.voc_cls, transform=TRANSFORM)
+        # logger.debug(f"Test set size: {len(test_ds)}")
         
-        test_loader = DataLoader(test_ds,
-                                batch_size=min(BATCH_SIZE, len(test_ds)),
-                                shuffle=True,
-                                pin_memory=True,
-                                drop_last=False,
-                                collate_fn=collate_fn)
+        # test_loader = DataLoader(test_ds,
+        #                         batch_size=min(BATCH_SIZE, len(test_ds)),
+        #                         shuffle=True,
+        #                         pin_memory=True,
+        #                         drop_last=False,
+        #                         collate_fn=collate_fn)
         
-        print(f"Train loader size: {len(train_loader)}")
-        print(f"Test loader size: {len(test_loader)}")
+        # print(f"Train loader size: {len(train_loader)}")
+        # print(f"Test loader size: {len(test_loader)}")
 
-        optim_config = OptimizationConfig()
-        optimizer = optim_config.get_optimizer(MODEL.model)
-        lr_scheduler = optim_config.get_scheduler(optimizer)
+        # optim_config = OptimizationConfig()
+        # optimizer = optim_config.get_optimizer(MODEL.model)
+        # lr_scheduler = optim_config.get_scheduler(optimizer)
 
-        CONFIG.initialize()
+        # LOGGER_CONFIG.initialize()
 
-        metadata = CONFIG.load_metadata()
+        # metadata = LOGGER_CONFIG.load_metadata()
 
-        TRAIN_CONFIG.num_epochs = metadata.get("epoch", 0) + NUM_EPOCHS
+        # TRAIN_CONFIG.num_epochs = metadata.get("epoch", 0) + NUM_EPOCHS
 
-        print("Starting training loop...")
-        training_loop(MODEL.model, optimizer, lr_scheduler, train_loader, test_loader, TRAIN_CONFIG, CONFIG)
-        print('fit() completed successfully.')
-        state = CONFIG.load_best_checkpoint()
-        # if state is not None
-        MODEL.model.load_state_dict(state['model_state_dict'])
+        # print("Starting training loop...")
+        # training_loop(MODEL.model, optimizer, lr_scheduler, train_loader, test_loader, TRAIN_CONFIG, LOGGER_CONFIG)
+        # print('fit() completed successfully.')
+        # state = LOGGER_CONFIG.load_best_checkpoint()
+        # # if state is not None
+        # MODEL.model.load_state_dict(state['model_state_dict'])
 

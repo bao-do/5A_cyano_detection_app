@@ -49,8 +49,10 @@ def training_loop(
         test_avg_loss = OnlineMovingAverage(size=1000)
         test_avg_map = OnlineMovingAverage(size=1000)
     
+    print(f"Training with {config.num_epochs} epochs")
 
     for epoch in range(start_epoch, config.num_epochs):
+        print(logger.best_metric)
         pb = tqdm(train_loader, desc=f"Epoch {epoch+1}/{config.num_epochs}", mininterval=10)
         for images, targets in pb:
             model.train()
@@ -141,14 +143,18 @@ def training_loop(
                 images_train = [(img*255).clamp(0,255).to(torch.uint8) for img in images_train]
                 for idx in range(num_log_images):
                     img_with_bb_pred = F.interpolate(
-                                            draw_bounding_boxes(images_train[idx],targets_pred_train[idx]['boxes'], colors='red').unsqueeze(0) if targets_pred_train[idx]['boxes'].shape[0] != 0 else images_train[idx].unsqueeze(0),
+                                            draw_bounding_boxes(images_train[idx],targets_pred_train[idx]['boxes'], colors='red').unsqueeze(0).float()/255.0
+                                            if targets_pred_train[idx]['boxes'].shape[0] != 0
+                                            else images_train[idx].unsqueeze(0).float()/255.0,
                                             size = logger.image_size,
                                             mode='bilinear',
                                             align_corners=False)
                     drawn_pred_train.append(img_with_bb_pred.to("cpu"))
 
                     img_with_bb_gt = F.interpolate(
-                                            draw_bounding_boxes(images_train[idx], targets[idx]['boxes'], colors='red').unsqueeze(0) if targets[idx]['boxes'].shape[0] != 0 else images_train[idx].unsqueeze(0),
+                                            draw_bounding_boxes(images_train[idx], targets[idx]['boxes'], colors='red').unsqueeze(0).float()/255.0
+                                            if targets[idx]['boxes'].shape[0] != 0
+                                            else images_train[idx].unsqueeze(0).float()/255.0,
                                             size = logger.image_size,
                                             mode='bilinear',
                                             align_corners=False)
@@ -169,7 +175,9 @@ def training_loop(
                     images_test = [(img*255).clamp(0,255).to(torch.uint8) for img in images_test]
                     for idx in range(num_log_images):
                         img_with_bb_pred = F.interpolate(
-                                                draw_bounding_boxes(images_test[idx], targets_pred_test[idx]['boxes'], colors='red').unsqueeze(0) if targets_pred_test[idx]['boxes'].shape[0] != 0 else images_test[idx].unsqueeze(0),
+                                                draw_bounding_boxes(images_test[idx], targets_pred_test[idx]['boxes'], colors='red').unsqueeze(0).float()/255.0
+                                                if targets_pred_test[idx]['boxes'].shape[0] != 0
+                                                else images_test[idx].unsqueeze(0).float()/255.0,
                                                 size = logger.image_size,
                                                 mode='bilinear',
                                                 align_corners=False
@@ -177,7 +185,9 @@ def training_loop(
                         drawn_pred_test.append(img_with_bb_pred.to("cpu"))
 
                         img_with_bb_gt = F.interpolate(
-                                                draw_bounding_boxes(images_test[idx], targets_test[idx]['boxes'], colors='red').unsqueeze(0) if targets_test[idx]['boxes'].shape[0] != 0 else images_test[idx].unsqueeze(0),
+                                                draw_bounding_boxes(images_test[idx], targets_test[idx]['boxes'], colors='red').unsqueeze(0).float()/255.0
+                                                if targets_test[idx]['boxes'].shape[0] != 0
+                                                else images_test[idx].unsqueeze(0).float()/255.0 ,
                                                 size = logger.image_size,
                                                 mode='bilinear',
                                                 align_corners=False)
@@ -289,7 +299,7 @@ if __name__ == "__main__":
     val_dataset = VOCDataset(args.images_val, args.annotations_val, transform)
     if len(val_dataset) == 0:
         test_loader=None
-    if (test_loader is not None):
+    else:
         if args.test_dataset_size is not None:
            print(f"Using the first {min(args.test_dataset_size, len(val_dataset))} images as validation set")
            val_dataset = data.Subset(val_dataset, range(min(args.test_dataset_size, len(val_dataset))))
@@ -300,20 +310,30 @@ if __name__ == "__main__":
     training_config = TrainingConfig()
     training_config.update(**vars(args))
 
-    logger = LoggingConfig(project_dir=os.path.join(abs_path,'exp/object_detection'),
-                           exp_name=f"VOC_fasterrcnn_resnet50_fpn_v2_{args.train_dataset_size}")
-    logger.monitor_metric = "val_avg_map" if test_loader is not None else "train_avg_map"
-    logger.monitor_mode = "max"
-    logger.initialize()
-    logger.log_hyperparameters(vars(args), main_key="training_config")
 
     # Save checkpoint every 200 steps
+    monitor_metric = "val_avg_map" if test_loader is not None else "train_avg_map"
+    monitor_mode = "max"
     num_step_per_epoch = max(len(train_loader), 1)
     freq = max(1, int(200 // num_step_per_epoch))
-    logger.save_freq = freq
-    logger.val_epoch_freq = freq
-    logger.log_loss_freq = 5
-    logger.log_image_freq = 200
+    save_freq = freq
+    val_epoch_freq = freq
+    log_loss_freq = 5
+    log_image_freq = 200
+    logger_args = dict(monitor_metric=monitor_metric,
+                        monitor_mode=monitor_mode,
+                        save_freq=save_freq,
+                        val_epoch_freq=val_epoch_freq,
+                        log_loss_freq=log_loss_freq,
+                        log_image_freq=log_image_freq)
+    
+    logger = LoggingConfig(project_dir=os.path.join(abs_path,'exp/object_detection'),
+                           exp_name=f"VOC_fasterrcnn_resnet50_fpn_v2_{args.train_dataset_size}",
+                           **logger_args
+                           )
+    
+    logger.initialize()
+    logger.log_hyperparameters(vars(args), main_key="training_config")
 
     optim_config = OptimizationConfig()
     optimizer = optim_config.get_optimizer(model)

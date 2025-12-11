@@ -155,20 +155,36 @@ class LoggingConfig:
     log_gpu_stats = False  # Log GPU utilization
     log_memory_stats = False    # Log memory usage
 
-    def __init__(self, project_dir: str=None, exp_name: str="default", **kwargs ):
-        self.best_metric = float("inf") if self.monitor_mode=="min" else -float("inf")
-        self.global_step = 0
-        self.epoch = 0
+    def __init__(self, project_dir: str=None, exp_name: str="default", **kwargs):
         self.writer = None
         self.project_dir = "" if project_dir is None else project_dir
         self.exp_dir = os.path.join(self.project_dir, exp_name)
         self.checkpoint_dir = os.path.join(self.exp_dir, "checkpoints")
         self.tensorboard_dir = os.path.join(self.exp_dir, "runs")
+        self.metadata_file = os.path.join(self.exp_dir,"metadata.json")
+
+        metadata = None
+        if os.path.exists(self.metadata_file):
+            print(f"Loading metadata from {self.metadata_file}")
+            with open(self.metadata_file, "r") as f:
+                metadata = json.load(f)
+
+        if metadata is not None:
+            self.global_step = metadata['global_step']
+            self.epoch = metadata['epoch']
+            
 
         for key, val in kwargs.items():
-            if hasattr(self, key, val):
+            if not hasattr(self, key):
                 warnings.warn(f"Unknown argment {key}")
             setattr(self, key, val)
+        
+
+        self.best_metric = float("inf") if self.monitor_mode=="min" else -float("inf")
+
+        if metadata is not None:
+            if (self.monitor_metric == metadata['monitor_metric']) and (self.monitor_mode == metadata['monitor_mode']):
+                self.best_metric = metadata['best_metric']
         
     def initialize(self):
         os.makedirs(self.exp_dir, exist_ok=True)
@@ -180,7 +196,6 @@ class LoggingConfig:
         else:
             self.writer = None
         
-        self.metadata_file = os.path.join(self.exp_dir,"metadata.json")
         self._save_metadata()
 
     def _save_metadata(self):
@@ -206,7 +221,8 @@ class LoggingConfig:
                 metadata = json.load(f)
             return metadata
         else:
-            warnings.warn("No metadata file found, starting from scratch.")
+            warnings.warn("No metadata file found, starting from scratch, returning None")
+            return None
     
     def get_checkpoint_path(self, epoch, metric_value=None):
         """
@@ -307,10 +323,11 @@ class LoggingConfig:
         metric = self.monitor_metric if metric is None else metric
         mode = self.monitor_mode if ((mode is None) or (mode not in ["min","max"])) else mode
         if chekpoint_path is None:
-            checkpoints = glob.glob(os.path.join(self.checkpoint_dir, f"{metric}_*.pth"))
+            checkpoints = glob.glob(os.path.join(self.checkpoint_dir, f"*{metric}_*.pth"))
             if not checkpoints:
-                warnings.warn("No checkpoint found in the experiment directory.")
-                return None
+                warnings.warn("No checkpoint found in the experiment directory, load the latest checkpoint instead")
+
+                return self.load_latest_checkpoint(verbose=verbose)
             else:
                 def get_metric_value(checkpoint_path):
                     match = re.search(rf"{metric}_([0-9]+(?:\.[0-9]+)?)", checkpoint_path)

@@ -65,9 +65,10 @@ exp_dir = os.path.join(project_dir,"exp/object_detection")
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 DTYPE = torch.float32
 LOGGER = LoggingConfig(project_dir=exp_dir,
-                       exp_name="VOC_fasterrcnn_mobilenet_v3_large_320_fpn_2000")
-LOGGER.monitor_metric = "avg_loss"
-LOGGER.monitor_mode = "min"
+                       exp_name="VOC_fasterrcnn_mobilenet_v3_large_320_fpn_2000",
+                       monitor_metric="val_avg_map",
+                       monitor_mode="max")
+
 
 DEFAULT_SCORE_THRESHOLD = 0.8
 DEFAULT_IOU_THRESHOLD = 0.5
@@ -76,7 +77,7 @@ MODEL = FasterRCNNMobile(score_threshold=DEFAULT_SCORE_THRESHOLD,
                          device=DEVICE)
 
 # Load checkpoint
-state = LOGGER.load_latest_checkpoint()
+state = LOGGER.load_best_checkpoint()
 MODEL.model.load_state_dict(state['model_state_dict'])
 
 
