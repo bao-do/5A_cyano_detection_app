@@ -26,13 +26,16 @@ services:
     environment:
       - LABEL_STUDIO_LOCAL_FILES_SERVING_ENABLED=true
       - LABEL_STUDIO_LOCAL_FILES_DOCUMENT_ROOT=/label-studio/data
+
+      - CSRF_TRUSTED_ORIGINS=https://college-clock-travel-administered.trycloudflare.com
+      - LABEL_STUDIO_HOST=https://college-clock-travel-administered.trycloudflare.com
     volumes:
       - ./data/ls_data:/label-studio/data
       - ./data/ls_data/source_storage:/label-studio/data/source_storage
       - ./data/ls_data/target_storage:/label-studio/data/target_storage
     stdin_open: true
     tty: true
-
+ 
   # -------------------------------------------------------
   # 1. The API Server (Handles Predict & Enqueues Training)
   # -------------------------------------------------------
