@@ -7,13 +7,16 @@ services:
     environment:
       - LABEL_STUDIO_LOCAL_FILES_SERVING_ENABLED=true
       - LABEL_STUDIO_LOCAL_FILES_DOCUMENT_ROOT=/label-studio/data
+
+      - CSRF_TRUSTED_ORIGINS=https://college-clock-travel-administered.trycloudflare.com
+      - LABEL_STUDIO_HOST=https://college-clock-travel-administered.trycloudflare.com
     volumes:
       - ./data/ls_data:/label-studio/data
       - ./data/ls_data/source_storage:/label-studio/data/source_storage
       - ./data/ls_data/target_storage:/label-studio/data/target_storage
     stdin_open: true
     tty: true
-
+ 
   # -------------------------------------------------------
   # 1. The API Server (Handles Predict & Enqueues Training)
   # -------------------------------------------------------
@@ -29,7 +32,7 @@ services:
       - WORKERS=1
       - THREADS=8
       - MODEL_DIR=/data/model
-      - LABEL_STUDIO_URL=http://label-studio:8080
+      - LABEL_STUDIO_URL=${LABEL_STUDIO_URL}
       - LABEL_STUDIO_API_KEY=${LABEL_STUDIO_API_KEY}
       - NVIDIA_VISIBLE_DEVICES=all
       # Redis Config
@@ -64,7 +67,7 @@ services:
     environment:
       - LOG_LEVEL=DEBUG
       - MODEL_DIR=/data/model
-      - LABEL_STUDIO_URL=http://label-studio:8080
+      - LABEL_STUDIO_URL=${LABEL_STUDIO_URL}
       - LABEL_STUDIO_API_KEY=${LABEL_STUDIO_API_KEY}
       - NVIDIA_VISIBLE_DEVICES=all
       - REDIS_HOST=redis
@@ -101,7 +104,7 @@ services:
       # - ./app/app.py:/app/app.py
       - ./data/ls_data/source_storage/1:/app/data/ls_data/source_storage/1
     environment:
-      - LABEL_STUDIO_URL=http://label-studio:8080
+      - LABEL_STUDIO_URL=${LABEL_STUDIO_URL}
       - LABEL_STUDIO_API_KEY=${LABEL_STUDIO_API_KEY}
       - NVIDIA_VISIBLE_DEVICES=all
     gpus: all

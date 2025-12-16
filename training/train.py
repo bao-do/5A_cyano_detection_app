@@ -52,7 +52,6 @@ def training_loop(
     print(f"Training with {config.num_epochs} epochs")
 
     for epoch in range(start_epoch, config.num_epochs):
-        print(logger.best_metric)
         pb = tqdm(train_loader, desc=f"Epoch {epoch+1}/{config.num_epochs}", mininterval=10)
         for images, targets in pb:
             model.train()
