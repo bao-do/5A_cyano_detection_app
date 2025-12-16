@@ -155,15 +155,12 @@ def run_training_task(ls_url, ls_api_key, main_project_id, val_project_id):
     tasks_train = list(ls.tasks.list(project=main_project_id))
     tasks_test = list(ls.tasks.list(project=val_project_id))
     
-    # Parse Data
-    # Note: We hardcode 'image' here, or pass it in args if it changes
     raw_dataset_train = parse_ls_detection_tasks(tasks_train, value='image')
     raw_dataset_test = parse_ls_detection_tasks(tasks_test, value='image')
     
     print(f"Worker: Found {len(raw_dataset_train)} train samples, {len(raw_dataset_test)} test samples")
 
     # Create Datasets
-    # Assuming VOCDataset, TRANSFORM, collate_fn are imported/available
     transform = model.transform
     train_ds = LSDetectionDataset(raw_dataset_train, classes=VOCDataset.voc_cls, transform=transform)
     test_ds = LSDetectionDataset(raw_dataset_test, classes=VOCDataset.voc_cls, transform=transform)
@@ -197,34 +194,17 @@ def run_training_task(ls_url, ls_api_key, main_project_id, val_project_id):
 
 
 # ----------- MODEL PREDICTION AND TRAINING SETUP  ----------------------
-MAIN_PROJECT_ID = 1
-VAL_PROJECT_ID = 2
+MAIN_PROJECT_ID = int(os.getenv("MAIN_PROJECT_ID", 1))
+VAL_PROJECT_ID = int(os.getenv("VAL_PROJECT_ID", 2))
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-# DTYPE = torch.float32
-# NUM_STEPS = 1000
-# BATCH_SIZE = 10
-# NUM_EPOCHS = NUM_STEPS//BATCH_SIZE + 1
-# FREQ = 200
 
-# TRAIN_CONFIG = TrainingConfig()
 LOGGER_CONFIG = LoggingConfig(project_dir='/data/model/exp/object_detection',
                         exp_name=f"VOC_fasterrcnn_mobilenet_v3_large_320_fpn_2000",
                         monitor_metric = "val_avg_map",
                         monitor_mode = "max")
 
-
-
-# LOGGER_CONFIG.save_freq = FREQ
-# LOGGER_CONFIG.val_epoch_freq = FREQ
-# LOGGER_CONFIG.log_loss_freq = 5
-# LOGGER_CONFIG.log_image_freq = 200
-
-# TRAIN_CONFIG.device = DEVICE
-# TRAIN_CONFIG.dtype = DTYPE
-
 MODEL = FasterRCNNMobile(score_threshold=0.8)
-# MODEL.to(TRAIN_CONFIG.device)
 MODEL.to(DEVICE)
 TRANSFORM = MODEL.transform
 

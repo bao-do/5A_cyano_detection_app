@@ -1,4 +1,23 @@
 services:
+  model-api:
+    container_name: model-api
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+    ports:
+      - "5075:5075"
+    volumes:
+      - ./api/api.py:/app/api.py
+      - ./data/ml-backend/fasterrcnn:/data/model/fasterrcnn:ro
+    environment:
+      - DEFAULT_CHECKPOINT_DIR=${DEFAULT_CHECKPOINT_DIR}
+      - DEFAULT_IOU_THRESHOLD=${DEFAULT_IOU_THRESHOLD}
+      - DEFAULT_SCORE_THRESHOLD=${DEFAULT_SCORE_THRESHOLD}
+      - DEFAULT_MONITOR_METRIC=${DEFAULT_MONITOR_METRIC}
+      - DEFAULT_MONITOR_MODE=${DEFAULT_MONITOR_MODE}
+      - NVIDIA_VISIBLE_DEVICES=all
+    gpus: all
+
   label-studio:
     container_name: label-studio
     image: heartexlabs/label-studio:latest
@@ -29,8 +48,9 @@ services:
       - WORKERS=1
       - THREADS=8
       - MODEL_DIR=/data/model
-      - LABEL_STUDIO_URL=http://label-studio:8080
+      - LABEL_STUDIO_URL=${LABEL_STUDIO_URL}
       - LABEL_STUDIO_API_KEY=${LABEL_STUDIO_API_KEY}
+      - API_URL=${API_URL}
       - NVIDIA_VISIBLE_DEVICES=all
       # Redis Config
       - REDIS_HOST=redis
@@ -64,7 +84,7 @@ services:
     environment:
       - LOG_LEVEL=DEBUG
       - MODEL_DIR=/data/model
-      - LABEL_STUDIO_URL=http://label-studio:8080
+      - LABEL_STUDIO_URL=${LABEL_STUDIO_URL}
       - LABEL_STUDIO_API_KEY=${LABEL_STUDIO_API_KEY}
       - NVIDIA_VISIBLE_DEVICES=all
       - REDIS_HOST=redis
@@ -101,8 +121,9 @@ services:
       # - ./app/app.py:/app/app.py
       - ./data/ls_data/source_storage/1:/app/data/ls_data/source_storage/1
     environment:
-      - LABEL_STUDIO_URL=http://label-studio:8080
+      - LABEL_STUDIO_URL=${LABEL_STUDIO_URL}
       - LABEL_STUDIO_API_KEY=${LABEL_STUDIO_API_KEY}
+      - API_URL=${API_URL}
       - NVIDIA_VISIBLE_DEVICES=all
     gpus: all
     depends_on:

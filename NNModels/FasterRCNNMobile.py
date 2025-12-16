@@ -1,12 +1,9 @@
 import os, sys
 sys.path.append("./../")
-from utils import iou, non_max_suppression, get_bboxes
-from training import LoggingConfig
+from utils import iou
 import torch
-import torchvision
 from torchvision.models.detection import fasterrcnn_mobilenet_v3_large_320_fpn
 from torchvision.transforms import v2
-import numpy as np
 
 
 class FasterRCNNMobile(torch.nn.Module):
