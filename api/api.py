@@ -90,12 +90,12 @@ def predict():
     with torch.no_grad():
         outputs = MODEL.predict(img_tensor, iou_threshold, score_threshold)[0]
 
-    print(type(outputs['boxes']), type(outputs['labels']), type(outputs['scores']))
     return jsonify({
         "boxes": outputs['boxes'].cpu().numpy().tolist(),
         "labels": [label for label in outputs['labels'].cpu().numpy().tolist()],
-        "scores": outputs['scores'].cpu().numpy().tolist()
+        "scores": outputs['scores'].cpu().numpy().tolist(),
+        "classes": [voc_cls[label-1] for label in outputs['labels'].cpu().numpy().tolist()]
     })
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5075)
+    app.run(host="0.0.0.0", port=5075, debug=True)

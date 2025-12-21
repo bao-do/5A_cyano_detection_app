@@ -20,8 +20,6 @@ import requests
 
 from label_studio_sdk import LabelStudio
 
-# LABEL_STUDIO_URL="http://localhost:8080"
-# LABEL_STUDIO_API_KEY= "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6ODA3MDk2NTE4MiwiaWF0IjoxNzYzNzY1MTgyLCJqdGkiOiIyMjc1ZDhjZjE5MGU0Y2M0YmMzYWJiN2VkYjRhMDEyMSIsInVzZXJfaWQiOjF9.pAMcDVKI7yCDvkYvP6mxJtoCN8GCeOAPGzd_i2fb-tc"
 LABEL_STUDIO_URL = os.getenv('LABEL_STUDIO_URL','http://label-studio:8080')
 LABEL_STUDIO_API_KEY= os.getenv('LABEL_STUDIO_API_KEY','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6ODA3MDk2NTE4MiwiaWF0IjoxNzYzNzY1MTgyLCJqdGkiOiIyMjc1ZDhjZjE5MGU0Y2M0YmMzYWJiN2VkYjRhMDEyMSIsInVzZXJfaWQiOjF9.pAMcDVKI7yCDvkYvP6mxJtoCN8GCeOAPGzd_i2fb-tc')
 API_URL = os.getenv('API_URL','http://api:5075/predict')
@@ -69,7 +67,6 @@ CLASSES = ['aeroplane', 'bicycle', 'bird', 'boat', 'bottle',
             'dog', 'horse', 'motorbike', 'person', 'pottedplant',
             'sheep', 'sofa', 'train', 'tvmonitor']
 
-DEFAULT_CLASS = CLASSES[0]
 CLASS_TO_ID = {cls: i for i, cls in enumerate(CLASSES)}
 
 ANNOTATION_COLORMAP = generate_colors(len(CLASSES))
@@ -331,7 +328,6 @@ annotation_table_card = dbc.Card(
                                     {"label":t, "value":t} for t in CLASSES
                                 ],
                                 searchable=True,
-                                value=DEFAULT_CLASS,
                                 clearable=False,
                             ),
                         ],
@@ -376,9 +372,9 @@ annotation_table_card = dbc.Card(
                         ],
                         className="d-flex justify-content-center"
                     ),
-                    width="auto"     # <-- THIS MAKES THE FOOTER CONTENT SHRINK TO THE BUTTONS
+                    width="auto"    
                 ),
-                justify="center"     # <-- center only the column, not the whole container
+                justify="center"     
             ),
         )
     ]
@@ -482,15 +478,17 @@ def get_prediction(n_clicks, iou_threshold, score_threshold, img_base64_string, 
                                   "score_threshold": score_threshold}
                            )
     targets_pred_single = reponses.json()
+    print("Predicted targets:", targets_pred_single, flush=True)
 
     rows = []
-    for box, label_id, score in zip(*targets_pred_single.values()):
+    for box, label_id, score, label in zip(targets_pred_single["boxes"], 
+                                            targets_pred_single["labels"],
+                                            targets_pred_single["scores"],
+                                            targets_pred_single["classes"]):
+        print("box:", box, "label_id:", label_id, "score:", score, "label:", label, flush=True)
         x0, y0, x1, y1 = box
-        label_id = int(label_id)
-        score = score
-        label = CLASSES[label_id - 1]
-        
-        rows.append({"Class": str(label),
+        label_id = int(label_id)        
+        rows.append({"Class": label,
                     "X0": format_float(x0),
                     "Y0": format_float(y0),
                     "X1": format_float(x1),
@@ -666,6 +664,6 @@ app.layout = dbc.Container(
 if __name__ == "__main__":
     app.run(host="0.0.0.0",
             port=5000,
-            debug=False,
+            debug=True,
             use_reloader=False,
             dev_tools_hot_reload=False)
