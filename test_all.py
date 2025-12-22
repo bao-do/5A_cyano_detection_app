@@ -34,3 +34,12 @@ for name, param in model.named_parameters():
 print(f"Number of trainable parameters: {sum(p.numel() for p in model.parameters() if p.requires_grad)}")
 
 # %%
+from label_studio_sdk import LabelStudio
+
+base_url = "http://localhost:8080"
+api_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6ODA3MjEyOTQyNiwiaWF0IjoxNzY0OTI5NDI2LCJqdGkiOiIxZmJlNDczNDljNzM0MzkzOTc5OTNkZWMxMmUwNmQzNSIsInVzZXJfaWQiOjF9.AsGLtLl9VehwHK1VeFPHfCOoYuUZ6oEG2DmRRG9uP6E"
+
+ls = LabelStudio(base_url=base_url, api_key=api_key)
+tasks = list(ls.tasks.list(project=2))
+tasks = list(map(lambda x: list(x), tasks))
+# %%

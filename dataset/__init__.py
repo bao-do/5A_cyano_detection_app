@@ -1,1 +1,6 @@
-from .utils import VOCDataset, collate_fn
+from .utils import (
+                    VOCDataset,
+                    LSDetectionDataset,
+                    collate_fn,
+                    )       
+    

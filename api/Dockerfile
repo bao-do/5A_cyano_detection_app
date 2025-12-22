@@ -9,6 +9,8 @@ COPY api /app
 COPY exp /app/exp
 COPY utils /app/utils
 COPY NNModels /app/NNModels
+COPY training /app/training
+COPY dataset /app/dataset
 
 EXPOSE 5000
 

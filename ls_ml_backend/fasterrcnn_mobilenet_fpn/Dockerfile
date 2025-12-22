@@ -39,10 +39,7 @@ RUN --mount=type=cache,target=${PIP_CACHE_DIR},sharing=locked \
     fi
 
 COPY ls_ml_backend/fasterrcnn_mobilenet_fpn .
-COPY training /app/training
-COPY dataset /app/dataset
-COPY utils /app/utils
-COPY NNModels /app/NNModels
+
 
 EXPOSE 9090
 

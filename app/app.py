@@ -1,7 +1,5 @@
 #%%
 import sys, os
-folders = [f for f in os.listdir("/app")]
-print("folder list: ", folders)
 # sys.path.append("..")
 import dash
 from dash.dependencies import Input, Output, State
