@@ -6,11 +6,6 @@ RUN pip install -r requirements.txt
 
 
 COPY app /app
-COPY exp /app/exp
-COPY training /app/training
-COPY dataset /app/dataset
-COPY utils /app/utils
-COPY NNModels /app/NNModels
 
 EXPOSE 5000
 

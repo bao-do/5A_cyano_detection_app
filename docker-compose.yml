@@ -1,4 +1,31 @@
 services:
+  model-api:
+    container_name: model-api
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+    ports:
+      - "5075:5075"
+    volumes:
+      - ./api/api.py:/app/api.py
+      - ./training/train_from_ls_data.py:/app/training/train_from_ls_data.py
+      - ./data/ml-backend/fasterrcnn:/data/model/fasterrcnn:ro
+      - ./data/ls_data:/data/ls_data:ro
+    environment:
+      - SAVE_DIR=${SAVE_DIR}
+      - EXP_NAME=${EXP_NAME}
+      - NUM_STEPS=${NUM_STEPS}
+      - BATCH_SIZE=${BATCH_SIZE}
+      - SAVE_FREQ=${SAVE_FREQ}
+      - VAL_EPOCH_FREQ=${VAL_EPOCH_FREQ}
+      - LOG_IMAGE_FREQ=${LOG_IMAGE_FREQ}
+      - DEFAULT_IOU_THRESHOLD=${DEFAULT_IOU_THRESHOLD}
+      - DEFAULT_SCORE_THRESHOLD=${DEFAULT_SCORE_THRESHOLD}
+      - MONITOR_METRIC=${MONITOR_METRIC}
+      - MONITOR_MODE=${MONITOR_MODE}
+      - NVIDIA_VISIBLE_DEVICES=all
+    gpus: all
+
   label-studio:
     container_name: label-studio
     image: heartexlabs/label-studio:latest
@@ -17,9 +44,7 @@ services:
     stdin_open: true
     tty: true
  
-  # -------------------------------------------------------
-  # 1. The API Server (Handles Predict & Enqueues Training)
-  # -------------------------------------------------------
+
   ml-backend:
     container_name: ml-backend-fasterrcnn
     build: 
@@ -34,10 +59,8 @@ services:
       - MODEL_DIR=/data/model
       - LABEL_STUDIO_URL=${LABEL_STUDIO_URL}
       - LABEL_STUDIO_API_KEY=${LABEL_STUDIO_API_KEY}
+      - API_URL=${API_URL}
       - NVIDIA_VISIBLE_DEVICES=all
-      # Redis Config
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
     gpus: all
 
     ports:
@@ -47,51 +70,8 @@ services:
       - ./data/ml-backend/fasterrcnn:/data/model/fasterrcnn
       - ./data/ls_data:/data/ls_data:ro
       - ./ls_ml_backend/fasterrcnn_mobilenet_fpn/model.py:/app/model.py
-      - ./exp:/data/model/exp
     depends_on:
       - label-studio
-      - redis
-    
-  # -------------------------------------------------------
-  # 2. The Worker (Picks up Training jobs from Queue)
-  # -------------------------------------------------------
-  ml-backend-worker:
-    container_name: ml-backend-worker
-    build: 
-      context: .
-      dockerfile: ls_ml_backend/fasterrcnn_mobilenet_fpn/Dockerfile
-      args:
-        TEST_ENV: ${TEST_ENV}
-    # Command to start the RQ worker listening on 'default' queue
-    command: rq worker default --url redis://redis:6379
-    environment:
-      - LOG_LEVEL=DEBUG
-      - MODEL_DIR=/data/model
-      - LABEL_STUDIO_URL=${LABEL_STUDIO_URL}
-      - LABEL_STUDIO_API_KEY=${LABEL_STUDIO_API_KEY}
-      - NVIDIA_VISIBLE_DEVICES=all
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-    gpus: all
-    volumes:
-      # MUST match server volumes exactly so it can write the model file
-      - ./data/server:/data/server
-      - ./data/ml-backend/fasterrcnn:/data/model/fasterrcnn
-      - ./data/ls_data:/data/ls_data:ro
-      - ./ls_ml_backend/fasterrcnn_mobilenet_fpn/model.py:/app/model.py
-      - ./exp:/data/model/exp
-    depends_on:
-      - label-studio
-      - redis
-  
-  # -------------------------------------------------------
-  # 3. Redis Message Broker
-  # -------------------------------------------------------
-  redis:
-    image: redis:alpine
-    container_name: redis
-    ports:
-      - "6379:6379"
     
   ui-app:
     container_name: ui-app
@@ -101,11 +81,12 @@ services:
     ports:
       - "5000:5000"
     volumes:
-      # - ./app/app.py:/app/app.py
+      - ./app/app.py:/app/app.py
       - ./data/ls_data/source_storage/1:/app/data/ls_data/source_storage/1
     environment:
       - LABEL_STUDIO_URL=${LABEL_STUDIO_URL}
       - LABEL_STUDIO_API_KEY=${LABEL_STUDIO_API_KEY}
+      - API_URL=${API_URL}
       - NVIDIA_VISIBLE_DEVICES=all
     gpus: all
     depends_on:

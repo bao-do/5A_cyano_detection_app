@@ -5,7 +5,6 @@ from torchvision.io import decode_image
 import pandas as pd
 from PIL import Image
 import xml.etree.cElementTree as ET
-import numpy as np
 import os
 import warnings
 
@@ -176,4 +175,40 @@ class VOCDataset(torch.utils.data.Dataset):
             img, boxes = self.transform(img, boxes)
 
         return img, {'boxes': boxes, 'labels':torch.tensor(labels)}
+    
+
+########### LABEL STUDIO DATASET UTILITIES #############
+class LSDetectionDataset(torch.utils.data.Dataset):
+    def __init__(self, raw_data: list[dict], classes: list[str]=VOCDataset.voc_cls, transform: v2=None):
+        cls_to_id = {name: i + 1 for i,name in enumerate(classes)}
+        self.classes = classes
+        self.cls_to_id = cls_to_id
+        self.raw_data = raw_data
+
+        self.transform = transform
+
+    def __len__(self):
+        return len(self.raw_data)
+
+
+    def __getitem__(self, index: int):
+        chosen_data = self.raw_data[index]
+
+        img_path = chosen_data["image_path"]
+        img = Image.open(img_path).convert("RGB")
+
+        boxes = chosen_data["annotation"]["boxes"]
+        boxes = tv_tensors.BoundingBoxes(boxes,
+                                         format="XYXY",
+                                         canvas_size=(chosen_data['original_width'],
+                                                      chosen_data['original_height']))
+        
+        if self.transform is not None:
+            img, boxes = self.transform(img, boxes)
+        else:
+            img = v2.ToTensor()(img)
+        
+        labels = [self.cls_to_id[label] for label in chosen_data["annotation"]["labels"]]
+        
+        return img, {'boxes':torch.tensor(boxes), 'labels': torch.tensor(labels)}
     

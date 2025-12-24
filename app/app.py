@@ -1,36 +1,26 @@
 #%%
 import sys, os
-folders = [f for f in os.listdir("/app")]
-print("folder list: ", folders)
 # sys.path.append("..")
-from dataset import VOCDataset
-from training import LoggingConfig
-from NNModels import FasterRCNNMobile
 import dash
 from dash.dependencies import Input, Output, State
 from dash import html, dcc, dash_table
 import dash_bootstrap_components as dbc
-import dash_mantine_components as dmc
-import plotly.express as px
 import re
-import time
 import io
 import numpy as np
 from PIL import Image
 import plotly.graph_objects as go
 import base64
-import torch
-import colorsys
 import random
 from dash.exceptions import PreventUpdate
 from uuid import uuid4
+import requests
 
 from label_studio_sdk import LabelStudio
 
-# LABEL_STUDIO_URL="http://localhost:8080"
-# LABEL_STUDIO_API_KEY= "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6ODA3MDk2NTE4MiwiaWF0IjoxNzYzNzY1MTgyLCJqdGkiOiIyMjc1ZDhjZjE5MGU0Y2M0YmMzYWJiN2VkYjRhMDEyMSIsInVzZXJfaWQiOjF9.pAMcDVKI7yCDvkYvP6mxJtoCN8GCeOAPGzd_i2fb-tc"
 LABEL_STUDIO_URL = os.getenv('LABEL_STUDIO_URL','http://label-studio:8080')
 LABEL_STUDIO_API_KEY= os.getenv('LABEL_STUDIO_API_KEY','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6ODA3MDk2NTE4MiwiaWF0IjoxNzYzNzY1MTgyLCJqdGkiOiIyMjc1ZDhjZjE5MGU0Y2M0YmMzYWJiN2VkYjRhMDEyMSIsInVzZXJfaWQiOjF9.pAMcDVKI7yCDvkYvP6mxJtoCN8GCeOAPGzd_i2fb-tc')
+API_URL = os.getenv('API_URL','http://api:5075/predict')
 
 PROJECT_ID = 1
 
@@ -62,41 +52,24 @@ source_storage_dir = os.path.join(project_dir, "data/ls_data/source_storage", st
 exp_dir = os.path.join(project_dir,"exp/object_detection")
 
 #Model configuration
-DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-DTYPE = torch.float32
-LOGGER = LoggingConfig(project_dir=exp_dir,
-                       exp_name="VOC_fasterrcnn_mobilenet_v3_large_320_fpn_2000",
-                       monitor_metric="val_avg_map",
-                       monitor_mode="max")
-
 
 DEFAULT_SCORE_THRESHOLD = 0.8
 DEFAULT_IOU_THRESHOLD = 0.5
-MODEL = FasterRCNNMobile(score_threshold=DEFAULT_SCORE_THRESHOLD,
-                         iou_threshold=DEFAULT_IOU_THRESHOLD,
-                         device=DEVICE)
-
-# Load checkpoint
-state = LOGGER.load_best_checkpoint()
-MODEL.model.load_state_dict(state['model_state_dict'])
-
-
-MODEL.eval()
-
 
 # App configuration
 DEBUG = True
 NUM_ATYPES = 15
 DEFAULT_FIG_MODE = "layout"
-CLASSES = VOCDataset.voc_cls
-DEFAULT_CLASS = CLASSES[0]
-CLASS_TO_ID = VOCDataset.cls_to_id
-# ANNOTATION_COLORMAP = px.colors.qualitative.Light24
+CLASSES = ['aeroplane', 'bicycle', 'bird', 'boat', 'bottle',
+            'bus', 'car', 'cat', 'chair', 'cow', 'diningtable',
+            'dog', 'horse', 'motorbike', 'person', 'pottedplant',
+            'sheep', 'sofa', 'train', 'tvmonitor']
+
+CLASS_TO_ID = {cls: i for i, cls in enumerate(CLASSES)}
+
 ANNOTATION_COLORMAP = generate_colors(len(CLASSES))
-
-
-# prepare bijective type<->color mapping
 typ_col_pairs = list(zip(CLASSES, ANNOTATION_COLORMAP))
+
 # types to colors
 color_dict = {typ: col for typ, col in typ_col_pairs}
 type_dict  = {col: typ for typ, col in typ_col_pairs}
@@ -353,7 +326,6 @@ annotation_table_card = dbc.Card(
                                     {"label":t, "value":t} for t in CLASSES
                                 ],
                                 searchable=True,
-                                value=DEFAULT_CLASS,
                                 clearable=False,
                             ),
                         ],
@@ -398,9 +370,9 @@ annotation_table_card = dbc.Card(
                         ],
                         className="d-flex justify-content-center"
                     ),
-                    width="auto"     # <-- THIS MAKES THE FOOTER CONTENT SHRINK TO THE BUTTONS
+                    width="auto"    
                 ),
-                justify="center"     # <-- center only the column, not the whole container
+                justify="center"     
             ),
         )
     ]
@@ -426,7 +398,7 @@ def display_uploaded_image(contents):
         content_type, content_string = contents.split(",")
         decoded = base64.b64decode(content_string)
         pil_image = Image.open(io.BytesIO(decoded))
-
+        
         # Save image to source storage to import to ls after
         image_name = f"{str(uuid4())[:8]}.png"
         pil_image.save(os.path.join(source_storage_dir, image_name))
@@ -439,6 +411,7 @@ def display_uploaded_image(contents):
 
         img_array = np.array(pil_image)
         inf = {"id": task.id, "height": img_array.shape[0], "width": img_array.shape[1]}
+
 
         # Create figure with image
         fig = go.Figure()
@@ -454,7 +427,7 @@ def display_uploaded_image(contents):
         graph_style = {"display": "block"}
         upload_style = {"display": "none"}
 
-        return fig, graph_style, upload_style, img_array, inf
+        return fig, graph_style, upload_style, content_string, inf
     
 
     # Nothing uploaded
@@ -473,7 +446,7 @@ def display_uploaded_image(contents):
 )
 def remove_image(n_clicks):
     debug_print("remove image callback")
-    return {"display": "none"}, None, {"display": "block"}, None, None, None
+    return {"display": "none"}, {"display": "block"}, None, None, None, None
 
 # get prediction callback
 @app.callback(
@@ -490,25 +463,30 @@ def remove_image(n_clicks):
     ],
     prevent_initial_call = True
 )
-def get_prediction(n_clicks, iou_threshold, score_threshold, image_array, figdict, new_shape_cls):
+def get_prediction(n_clicks, iou_threshold, score_threshold, img_base64_string, figdict, new_shape_cls):
     debug_print("get_prediction callback")
-    if image_array is None:
+    if img_base64_string is None:
         raise PreventUpdate
-    image_numpy = np.array(image_array, dtype=np.float32)
-    image_torch = torch.from_numpy(image_numpy).permute(2,0,1).float().to(DEVICE)
-    max_pixel = image_torch.max()
-    image_torch = image_torch/max_pixel
-    with torch.no_grad():
-        targets_pred_single = MODEL.predict(image_torch, iou_threshold, score_threshold)[0]
-    rows = []
+    
+    image_bytes = base64.b64decode(img_base64_string)
+    
+    reponses = requests.post(API_URL,
+                            files={"file": ("image.png", image_bytes)},
+                            data={"iou_threshold": iou_threshold,
+                                  "score_threshold": score_threshold}
+                           )
+    targets_pred_single = reponses.json()
+    print("Predicted targets:", targets_pred_single, flush=True)
 
-    for box, label_id, score in zip(*targets_pred_single.values()):
-        x0, y0, x1, y1 = box.tolist()
-        label_id = int(label_id.item())
-        score = score.item()
-        label = CLASSES[label_id - 1]
-        
-        rows.append({"Class": str(label),
+    rows = []
+    for box, label_id, score, label in zip(targets_pred_single["boxes"], 
+                                            targets_pred_single["labels"],
+                                            targets_pred_single["scores"],
+                                            targets_pred_single["classes"]):
+        print("box:", box, "label_id:", label_id, "score:", score, "label:", label, flush=True)
+        x0, y0, x1, y1 = box
+        label_id = int(label_id)        
+        rows.append({"Class": label,
                     "X0": format_float(x0),
                     "Y0": format_float(y0),
                     "X1": format_float(x1),
@@ -684,6 +662,6 @@ app.layout = dbc.Container(
 if __name__ == "__main__":
     app.run(host="0.0.0.0",
             port=5000,
-            debug=False,
+            debug=True,
             use_reloader=False,
             dev_tools_hot_reload=False)
