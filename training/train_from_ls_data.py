@@ -22,7 +22,9 @@ def training_loop(
     test_loader: torch.utils.data.DataLoader,
     config: TrainingConfig,
     logger: LoggingConfig,
+    num_step_to_accumulate: int = 1,
 ):
+
     # Initialize EMA for model weights using PyTorch's AveragedModel
     swa_start = 1000 # Start using SWA after 1000 iterations
 
@@ -51,9 +53,14 @@ def training_loop(
     
     print(f"Training with {config.num_epochs} epochs")
 
+    is_first_iteration = True  
+
     for epoch in range(start_epoch, config.num_epochs):
         pb = tqdm(train_loader, desc=f"Epoch {epoch+1}/{config.num_epochs}", mininterval=10)
+        accumulation_step = 0
+        
         for images, targets in pb:
+
             model.train()
             images, targets = move_to_device(images, targets, config.device)
 
@@ -63,19 +70,31 @@ def training_loop(
             if torch.isnan(losses):
                 continue
 
-            optimizer.zero_grad()
-            losses.backward()
+            # Scale loss by accumulation steps
+            scaled_loss = losses / num_step_to_accumulate
+            
+            # Zero gradients at start of accumulation cycle
+            if accumulation_step == 0:
+                optimizer.zero_grad()
+            
+            scaled_loss.backward()
+            accumulation_step += 1
 
-            grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
-
-            optimizer.step()
-            lr_scheduler.step()
+            # Optimizer step only after accumulation
+            if accumulation_step == num_step_to_accumulate:
+                grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+                optimizer.step()
+                lr_scheduler.step()
+                accumulation_step = 0
+            elif is_first_iteration:
+                    grad_norm = torch.tensor(0.0)  # Placeholder for non-update steps
 
             if logger.global_step > swa_start and logger.global_step % 5 == 0:
                 ema_model.update_parameters(model)
             
+            # Log unscaled loss for clarity
             train_avg_loss.update(losses.item()/len(images))
-            pb.set_description(f"Avg_loss: {train_avg_loss.mean:.3e}")
+            pb.set_description(f"Avg_loss: {train_avg_loss.mean:.3e} | Accum: {accumulation_step}/{num_step_to_accumulate}")
             
             ################## Calcul and Log metrics ##########################
             if ((logger.global_step + 1) % logger.log_loss_freq == 0) or (logger.global_step == 0):
@@ -205,6 +224,7 @@ def training_loop(
 
             ##################### UPDATE GLOBAL STEP #########################3
             logger.global_step += 1
+            is_first_iteration = False
 
         ######################### SAVE CHECKPOINT #########################
         if ((epoch + 1) == config.num_epochs) or (epoch % logger.save_freq == 0):
@@ -275,9 +295,12 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     dtype = torch.float32
     num_step = int(os.getenv("NUM_STEP", "1000"))
+    batch_size_to_accumulate = int(os.getenv("BATCH_SIZE_TO_ACCUMULATE", "100"))
     batch_size = int(os.getenv("BATCH_SIZE", "10"))
+    num_step_to_accumulate = max(1, batch_size_to_accumulate // batch_size) 
     num_steps_per_epoch = len(raw_dataset_train)//batch_size + 1
     num_epoch = max(1, num_step // num_steps_per_epoch) + logging_config.epoch
+
 
     train_config_params = dict(
         device=device,
@@ -331,7 +354,7 @@ if __name__ == "__main__":
 
     # Start training loop
     print("Worker: Starting Loop...")
-    training_loop(model, optimizer, lr_scheduler, train_loader, test_loader, training_config, logging_config)
+    training_loop(model, optimizer, lr_scheduler, train_loader, test_loader, training_config, logging_config, num_step_to_accumulate)
     
     print("Worker: Training Finished successfully.")
 
