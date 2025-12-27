@@ -1,7 +1,6 @@
 import torch.optim as optim
 import warnings
 from torch.utils.tensorboard import SummaryWriter
-import psutil
 import json
 import glob
 import re
@@ -485,33 +484,6 @@ class LoggingConfig:
         step = self.global_step if step is None else step
         self.writer.add_figure(name, figure, global_step=step)   
 
-    
-    def log_system_stats(self, step):
-        """
-        Log system statistics to TensorBoard.
-
-        Args:
-            writer: TensorBoard writer instance
-            step (int): Current step/iteration
-        """
-        if self.writer is None:
-            return
-
-        step = self.global_step if step is None else step
-        if self.log_gpu_stats and torch.cuda.is_available():
-            self.writer.add_scalar(
-                "system/gpu_utilization", torch.cuda.utilization(), step
-            )
-            self.writer.add_scalar(
-                "system/gpu_memory_allocated", torch.cuda.memory_allocated(), step
-            )
-
-        if self.log_memory_stats:
-            self.writer.add_scalar(
-                "system/ram_usage_percent", psutil.virtual_memory().percent, step
-            )
-
-        self.writer.flush()
 
     def log_hyperparameters(self, hparams, main_key: str = "hyperparameters"):
         """

@@ -1,1 +1,1 @@
-PYTHONPATH=./ python3 ./training/train.py --dataset_size 2000 --num_epochs 500 --batch_size 16
+    PYTHONPATH=./ nohup python ./training/train.py --train_dataset_size 3000 --test_dataset_size 200  --num_epochs 60 --batch_size 10 > output.log 2>&1 &
