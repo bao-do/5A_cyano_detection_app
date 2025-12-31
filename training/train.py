@@ -6,12 +6,13 @@ from torchvision.utils import draw_bounding_boxes
 from torchvision.transforms import v2
 from torchmetrics.detection.mean_ap import MeanAveragePrecision
 from tqdm import tqdm
-from .utils import OptimizationConfig, TrainingConfig, LoggingConfig, OnlineMovingAverage, ema_avg_fn, move_to_device
+from utils import OptimizationConfig, TrainingConfig, LoggingConfig, OnlineMovingAverage, ema_avg_fn, move_to_device
 from typing import Callable
 from torch.optim.swa_utils import AveragedModel
 import os
 import sys
 import numpy as np
+
 
 # %%
 def training_loop(
@@ -22,6 +23,7 @@ def training_loop(
     test_loader: torch.utils.data.DataLoader,
     config: TrainingConfig,
     logger: LoggingConfig,
+    num_step_to_accumulate: int = 1,
 ):
     # Initialize EMA for model weights using PyTorch's AveragedModel
     swa_start = 1000 # Start using SWA after 1000 iterations
@@ -51,9 +53,14 @@ def training_loop(
     
     print(f"Training with {config.num_epochs} epochs")
 
+    is_first_iteration = True
+
     for epoch in range(start_epoch, config.num_epochs):
         pb = tqdm(train_loader, desc=f"Epoch {epoch+1}/{config.num_epochs}", mininterval=10)
+        accumulation_step = 0
+        
         for images, targets in pb:
+
             model.train()
             images, targets = move_to_device(images, targets, config.device)
 
@@ -63,17 +70,27 @@ def training_loop(
             if torch.isnan(losses):
                 continue
 
-            optimizer.zero_grad()
-            losses.backward()
+            # Scale loss by accumulation steps
+            scaled_loss = losses / num_step_to_accumulate
+            
+            # Zero gradients at start of accumulation cycle
+            if accumulation_step == 0:
+                optimizer.zero_grad()
+            
+            scaled_loss.backward()
+            accumulation_step += 1
 
-            grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
-
-            optimizer.step()
-            lr_scheduler.step()
+            # Optimizer step only after accumulation
+            if accumulation_step == num_step_to_accumulate:
+                grad_norm = torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+                optimizer.step()
+                lr_scheduler.step()
+                accumulation_step = 0
+            elif is_first_iteration:
+                    grad_norm = torch.tensor(0.0)  # Placeholder for non-update steps
 
             if logger.global_step > swa_start and logger.global_step % 5 == 0:
-                ema_model.update_parameters(model)
-            
+                ema_model.update_parameters(model)            
             train_avg_loss.update(losses.item()/len(images))
             pb.set_description(f"Avg_loss: {train_avg_loss.mean:.3e}")
             
@@ -205,6 +222,7 @@ def training_loop(
 
             ##################### UPDATE GLOBAL STEP #########################3
             logger.global_step += 1
+            is_first_iteration = False
 
         ######################### SAVE CHECKPOINT #########################
         if ((epoch + 1) == config.num_epochs) or (epoch % logger.save_freq == 0):
@@ -233,8 +251,8 @@ if __name__ == "__main__":
     import sys
     sys.path.append("./../")
     from dataset import VOCDataset, collate_fn
-    from torchvision.models.detection import fasterrcnn_mobilenet_v3_large_320_fpn
-    from torchvision.models import  MobileNet_V3_Large_Weights
+    from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
+    from torchvision.models.detection import fasterrcnn_resnet50_fpn_v2, FasterRCNN_ResNet50_FPN_V2_Weights
     import torch.utils.data as data
     import argparse  
 
@@ -260,19 +278,38 @@ if __name__ == "__main__":
 
 
     #################################### DEFINE MODEL #########################
-    model_kwargs = dict(
-        weights=None,
-        progress=True,
-        num_classes = 21,
-        weights_backbone= MobileNet_V3_Large_Weights.DEFAULT,
-        trainable_backbone_layers=1
-    )
-
-    model = fasterrcnn_mobilenet_v3_large_320_fpn(**model_kwargs)
+        
+    model = fasterrcnn_resnet50_fpn_v2(weights=FasterRCNN_ResNet50_FPN_V2_Weights.DEFAULT)
     
-    print("Number of trainable parameters: ", sum([p.numel() for p in model.parameters() if p.requires_grad]))
-    print("Number of parameters: ", sum([p.numel() for p in model.parameters()]))
+    # Freeze everything first
+    for param in model.parameters():
+        param.requires_grad = False
 
+    # Unfreeze box predictor (detection head)
+    in_features = model.roi_heads.box_predictor.cls_score.in_features
+    model.roi_heads.box_predictor = FastRCNNPredictor(in_features, 21)
+    
+    # # Unfreeze specific backbone layers (layer3, layer4)
+    # resnet = model.backbone.body
+    # for layer_name in ["layer3", "layer4"]:
+    #     layer = getattr(resnet, layer_name)
+    #     for param in layer.parameters():
+    #         param.requires_grad = True
+    
+    # # Unfreeze RPN head
+    # for param in model.rpn.head.parameters():
+    #     param.requires_grad = True
+    
+    # Unfreeze ROI box head
+    for param in model.roi_heads.box_head.parameters():
+        param.requires_grad = True
+    
+    trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    total = sum(p.numel() for p in model.parameters())
+    
+    print(f"Trainable params: {trainable / 1e6:.2f}M")
+    print(f"Total params: {total / 1e6:.2f}M")
+    
 
     ############################## DEFINE DATASET ###########################################
     transform = v2.Compose([
@@ -319,17 +356,21 @@ if __name__ == "__main__":
     val_epoch_freq = freq
     log_loss_freq = 5
     log_image_freq = 200
+    num_log_images = 2
     logger_args = dict(monitor_metric=monitor_metric,
                         monitor_mode=monitor_mode,
                         save_freq=save_freq,
                         val_epoch_freq=val_epoch_freq,
                         log_loss_freq=log_loss_freq,
-                        log_image_freq=log_image_freq)
+                        log_image_freq=log_image_freq,
+                        num_log_images=num_log_images)
     
     logger = LoggingConfig(project_dir=os.path.join(abs_path,'exp/object_detection'),
                            exp_name=f"VOC_fasterrcnn_resnet50_fpn_v2_{args.train_dataset_size}",
                            **logger_args
                            )
+    batch_size_to_calculate_grad = 100
+    num_step_to_accumulate = max(1, batch_size_to_calculate_grad // args.batch_size)
     
     logger.initialize()
     logger.log_hyperparameters(vars(args), main_key="training_config")
@@ -339,9 +380,5 @@ if __name__ == "__main__":
     lr_scheduler = optim_config.get_scheduler(optimizer)
 
     ########################### LANCE TRAINING LOOP ##############################################
-    training_loop(model, optimizer, lr_scheduler, train_loader, test_loader, training_config, logger)
+    training_loop(model, optimizer, lr_scheduler, train_loader, test_loader, training_config, logger, num_step_to_accumulate)
 
-
-
-
-# %%
