@@ -1,0 +1,111 @@
+\documentclass{article}
+\input{template.tex}
+\input{notations.tex}
+
+\title{Cyanobacteria identification from microscope images using deep learning approaches}
+\author{Quoc-Bao Do \\
+5th Year Student, Department of Applied Mathematics, INSA Toulouse, France \\
+Mentor: Pierre Weiss \\
+Researcher, Integrative Biology Center, Toulouse, France}
+\date{January 2025}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+\newpage
+
+\section{Introduction}
+Harmful Algal Blooms (HABs) produce toxins that affect humans and animals health, damage ecosystems, make unlivable certain aquatic environments by releasing toxic chemicals, preventing light penetration, depleting oxygen and nutrition in water. HABs are mainly caused by rapid and uncontrolled growth of cyanobacterias in water bodies. HABs also cause subtantial eonomic losses due to additional water treatment and healthcare expenses.
+Monitering the presence of cyanobacteria is therefore crucial to prevent their harmful effects. Traditional and human-based methods for detecting cyanobacterias in water samples are time-consuming, labor-intensive, and prone to errors. Many tools and applications based on deep learning have been developed to automate this process. This work aims introduce CyDect (Cyanobacteria Detection), a web-based application that are capable of identify more than 1000 types of cyanobacterias from microscope images using the deep learning technique of faster region-based convolution neural network (RCNN).
+
+\paragraph{Related works} A open-source python package named CyFi (Cyanobacteria Finder) has been developed to estimate cyanobacteria concentration in samll, inland water bodies using satellite images and machine learning techniques. SAS (Spectral Mixture Analysis for Surveillance of Harmful Algal Blooms) is a sofware application that identifies cyanobacteria genera from remotely sensed data. As best to our knowledge, our work is the first to propose a deep learning-based method to detect and classify cyanobacterias from microscope images. 
+
+
+\paragraph{Outline} We present our works as follows:
+\begin{enumerate}
+    \item In Section 2, we describe the dataset used in this work and the preprocessing steps.
+    \item In Section 3, we present our faster-rcnn model used for cyanobacteria identification.
+    \item In section 4, we describe the method used to deploy the CyDect application.
+    \item In Section 5, we show and discuss the results obtained.
+\end{enumerate}
+
+\section{Data acquisition}
+
+\section{Deep learning approach}
+\subsection{Overview of RCNN family}
+Faster-RCNN is a variant of the RCNN, which are a family of machine learning model for computer vision, and specifically object detection and localization. A RCNN model takes an image as input and then output bouding boxes around the detected objects along with their predicted class labels. In particular, a RCNN model taskes an input image, extracts region proposals that are likely to contain objects using Seletive Search algorithm \citep{uijlings2013selective}, computes features for each proposal using a learge convolutional neural network (CNN), then and then classifies each region using class-specific linear SVMSs \citep{girshick2014richfeaturehierarchiesaccurate}, as shown in Figure \ref{fig:rcnn_demo}. Originally, RCNN encounter several inefficiencies, one of these is training RCNN models involves multiple stages, including pre-training the CNN on a large dataset, fine-tuning it on the target dataset, and training class-specific SVMs, which makes the training process complex and time-consuming. Moreover, RCNN requires significant storage space as it needs to store the features for each region proposal, the model also suffers from botllenect as each region proposal need to be processed independently by the CNN, selective search for region proposals is also slow and not computationally expensive. These limitations are addressed by the fast-RCNN and faster-RCNN models which are presented below.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{figures/RCNN_demonstration.png}
+    \caption{RCNN demonstration. From \textit{Convolutional Neural Networks for Computer Vision} [Lecture notes] by Juliette Chevallier, 2025, INSA Toulouse.}
+    \label{fig:rcnn_demo}
+\end{figure}
+
+Fast-RCNN response to this inefficiency by (1) performing feature extraction over the image before proposing regions, and (2) replaceing the SVM with a softmax layer \citep{girshick2015fast}. The first improvement is made by passing the entire image through an large CNN to generate feature maps, then region proposals are projected onto these feature maps as shown in Figure \ref{fig:fastrcnn_demo}. With these two improvements, fast-RCNN avoid the bottleneck as feature extraction is shared across region proposals, and a fast-RCNN is a unified model as the classifier is now part of the neural network, leading to a significant reduction in training and inference time.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{figures/FastRCNN_demonstration.png}
+    \caption{Fast-RCNN demonstration. From \textit{Convolutional Neural Networks for Computer Vision} [Lecture notes] by Juliette Chevallier, 2025, INSA Toulouse.}
+    \label{fig:fastrcnn_demo}
+\end{figure}
+
+
+However, Fast-RCNN still rely on selective search for region proposals, which is not computationally efficient. Faster-RCNN solve this issue by replacing slow selective search with a region proposal network (RPN), which is a fully convolutional network that shares the convolutional layers with the object detection network \citep{ren2016fasterrcnnrealtimeobject}. The RPN takes the feature maps generated by the shared convolutional layers as input and outputs a set bounding box coordinates, each with an objectness score indicating the likelihood of containing an object, if this score is above a certain threshold, i.e the corresponding box has a good objectness, its coordinate get passed forward as a region proposal. The RPN uses a sliding window approach to generate boxes at different scales with certain fixed ratios, called anchor boxes, as shown in Figure \ref{fig:anchor_box}. By sharing the convolutional layers between the RPN and the object detection network, faster-RCNN significantly reduces the computational cost of region proposal generation, leading to faster inference times. The general architecture of a faster-RCNN is shown in Figure \ref{fig:fasterrcnn_demo}. 
+
+\subsection{Faster-RCNN for cyanobacteria identification}
+At the day this paper is written, the faster-RCNN model is no longer the state-of-the-art for object detection tasks, however, we still choose this model for this cyanobacteria identification task due to its robustness and high accuracy for small object detection, which is crucial as cyanobacterias are often small and densely packed in microscope images. Moreover, training faster-RCNN is easier compared to more recent models such as YOLO-family models and transformer-based models, which often require more complex training procedures, hyperparameter tuning and larger datasets to achieve good performance. To enhance the performance of our faster-RCNN model, we employ the ResNet50 architecture as the the backbone CNN for feature extraction, we also utilize Feature Pyramid Network (FPN) technique to improve the model's ability to detect cyanobacterias at different scales.
+
+
+\begin{figure}[htbp]
+    \centering
+    % First Subfigure
+    \begin{subfigure}[b]{0.4\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figures/anchor_boxes.png}
+        \caption{Anchor boxes used in the region proposal network \citep{ren2016fasterrcnnrealtimeobject}.}
+        \label{fig:anchor_box}
+    \end{subfigure}
+    \hfill % Adds flexible space between images
+    % Second Subfigure
+    \begin{subfigure}[b]{0.55\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figures/fasterrcnn_demonstration.png}
+        \caption{Faster-RCNN demonstration. From \textit{Convolutional Neural Networks for Computer Vision} [Lecture notes] by Juliette Chevallier, 2025, INSA Toulouse.}
+        \label{fig:fasterrcnn_demo}
+    \end{subfigure}
+    \caption{Anchor boxes and Faster-RCNN demonstration.}
+    \label{fig:both_images}
+\end{figure}
+
+
+
+\section{Application deployment}
+
+Our application has two interfaces: one for the expert users (researchers and biologists) and one for general public users. Both of these interfaces are user-friendly and intuitive, they do not require users to have any technical knowledge or informatic background. These interfaces allow users to upload microscope images, view the detection results from backend deep learning model, and download the results for further analysis. These two interfaces share common features such as enable users to zoom in and out of the images, annotate the detected cyanobacterias.The expert interface has additional features such as authentication, dataset management, model retraining triggering. The regular user interface is publicly accessible without authentication, this interface also allows users to give feedback on detection results, under user-corrected labels, which will be send to experts for review and will be added to the dataset for future model retraining if approved by experts.
+
+The application architecture consists of three main components: the expert interface, the general public interface, and the API backend server. The work flow of the application is described in Figure \ref{fig:app_workflow}. 
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.8\textwidth]{figures/app_workflow.png}
+    \caption{Application workflow diagram: users upload microscope images through either the expert interface or the general public interface, these images are then sent to the API backend server where the faster-RCNN model process them and return the detection results to the user interfaces for display; experts can also manage and enrich the dataset by uploading their own microscope images or/and validating user-correction; the model retraining proccess can only be triggered by experts.}
+    \label{fig:app_workflow}
+\end{figure}
+
+\paragraph{API backend server}
+The API backend server is built using \href{https://flask.palletsprojects.com/en/stable/}{Flask}, a lightweight and flexible web framework for Python. The server hosts the trained faster-RCNN model and the training scripts that allow experts to retrain the model with more enriched dataset. When users request predictions, the corresponding images are sent to the API backend server via an HTTP POST request. The server processes the image using the faster-RCNN model, generates detection results, and sends them back to the user interface in JSON format for display.
+
+\paragraph{General user interface} The general user interface is developed using \href{https://dash.plotly.com/}{Plotly Dash}, a popular framework for building interactive web applications in Python, allowing users. The interface is shown in Figure \ref{fig:general_ui}.
+
+\paragraph{Expert interface} We use \href{https://labelstud.io/}{Label Studio}, an open-source data labeling tool, for the expert interface. This interface provides advanced features that facilitate the annotation workflow and other userful functionalities such as authentication, dataset management, and model retraining triggering, enabling experts to manage and enrich the dataset effectively. The interface is shown in Figure \ref{fig:expert_ui}.
+
+\section{Results and discussion}
+
+
+\bibliography{biblio.bib}
+
+
+\end{document}
