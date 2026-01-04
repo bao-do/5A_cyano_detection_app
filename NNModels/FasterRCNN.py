@@ -6,17 +6,9 @@ from torchvision.models.detection import fasterrcnn_mobilenet_v3_large_320_fpn
 from torchvision.transforms import v2
 
 
-class FasterRCNNMobile(torch.nn.Module):
-    model_kwargs = dict(
-                        weights=None,
-                        progress=True,
-                        num_classes = 21,
-                        trainable_backbone_layers=1
-                    )
-    
-    model = fasterrcnn_mobilenet_v3_large_320_fpn(**model_kwargs)
-
-    def __init__(self,ckpath: str=None,
+class FasterRcnnPredictor(torch.nn.Module):
+    def __init__(self,
+                 model: torch.nn.Module,
                  transform: v2=None,
                  score_threshold: float=0.5,
                  iou_threshold: float=0.5,
@@ -27,10 +19,7 @@ class FasterRCNNMobile(torch.nn.Module):
         self.iou_threshold = iou_threshold
         self.device = device
         
-        self.model = self.model.to(device)
-        if ckpath is not None:
-            state = torch.load(ckpath)
-            self.model.load_state_dict(state['model_state_dict'])
+        self.model = model.to(device)
 
         if transform is not None:
             self.transform = transform

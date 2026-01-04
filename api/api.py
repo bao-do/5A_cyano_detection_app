@@ -1,12 +1,13 @@
 import sys, os
 abs_path = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.append(abs_path)
-from NNModels import FasterRCNNMobile
-from training import (LoggingConfig,
+from NNModels import FasterRcnnPredictor
+from utils import (LoggingConfig,
                       OptimizationConfig,
-                      TrainingConfig,
-                      training_loop)
-
+                      TrainingConfig)
+from training import training_loop
+from torchvision.models.detection import fasterrcnn_resnet50_fpn_v2, FasterRCNN_ResNet50_FPN_V2_Weights
+from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 
 import torch
 from torchvision import transforms
@@ -31,7 +32,7 @@ cls_to_id = {name: i+1 for i, name in enumerate(voc_cls)}
 MONITOR_METRIC = os.getenv("MONITOR_METRIC","val_avg_map")
 MONITOR_MODE = os.getenv("MONITOR_MODE", "max")
 SAVE_WEIGHTS_DIR = os.getenv("SAVE_WEIGHTS_DIR", "exp/object_detection/")
-EXP_NAME = os.getenv("EXP_NAME", "VOC_fasterrcnn_mobilenet_v3_large_320_fpn_2000")
+EXP_NAME = os.getenv("EXP_NAME", "VOC_fasterrcnn_resnet50_fpn_v2_3000")
 
 
 logger_config = LoggingConfig(project_dir=SAVE_WEIGHTS_DIR,
@@ -44,18 +45,21 @@ logger_config = LoggingConfig(project_dir=SAVE_WEIGHTS_DIR,
 ############# Define Model ##############
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-
-
 DEFAULT_SCORE_THRESHOLD = float(os.getenv("DEFAULT_SCORE_THRESHOLD", 0.8))
 DEFAULT_IOU_THRESHOLD = float(os.getenv("DEFAULT_IOU_THRESHOLD", 0.5))
 
-MODEL = FasterRCNNMobile(score_threshold=DEFAULT_SCORE_THRESHOLD,
+model = fasterrcnn_resnet50_fpn_v2(weights=FasterRCNN_ResNet50_FPN_V2_Weights.DEFAULT)
+
+in_features = model.roi_heads.box_predictor.cls_score.in_features
+model.roi_heads.box_predictor = FastRCNNPredictor(in_features, 21)
+state = logger_config.load_best_checkpoint()
+model.load_state_dict(state['model_state_dict'])
+
+MODEL = FasterRcnnPredictor(model=model,
+                         score_threshold=DEFAULT_SCORE_THRESHOLD,
                          iou_threshold=DEFAULT_IOU_THRESHOLD,
                          device=DEVICE)
 
-# Load checkpoint
-state = logger_config.load_best_checkpoint()
-MODEL.model.load_state_dict(state['model_state_dict'])
 MODEL.eval()
 
 # PIL image to tensor transform

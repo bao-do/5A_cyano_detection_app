@@ -169,3 +169,52 @@ with torch.no_grad():
 print(output)
 
 # %%
+from dataset import VOCDataset
+from torchvision.transforms import v2
+import torch
+
+transform_train = v2.Compose([
+    v2.ToDtype(dtype=torch.float32, scale=True),
+    v2.RandomHorizontalFlip(),
+    v2.RandomGrayscale(p=0.1),
+    v2.GaussianNoise(),
+    v2.ColorJitter(),
+    v2.RandomCrop((224,224), pad_if_needed=True),
+])
+
+ds = VOCDataset(images_dir='data/VOC/VOCtrainval_06-Nov-2007/VOCdevkit/VOC2007/JPEGImages',
+                annotation_dir='data/VOC/VOCtrainval_06-Nov-2007/VOCdevkit/VOC2007/Annotations',
+                transform=transform_train
+                )
+
+img, target = ds[0]
+# %%
+import torchvision
+img = torchvision.io.decode_image('data/VOC/VOCtrainval_06-Nov-2007/VOCdevkit/VOC2007/JPEGImages/000012.jpg')
+img = torchvision.tv_tensors.Image(img)
+img_transformed = transform_train(img)
+# %%
+from matplotlib import pyplot as plt
+plt.imshow(img.permute(1,2,0).numpy())
+# %% check learning rate when resuming from checkpoint
+import torch.optim as optim
+import torch
+from torchvision.models.detection import fasterrcnn_resnet50_fpn_v2
+from utils import OptimizationConfig
+
+model = fasterrcnn_resnet50_fpn_v2(weights=None, num_classes=21)
+
+cktp_path = 'exp/object_detection/VOC_fasterrcnn_resnet50_fpn_v2_3000/checkpoints/epoch_058_val_avg_map_1.8622.pth'
+state = torch.load(cktp_path, map_location='cpu')
+
+print(f"last lr: {state['scheduler_state_dict']['_last_lr']}")
+
+optimizer_config = OptimizationConfig()
+optimizer = optimizer_config.get_optimizer(model)
+lr_scheduler = optimizer_config.get_scheduler(optimizer)
+
+optimizer.load_state_dict(state['optimizer_state_dict'])
+lr_scheduler.load_state_dict(state['scheduler_state_dict'])
+
+print(f"Current LR: {optimizer.param_groups[0]['lr']}")
+# %%

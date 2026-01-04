@@ -9,3 +9,4 @@ tensorboard
 torchmetrics
 pandas
 pycocotools
+deepinv

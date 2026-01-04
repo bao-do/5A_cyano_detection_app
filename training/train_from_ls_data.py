@@ -12,6 +12,7 @@ from tqdm import tqdm
 from utils import OptimizationConfig, TrainingConfig, LoggingConfig, OnlineMovingAverage, ema_avg_fn, move_to_device
 from torch.optim.swa_utils import AveragedModel
 import json
+import deepinv as dinv
 
 # %%
 def training_loop(
@@ -28,17 +29,35 @@ def training_loop(
     # Initialize EMA for model weights using PyTorch's AveragedModel
     swa_start = 1000 # Start using SWA after 1000 iterations
 
+    # Move model to device FIRST before loading any states
     model = model.to(config.device)
     ema_model = AveragedModel(model, avg_fn=ema_avg_fn, use_buffers=True)
     ema_model = ema_model.to(config.device)
+    
     state = logger.load_latest_checkpoint()
     if state is not None:
+        # Load model state
         model.load_state_dict(state['model_state_dict'])
-        optimizer.load_state_dict(state['optimizer_state_dict'])
-        lr_scheduler.load_state_dict(state['scheduler_state_dict'])
         ema_model.load_state_dict(state['ema_model_state_dict'])
+        
+        # Load optimizer state with device mapping
+        optimizer.load_state_dict(state['optimizer_state_dict'])
+        # Move optimizer states to correct device
+        for state_param in optimizer.state.values():
+            if isinstance(state_param, dict):
+                for k, v in state_param.items():
+                    if torch.is_tensor(v):
+                        state_param[k] = v.to(config.device)
+        
+        # Load scheduler state
+        if state['scheduler_state_dict'] is not None:
+            lr_scheduler.load_state_dict(state['scheduler_state_dict'])
+        
         global_step = state["global_step"]
         start_epoch = state["epoch"]
+        
+        print(f"Resumed from global_step={global_step}, epoch={start_epoch}")
+        print(f"Current LR: {optimizer.param_groups[0]['lr']:.6e}")
     else:
         global_step = 0
         start_epoch = 0
@@ -155,7 +174,8 @@ def training_loop(
 
                 # Log images of training set
                 images_train = images[:num_log_images]
-                targets_pred_train = model(images_train)
+                with torch.no_grad():
+                    targets_pred_train = model(images_train).detach()
                 drawn_gt_train = []
                 drawn_pred_train = []
                 images_train = [(img*255).clamp(0,255).to(torch.uint8) for img in images_train]
@@ -187,7 +207,8 @@ def training_loop(
                     images_test = images_test[:num_log_images]
                     targets_test = targets_test[:num_log_images]
                     images_test, targets_test = move_to_device(images_test, targets_test, config.device)
-                    targets_pred_test = model(images_test)
+                    with torch.no_grad():
+                        targets_pred_test = model(images_test).detach()
                     drawn_gt_test = []
                     drawn_pred_test = []
                     images_test = [(img*255).clamp(0,255).to(torch.uint8) for img in images_test]
@@ -213,14 +234,16 @@ def training_loop(
                     drawn_pred_test = torch.cat(drawn_pred_test, dim=0)
                     drawn_gt_test = torch.cat(drawn_gt_test, dim=0)
 
-                logger.log_images({
-                    'x_train': images_train,
-                    'train_gt': drawn_gt_train,
-                    'train_pred': drawn_pred_train,
-                    'x_test': None if test_loader is None else images_test,
-                    'test_gt': None if test_loader is None else drawn_gt_test,
-                    'test_pred': None if test_loader is None else drawn_pred_test
-                }, logger.global_step)
+                fig = dinv.utils.plot([drawn_pred_train,
+                                       drawn_gt_train,
+                                       drawn_pred_test if test_loader is not None else None,
+                                       drawn_gt_test if test_loader is not None else None],
+                                       titles=['train pred', 'train gt',
+                                               'test pred' if test_loader is not None else None,
+                                               'test gt' if test_loader is not None else None],
+                                        return_fig=True,   
+                                        show=False)
+                logger.log_figure(figure=fig,name="samples from train and test sets",step=logger.global_step)
 
             ##################### UPDATE GLOBAL STEP #########################3
             logger.global_step += 1

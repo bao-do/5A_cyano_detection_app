@@ -294,14 +294,16 @@ class LoggingConfig:
                 warnings.warn(f"Checkpoint {checkpoint_path} does not exist.")
                 return None
             
-        state = torch.load(checkpoint_path)
-        self.global_step = state.get("global_step",0) + 1 
-        self.epoch = state.get("epoch", 0) + 1
+        state = torch.load(checkpoint_path, map_location='cpu')
+        # Don't add +1 here - let the training loop handle incrementing
+        # This ensures global_step matches what was saved
+        self.global_step = state.get("global_step", 0)
+        self.epoch = state.get("epoch", 0) + 1  # +1 for epoch since we resume at next epoch
         self.best_metric = state.get("best_metric", self.best_metric)
 
         if verbose:
             print(f"Loaded checkpoint from: {checkpoint_path}")
-            print(f"Resuming from epoch {self.epoch}")
+            print(f"Resuming from epoch {self.epoch}, global_step {self.global_step}")
         
         return state
     
