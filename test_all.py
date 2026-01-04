@@ -217,4 +217,19 @@ optimizer.load_state_dict(state['optimizer_state_dict'])
 lr_scheduler.load_state_dict(state['scheduler_state_dict'])
 
 print(f"Current LR: {optimizer.param_groups[0]['lr']}")
+# %% get classes from label studio
+
+import json
+from label_studio_sdk import LabelStudio
+
+ls_url = "http://localhost:8080"
+ls_api_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6ODA3MjEyOTQyNiwiaWF0IjoxNzY0OTI5NDI2LCJqdGkiOiIxZmJlNDczNDljNzM0MzkzOTc5OTNkZWMxMmUwNmQzNSIsInVzZXJfaWQiOjF9.AsGLtLl9VehwHK1VeFPHfCOoYuUZ6oEG2DmRRG9uP6E"
+project_id = 1
+
+ls = LabelStudio(base_url=ls_url, api_key=ls_api_key)
+project = ls.projects.get(project_id)
+
+# %%
+labels = project.parsed_label_config['label']['labels']
+
 # %%

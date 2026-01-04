@@ -193,24 +193,24 @@ class FasterRCNN(LabelStudioMLBase):
         )
 
         project_id = project['id']
-        if (project_id != MAIN_PROJECT_ID) and (project_id != VAL_PROJECT_ID):
-            logger.info("Skip training: fit method is only supported for this project")
+        if (project_id != MAIN_PROJECT_ID):
+            logger.info("Skip training: fit method is not supported for this project")
             return
         
         # Load data
         ls = LabelStudio(base_url= self.LABEL_STUDIO_HOST, api_key=self.LABEL_STUDIO_API_KEY)
+
         print(f"Worker: Fetching tasks for Project {MAIN_PROJECT_ID}...")
         
         tasks_train = list(ls.tasks.list(project=MAIN_PROJECT_ID))
-        tasks_test = list(ls.tasks.list(project=VAL_PROJECT_ID))
 
         raw_dataset_train = parse_ls_detection_tasks(tasks_train)
-        raw_dataset_test = parse_ls_detection_tasks(tasks_test)
+        class_str = ls.projects.get(MAIN_PROJECT_ID).parsed_label_config['label']['labels']
 
-        print(f"Worker: Found {len(raw_dataset_train)} train samples, {len(raw_dataset_test)} test samples")
+        print(f"Worker: Found {len(raw_dataset_train)} samples")
         payload = {
             "raw_train_data": raw_dataset_train,
-            "raw_test_data": raw_dataset_test
+            "class_str": class_str
         }
         try:
             resp = requests.post(TRAIN_API_URL, json=payload, timeout=5)

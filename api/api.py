@@ -2,9 +2,7 @@ import sys, os
 abs_path = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.append(abs_path)
 from NNModels import FasterRcnnPredictor
-from utils import (LoggingConfig,
-                      OptimizationConfig,
-                      TrainingConfig)
+from utils import LoggingConfig
 from training import training_loop
 from torchvision.models.detection import fasterrcnn_resnet50_fpn_v2, FasterRCNN_ResNet50_FPN_V2_Weights
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
@@ -21,12 +19,6 @@ import subprocess
 import shlex
 import json
 
-# VOC classes and mapping
-voc_cls = ['aeroplane', 'bicycle', 'bird', 'boat', 'bottle',
-            'bus', 'car', 'cat', 'chair', 'cow', 'diningtable',
-            'dog', 'horse', 'motorbike', 'person', 'pottedplant',
-            'sheep', 'sofa', 'train', 'tvmonitor']
-cls_to_id = {name: i+1 for i, name in enumerate(voc_cls)}
 
 # Load checkpoint function
 MONITOR_METRIC = os.getenv("MONITOR_METRIC","val_avg_map")
@@ -113,7 +105,12 @@ app.config['MAX_CONTENT_LENGTH'] = 32 * 1024 * 1024  # 32 MB
 
 @app.route("/predict", methods=["POST"])
 def predict():
-
+    # if there is no payload, meaning the model has not been trained yet
+    if not os.path.exists(PAYLOAD_DIR):
+        return jsonify({"error": "Model not trained yet."}), 400
+    with open(PAYLOAD_DIR, "r") as f:
+        payload = json.load(f)
+    class_str = payload.get("class_str", "")
     file = request.files["file"]
     img_bytes = file.read()
     iou_threshold = float(request.form.get("iou_threshold", DEFAULT_IOU_THRESHOLD))
