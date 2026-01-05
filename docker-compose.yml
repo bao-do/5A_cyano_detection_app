@@ -1,31 +1,4 @@
 services:
-  model-api:
-    container_name: model-api
-    build:
-      context: .
-      dockerfile: api/Dockerfile
-    ports:
-      - "5075:5075"
-    volumes:
-      - ./api/api.py:/app/api.py
-      - ./training/train_from_ls_data.py:/app/training/train_from_ls_data.py
-      - ./data/ml-backend/fasterrcnn:/data/model/fasterrcnn:ro
-      - ./data/ls_data:/data/ls_data:ro
-    environment:
-      - SAVE_DIR=${SAVE_DIR}
-      - EXP_NAME=${EXP_NAME}
-      - NUM_STEPS=${NUM_STEPS}
-      - BATCH_SIZE=${BATCH_SIZE}
-      - SAVE_FREQ=${SAVE_FREQ}
-      - VAL_EPOCH_FREQ=${VAL_EPOCH_FREQ}
-      - LOG_IMAGE_FREQ=${LOG_IMAGE_FREQ}
-      - DEFAULT_IOU_THRESHOLD=${DEFAULT_IOU_THRESHOLD}
-      - DEFAULT_SCORE_THRESHOLD=${DEFAULT_SCORE_THRESHOLD}
-      - MONITOR_METRIC=${MONITOR_METRIC}
-      - MONITOR_MODE=${MONITOR_MODE}
-      - NVIDIA_VISIBLE_DEVICES=all
-    gpus: all
-
   label-studio:
     container_name: label-studio
     image: heartexlabs/label-studio:latest
@@ -44,12 +17,45 @@ services:
     stdin_open: true
     tty: true
  
+  model-api:
+    container_name: model-api
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+    ports:
+      - "5075:5075"
+    volumes:
+      - ./api/api.py:/app/api.py
+      - ./training/train_from_ls_data.py:/app/training/train_from_ls_data.py
+      - ./data/ml-backend/fasterrcnn:/data/model/fasterrcnn:ro
+      - ./data/ls_data:/data/ls_data:ro
+      - ./exp:/app/exp
+      - ./NNModels:/app/NNModels
+    environment:
+      - LABEL_STUDIO_URL=${LABEL_STUDIO_URL}
+      - LABEL_STUDIO_API_KEY=${LABEL_STUDIO_API_KEY}
+      - SAVE_DIR=${SAVE_DIR}
+      - EXP_NAME=${EXP_NAME}
+      - NUM_STEPS=${NUM_STEPS}
+      - BATCH_SIZE=${BATCH_SIZE}
+      - SAVE_FREQ=${SAVE_FREQ}
+      - VAL_EPOCH_FREQ=${VAL_EPOCH_FREQ}
+      - LOG_IMAGE_FREQ=${LOG_IMAGE_FREQ}
+      - DEFAULT_IOU_THRESHOLD=${DEFAULT_IOU_THRESHOLD}
+      - DEFAULT_SCORE_THRESHOLD=${DEFAULT_SCORE_THRESHOLD}
+      - MONITOR_METRIC=${MONITOR_METRIC}
+      - MONITOR_MODE=${MONITOR_MODE}
+      - NVIDIA_VISIBLE_DEVICES=all
+    gpus: all
+    depends_on:
+      - label-studio
+
 
   ml-backend:
     container_name: ml-backend-fasterrcnn
     build: 
       context: .
-      dockerfile: ls_ml_backend/fasterrcnn_mobilenet_fpn/Dockerfile
+      dockerfile: ls_ml_backend/fasterrcnn/Dockerfile
       args:
         TEST_ENV: ${TEST_ENV}
     environment:
@@ -69,7 +75,7 @@ services:
       - ./data/server:/data/server
       - ./data/ml-backend/fasterrcnn:/data/model/fasterrcnn
       - ./data/ls_data:/data/ls_data:ro
-      - ./ls_ml_backend/fasterrcnn_mobilenet_fpn/model.py:/app/model.py
+      - ./ls_ml_backend/fasterrcnn/model.py:/app/model.py
     depends_on:
       - label-studio
     

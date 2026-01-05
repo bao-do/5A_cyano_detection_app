@@ -233,3 +233,47 @@ project = ls.projects.get(project_id)
 labels = project.parsed_label_config['label']['labels']
 
 # %%
+import torch
+import torchvision
+from torchvision.models.detection import FasterRCNN
+from torchvision.models.detection.backbone_utils import resnet_fpn_backbone
+
+def get_lightweight_model(num_classes):
+    # 1. Create the backbone: ResNet-18 with FPN
+    # 'trainable_layers=3' means we train the top 3 blocks, freezing the bottom 2 (common for small datasets)
+    backbone = resnet_fpn_backbone(
+        backbone_name='resnet18', 
+        weights='DEFAULT', 
+        trainable_layers=1
+    )
+
+    # 2. Create the Faster R-CNN model using this backbone
+    # num_classes includes background (e.g., 1 class + background = 2)
+    model = FasterRCNN(backbone, num_classes=num_classes)
+    
+    return model
+
+# Usage
+model = get_lightweight_model(num_classes=100) # 1 for Cyanobacteria + 1 Background
+print(f"Total trainable parameters in lightweight model: {sum(p.numel() for p in model.parameters() if p.requires_grad) / 1e6:.2f}M ")
+# %%
+img_path = 'data/VOC/VOCtrainval_06-Nov-2007/VOCdevkit/VOC2007/JPEGImages/000005.jpg'
+img = torchvision.io.decode_image(img_path)
+img = img.float() / 255.0  # Normalize to [0, 1]
+img = img.unsqueeze(0)  # Add batch dimension
+model.eval()
+with torch.no_grad():
+    output = model(img)
+print(output)
+# %%
+from utils import get_model
+
+model_name = 'fasterrcnn_resnet18_fpn'
+model = get_model(model_name, num_classes=21)
+print(f"Total trainable parameters in {model_name}: {sum(p.numel() for p in model.parameters() if p.requires_grad) / 1e6:.2f}M ")
+# %% trainble params in mobilenet backbone
+for name, param in model.named_parameters():
+    if param.requires_grad:
+        print(name)
+
+# %%

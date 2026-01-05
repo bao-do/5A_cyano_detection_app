@@ -125,7 +125,6 @@ def ema_avg_fn(averaged_model_parameter, model_parameter, n_averaged):
 class LoggingConfig:
     # Logging frequencies
     log_freq = 10
-    save_freq = 1
 
     # Tensorboard settings
     tensorboard = True
@@ -148,7 +147,6 @@ class LoggingConfig:
     log_image_freq = 200
     num_log_images= 4 
     log_loss_freq: int=10
-    val_epoch_freq: int=5
 
     # System monitoring
     log_gpu_stats = False  # Log GPU utilization
@@ -169,7 +167,8 @@ class LoggingConfig:
         
         if (not load_old_ckpt) or (not os.path.exists(self.metadata_file)):
             warnings.warn(f"Starting new experiment, removing old metadata file {self.metadata_file}")
-            os.remove(self.metadata_file)
+            if os.path.exists(self.metadata_file):
+                os.remove(self.metadata_file)
             self.global_step = 0
             self.epoch = 0
             self.best_metric = float("inf") if self.monitor_mode=="min" else -float("inf")
@@ -180,7 +179,7 @@ class LoggingConfig:
                 metadata = json.load(f)
                 self.global_step = metadata['global_step']
                 self.epoch = metadata['epoch']
-                
+
             if (self.monitor_metric == metadata['monitor_metric']) and (self.monitor_mode == metadata['monitor_mode']):
                 self.best_metric = metadata['best_metric']
         
@@ -525,8 +524,46 @@ def move_to_device(images: list=None, targets: list=None, device="cpu", has_scor
         
 
 
-        
+from torchvision.models.detection import (fasterrcnn_mobilenet_v3_large_320_fpn,
+                                          FasterRCNN_MobileNet_V3_Large_320_FPN_Weights,
+                                          FasterRCNN)
+from torchvision.models import ResNet18_Weights
+from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
+from torchvision.models.detection.backbone_utils import resnet_fpn_backbone
 
+def get_model(model_name,num_classes, trainable_backbone_layers=1):
+    """
+    Args:
+        model_name (str): Name of the model to load. Options: 
+            - "fasterrcnn_mobilenet_v3_large_320_fpn"
+            - "fasterrcnn_resnet18_fpn"
+            - "fasterrcnn_resnet34_fpn"
+    """
+    if model_name == "fasterrcnn_mobilenet_v3_large_320_fpn":
+        model = fasterrcnn_mobilenet_v3_large_320_fpn(weights=FasterRCNN_MobileNet_V3_Large_320_FPN_Weights.DEFAULT,
+                                                      trainable_backbone_layers=trainable_backbone_layers)
+        in_features = model.roi_heads.box_predictor.cls_score.in_features
+        model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes)
 
+    elif model_name == "fasterrcnn_resnet18_fpn":
+        backbone = resnet_fpn_backbone(
+            backbone_name='resnet18', 
+            weights=ResNet18_Weights.DEFAULT, 
+            trainable_layers=trainable_backbone_layers
+        )
+        model = FasterRCNN(backbone, num_classes=num_classes)
+    elif model_name == "fasterrcnn_resnet34_fpn":
+        backbone = resnet_fpn_backbone(
+            backbone_name='resnet34', 
+            weights=None, 
+            trainable_layers=trainable_backbone_layers
+        )
+        model = FasterRCNN(backbone, num_classes=num_classes)    
+    else:
+        raise ValueError(f"Model {model_name} not supported")
+    
+
+    return model
+    
 
 

@@ -287,6 +287,7 @@ if __name__ == "__main__":
     from torchvision.models.detection import fasterrcnn_resnet50_fpn_v2, FasterRCNN_ResNet50_FPN_V2_Weights
     import torch.utils.data as data
     import argparse  
+    from utils import get_model
 
 
     ######################## Training arguments ############################################
@@ -301,6 +302,8 @@ if __name__ == "__main__":
     parser.add_argument("--batch_size", type=int, default=128, help="Batch size for training")
     parser.add_argument("--save_dir", type=str, help="Saved directory",
                         default='/home/bao/School/5A/research_project/bacteria_detection_app/exp/default')
+    parser.add_argument("--model_name", type=str, default="fasterrcnn_mobilenet_v3_large_320_fpn", choices=[
+                        "fasterrcnn_resnet18_fpn", "fasterrcnn_resnet34_fpn", "fasterrcnn_mobilenet_v3_large_320_fpn"], help="Model name")
     args = parser.parse_args()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -311,30 +314,7 @@ if __name__ == "__main__":
 
     #################################### DEFINE MODEL #########################
         
-    model = fasterrcnn_resnet50_fpn_v2(weights=FasterRCNN_ResNet50_FPN_V2_Weights.DEFAULT)
-    
-    # Freeze everything first
-    for param in model.parameters():
-        param.requires_grad = False
-
-    # Unfreeze box predictor (detection head)
-    in_features = model.roi_heads.box_predictor.cls_score.in_features
-    model.roi_heads.box_predictor = FastRCNNPredictor(in_features, 21)
-    
-    # # Unfreeze specific backbone layers (layer3, layer4)
-    # resnet = model.backbone.body
-    # for layer_name in ["layer3", "layer4"]:
-    #     layer = getattr(resnet, layer_name)
-    #     for param in layer.parameters():
-    #         param.requires_grad = True
-    
-    # # Unfreeze RPN head
-    # for param in model.rpn.head.parameters():
-    #     param.requires_grad = True
-    
-    # Unfreeze ROI box head
-    for param in model.roi_heads.box_head.parameters():
-        param.requires_grad = True
+    model = get_model(model_name=args.model_name, num_classes=21)
     
     trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
     total = sum(p.numel() for p in model.parameters())
@@ -393,22 +373,19 @@ if __name__ == "__main__":
     monitor_metric = "val_avg_map" if test_loader is not None else "train_avg_map"
     monitor_mode = "max"
     num_step_per_epoch = max(len(train_loader), 1)
-    freq = max(1, int(200 // num_step_per_epoch))
-    save_freq = freq
-    val_epoch_freq = freq
-    log_loss_freq = 5
-    log_image_freq = 200
-    num_log_images = 2
+    save_freq =  max(1, int(500 // num_step_per_epoch))
+    log_loss_freq = 50
+    log_image_freq = 500
+    num_log_images = 3
     logger_args = dict(monitor_metric=monitor_metric,
                         monitor_mode=monitor_mode,
                         save_freq=save_freq,
-                        val_epoch_freq=val_epoch_freq,
                         log_loss_freq=log_loss_freq,
                         log_image_freq=log_image_freq,
                         num_log_images=num_log_images)
     
     logger = LoggingConfig(project_dir=os.path.join(abs_path,'exp/object_detection'),
-                           exp_name=f"VOC_fasterrcnn_resnet50_fpn_v2_{args.train_dataset_size}",
+                           exp_name=f"VOC_{args.model_name}_{args.train_dataset_size}",
                            **logger_args
                            )
     batch_size_to_calculate_grad = 100

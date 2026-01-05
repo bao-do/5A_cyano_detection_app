@@ -368,11 +368,15 @@ if __name__ == "__main__":
     
     print("Worker: Training Finished successfully.")
 
-    # Save class_str used for training
-    with open(payload_path,'w') as f:
-        json.dump({'class_str': class_str}, f)
+    # Save class_str used for training with checkpoint metadata
+    payload = {
+        'class_str': class_str,
+    }
+    with open(payload_path, 'w') as f:
+        json.dump(payload, f, indent=2)
     
-
+    print(f"Worker: Saved updated model information to {payload_path}")
+    
     
 
 

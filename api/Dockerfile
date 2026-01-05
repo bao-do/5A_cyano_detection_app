@@ -6,7 +6,6 @@ RUN pip install -r requirements.txt
 
 
 COPY api /app
-COPY exp /app/exp
 COPY utils /app/utils
 COPY NNModels /app/NNModels
 COPY training /app/training

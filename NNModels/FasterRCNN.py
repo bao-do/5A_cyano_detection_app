@@ -74,12 +74,19 @@ class FasterRcnnPredictor(torch.nn.Module):
                 mask = (labels[1:] != chosen_label) | (ious < iou_threshold)
                 boxes, labels, scores = boxes[1:][mask], labels[1:][mask], scores[1:][mask]
             
-
-            predictions.append({
-                'boxes': torch.cat(boxes_after_nms, dim=0) if len(boxes_after_nms) != 0 else boxes_after_nms,
-                'labels': torch.tensor(labels_after_nms) if len(labels_after_nms) != 0 else labels_after_nms,
-                'scores': torch.tensor(scores_after_nms) if len(scores_after_nms) != 0 else scores_after_nms
-            })
+            
+            if len (boxes_after_nms) > 0:
+                predictions.append({
+                    'boxes': torch.cat(boxes_after_nms, dim=0),
+                    'labels': torch.tensor(labels_after_nms),
+                    'scores': torch.tensor(scores_after_nms)
+                })
+            else:
+                predictions.append({
+                    'boxes': torch.tensor([]),
+                    'labels': torch.tensor([]),
+                    'scores': torch.tensor([])
+                })
         return predictions
             
 
