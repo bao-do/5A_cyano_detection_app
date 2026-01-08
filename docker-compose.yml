@@ -8,8 +8,10 @@ services:
       - LABEL_STUDIO_LOCAL_FILES_SERVING_ENABLED=true
       - LABEL_STUDIO_LOCAL_FILES_DOCUMENT_ROOT=/label-studio/data
 
-      # - CSRF_TRUSTED_ORIGINS=https://college-clock-travel-administered.trycloudflare.com
-      # - LABEL_STUDIO_HOST=https://college-clock-travel-administered.trycloudflare.com
+      - LABEL_STUDIO_HOST=https://label.cyanobacidentification.studio
+      - CSRF_TRUSTED_ORIGINS=https://label.cyanobacidentification.studio
+      - CSRF_ALLOWED_ORIGINS=https://label.cyanobacidentification.studio
+      - LABEL_STUDIO_DISABLE_SIGNUP_WITHOUT_LINK=true
     volumes:
       - ./data/ls_data:/label-studio/data
       - ./data/ls_data/source_storage:/label-studio/data/source_storage

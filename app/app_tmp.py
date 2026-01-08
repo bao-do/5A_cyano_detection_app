@@ -15,7 +15,6 @@ import random
 from dash.exceptions import PreventUpdate
 from uuid import uuid4
 import requests
-from dash import Patch
 
 from label_studio_sdk import LabelStudio
 
@@ -31,20 +30,14 @@ ls = LabelStudio(
 )
 
 def generate_colors(n, seed=1337):
-    # the first color should always be red for the first class 'aeroplane'
-
     random.seed(seed)
-    colors = ["rgb(255,0,0)"]  # Start with red as a list to maintain order
-    colors_set = {"rgb(255,0,0)"}  # Use set to track duplicates
+    colors = set()
     while len(colors) < n:
         r = random.randint(0, 255)
         g = random.randint(0, 255)
         b = random.randint(0, 255)
-        color = f"rgb({r},{g},{b})"
-        if color not in colors_set:
-            colors.append(color)
-            colors_set.add(color)
-    return colors
+        colors.add(f"rgb({r},{g},{b})")
+    return list(colors)
 
 def hex_to_rgb(hex_color):
     """Convert hex ('#RRGGBB') to 'rgb(r,g,b)' or 'rgba(r,g,b,a)'."""
@@ -332,7 +325,6 @@ annotation_table_card = dbc.Card(
                                 options=[
                                     {"label":t, "value":t} for t in CLASSES
                                 ],
-                                value=CLASSES[0],
                                 searchable=True,
                                 clearable=False,
                             ),
@@ -395,7 +387,7 @@ annotation_table_card = dbc.Card(
     Output("graph", "style", allow_duplicate=True),
     Output("upload-div", "style", allow_duplicate=True),
     Output("uploaded-image-store", "data", allow_duplicate=True),
-    # Output("inf-container", "data", allow_duplicate=True),
+    Output("inf-container", "data", allow_duplicate=True),
     Input("upload-image", "contents"),
     prevent_initial_call=True,
 )
@@ -410,15 +402,15 @@ def display_uploaded_image(contents):
         # Save image to source storage to import to ls after
         image_name = f"{str(uuid4())[:8]}.png"
         pil_image.save(os.path.join(source_storage_dir, image_name))
-        # task = ls.tasks.create(
-        #     project=PROJECT_ID,
-        #     data={
-        #         "image": f"/data/local-files/?d=source_storage/{PROJECT_ID}/{image_name}"
-        #     }
-        # )
+        task = ls.tasks.create(
+            project=PROJECT_ID,
+            data={
+                "image": f"/data/local-files/?d=source_storage/{PROJECT_ID}/{image_name}"
+            }
+        )
 
         img_array = np.array(pil_image)
-        # inf = {"id": task.id, "height": img_array.shape[0], "width": img_array.shape[1]}
+        inf = {"id": task.id, "height": img_array.shape[0], "width": img_array.shape[1]}
 
 
         # Create figure with image
@@ -435,8 +427,7 @@ def display_uploaded_image(contents):
         graph_style = {"display": "block"}
         upload_style = {"display": "none"}
 
-        # return fig, graph_style, upload_style, content_string, inf
-        return fig, graph_style, upload_style, content_string
+        return fig, graph_style, upload_style, content_string, inf
     
 
     # Nothing uploaded
@@ -447,7 +438,6 @@ def display_uploaded_image(contents):
     Output("graph", "style"),
     Output("upload-div", "style"),
     Output("uploaded-image-store", "data"),
-    Output("annotation-type-dropdown", "value"), # reset to first class
     Output("annotations-table","data", allow_duplicate=True),
     Output("annotations-store", "data", allow_duplicate=True),
     Output("inf-container", "data"),
@@ -456,7 +446,7 @@ def display_uploaded_image(contents):
 )
 def remove_image(n_clicks):
     debug_print("remove image callback")
-    return {"display": "none"}, {"display": "block"}, None, CLASSES[0], None, None, None
+    return {"display": "none"}, {"display": "block"}, None, None, None, None
 
 # get prediction callback
 @app.callback(
@@ -517,24 +507,25 @@ def table_to_graph(current_class, table_data, figdict):
     cbcontext = [p["prop_id"] for p in dash.callback_context.triggered][0]
     debug_print(f"Callback is triggered by {cbcontext}")
     
-    if figdict is None:
-        raise PreventUpdate
-    
-    # Only update newshape color when dropdown changes
     if cbcontext == "annotation-type-dropdown.value":
-        print(f"first current_class: {current_class}, color {color_dict[current_class]}", flush=True)
-        # Use Patch() for efficient partial updates - only update layout.newshape
-        
-        patched_figure = Patch()
-        patched_figure["layout"]["newshape"]["line_color"] = color_dict[current_class]
-        patched_figure["layout"]["newshape"]["fillcolor"] = color_dict[current_class].replace("rgb", "rgba").replace(")", ",0.2)")
-        return patched_figure
+        if figdict is None:
+            PreventUpdate
+        shapes = figdict.get("layout", {}).get("shapes", [])
+        fig = go.Figure(figdict)
+        fig.update_layout(
+            shapes=shapes,
+            dragmode="drawrect",
+            newshape=dict(line_color=color_dict[current_class],
+                        line_width = 2,
+                        fillcolor=color_dict[current_class].replace("rgb", "rgba").replace(")", ",0.2)"),
+                        )
+        )    
+        return fig
     
-    # Table data changed - update shapes
-    if table_data is None:
+    if (figdict is None) or (table_data is None):
         raise PreventUpdate
     
-    # Build shapes list from table data
+    fig = go.Figure(figdict)
     shapes = []
     for row in table_data:
         x0, y0, x1, y1 = float(row["X0"]), float(row["Y0"]), float(row["X1"]), float(row["Y1"])
@@ -548,17 +539,8 @@ def table_to_graph(current_class, table_data, figdict):
                 editable=True
             )
         )
-    
-    # Use Patch() to only update shapes - much faster than recreating entire figure
-    from dash import Patch
-    patched_figure = Patch()
-    patched_figure["layout"]["shapes"] = shapes
-    patched_figure["layout"]["newshape"]["line_color"] = color_dict[current_class]
-    patched_figure["layout"]["newshape"]["fillcolor"] = color_dict[current_class].replace("rgb", "rgba").replace(")", ",0.2)")
-    
-    print(f"second current_class: {current_class}, color {color_dict[current_class]}", flush=True)
-    
-    return patched_figure
+    fig.update_layout(shapes=shapes)
+    return fig
 
 
 @app.callback(
@@ -676,6 +658,6 @@ app.layout = dbc.Container(
 if __name__ == "__main__":
     app.run(host="0.0.0.0",
             port=5000,
-            debug=False,
+            debug=True,
             use_reloader=False,
             dev_tools_hot_reload=False)

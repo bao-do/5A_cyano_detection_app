@@ -1,4 +1,4 @@
-FROM pytorch/pytorch:2.1.2-cuda12.1-cudnn8-devel
+FROM python:3.10-slim
 ARG TEST_ENV
 
 WORKDIR /app

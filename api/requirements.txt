@@ -1,6 +1,6 @@
-torch
-torchvision
-numpy
+torch==2.3.1
+torchvision==0.18.1
+numpy==2.2.6
 requests>=2.28.1
 matplotlib
 flask
@@ -11,3 +11,4 @@ pandas
 pycocotools
 deepinv
 label-studio-sdk
+gunicorn

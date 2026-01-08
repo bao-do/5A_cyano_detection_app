@@ -11,8 +11,6 @@ from torchvision import transforms
 from flask import Flask, request, jsonify
 from PIL import Image
 import io
-import glob
-import re
 import threading
 import subprocess
 import shlex
@@ -20,6 +18,7 @@ import json
 from label_studio_sdk import LabelStudio
 import time
 import httpx
+from utils import get_model
 
 
 LABEL_STUDIO_HOST = os.getenv("LABEL_STUDIO_HOST", "http://label-studio:8080")
@@ -38,7 +37,11 @@ max_retries = 10
 for i in range(max_retries):
     try:
         print(f"Attempting to connect to Label Studio (Try {i+1}/{max_retries})...")
-        class_str = ls.projects.get(MAIN_PROJECT_ID).parsed_label_config['label']['labels']
+        # class_str = ls.projects.get(MAIN_PROJECT_ID).parsed_label_config['label']['labels']
+        class_str = ['aeroplane', 'bicycle', 'bird', 'boat', 'bottle',
+            'bus', 'car', 'cat', 'chair', 'cow', 'diningtable',
+            'dog', 'horse', 'motorbike', 'person', 'pottedplant',
+            'sheep', 'sofa', 'train', 'tvmonitor']
         print("Connected successfully!")
         break
         

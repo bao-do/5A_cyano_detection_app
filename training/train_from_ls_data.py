@@ -288,7 +288,7 @@ if __name__ == "__main__":
         v2.ToDtype(dtype=torch.float32, scale=True),
         v2.RandomHorizontalFlip(),
         v2.RandomGrayscale(p=0.1),
-        v2.GaussianNoise(),
+        # v2.GaussianNoise(),
         v2.ColorJitter(),
     ])
 

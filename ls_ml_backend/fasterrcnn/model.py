@@ -9,8 +9,6 @@ from label_studio_ml.response import ModelResponse
 from PIL import Image
 import requests
 import io
-import json
-
 
 #%%
 
@@ -49,7 +47,6 @@ def get_local_path(url):
 
 # ----------- MODEL PREDICTION AND TRAINING SETUP  ----------------------
 MAIN_PROJECT_ID = int(os.getenv("MAIN_PROJECT_ID", 1))
-VAL_PROJECT_ID = int(os.getenv("VAL_PROJECT_ID", 2))
 API_URL = os.getenv("API_URL", "http://model-api:5075/predict")
 TRAIN_API_URL = os.getenv("TRAIN_API_URL", API_URL.replace("/predict", "/train"))
 
