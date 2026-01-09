@@ -286,10 +286,15 @@ img = img.convert("RGB")
 # save as png
 img.save("512_hai.png")
 # %%
-from torchvision.io import decode_image
+from label_studio_sdk import LabelStudio
 
-img = decode_image("512_hai.png")
-print(img.shape)
+base_url = "https://label.cyanobacidentification.studio"
+api_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6ODA3MjEyOTQyNiwiaWF0IjoxNzY0OTI5NDI2LCJqdGkiOiIxZmJlNDczNDljNzM0MzkzOTc5OTNkZWMxMmUwNmQzNSIsInVzZXJfaWQiOjF9.AsGLtLl9VehwHK1VeFPHfCOoYuUZ6oEG2DmRRG9uP6E"
 
+ls = LabelStudio(base_url=base_url, api_key=api_key)
+project = ls.projects.get(1)
 
+classes = project.parsed_label_config['label']['labels']
+print(classes[-1])
 
+# %%

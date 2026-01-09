@@ -92,6 +92,7 @@ services:
       - ./app/app_tmp.py:/app/app.py
       - ./data/ls_data/source_storage/1:/app/data/ls_data/source_storage/1
     environment:
+      - TZ=Europe/Paris
       - LABEL_STUDIO_URL=${LABEL_STUDIO_URL}
       - LABEL_STUDIO_API_KEY=${LABEL_STUDIO_API_KEY}
       - API_URL=${API_URL}
@@ -99,6 +100,39 @@ services:
     gpus: all
     depends_on:
       - label-studio
+  ui-app-restarter:
+    image: docker:cli
+    container_name: ui-app-restarter
+    environment:
+      - TZ=Europe/Paris
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        echo "UI-App Restarter: Started at $$(date '+%Y-%m-%d %H:%M:%S %Z')"
+        echo "Will restart ui-app daily at 00:00 Paris time"
+        echo "Current timezone: $$(date +%Z)"
+        while true; do
+          CURRENT_TIME=$$(date +'%H:%M')
+          # Log every 10 minutes to show we're alive
+          MINUTE=$$(date +'%M')
+          if [ "$$(expr $$MINUTE % 10)" = "0" ]; then
+            echo "[$$(date '+%Y-%m-%d %H:%M:%S')] Alive - waiting for 00:00 (current: $$CURRENT_TIME)"
+          fi
+          # Restart at midnight
+          if [ "$$CURRENT_TIME" = '00:00' ]; then
+            echo "[$$(date '+%Y-%m-%d %H:%M:%S')] Restarting ui-app to reload classes from Label Studio..."
+            docker restart ui-app
+            echo "[$$(date '+%Y-%m-%d %H:%M:%S')] ui-app restarted successfully"
+            # Sleep for 61 seconds to avoid multiple restarts in the same minute
+            sleep 61
+          fi
+          sleep 60
+        done
 
   reverse-proxy:
     image: nginx:latest
@@ -112,3 +146,4 @@ services:
       - ui-app
       - ml-backend
       - label-studio
+

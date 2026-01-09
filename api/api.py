@@ -33,6 +33,7 @@ EXP_NAME = os.getenv("EXP_NAME", "VOC_fasterrcnn_resnet50_fpn_v2")
 ls = LabelStudio(base_url= LABEL_STUDIO_HOST, api_key=LABEL_STUDIO_API_KEY)
 
 
+
 max_retries = 10
 for i in range(max_retries):
     try:
@@ -247,6 +248,9 @@ def get_local_path(url):
 ############### api ####################
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 32 * 1024 * 1024  # 32 MB
+
+
+
 
 @app.route("/predict", methods=["POST"])
 def predict():
