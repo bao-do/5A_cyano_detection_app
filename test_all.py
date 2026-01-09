@@ -277,3 +277,19 @@ for name, param in model.named_parameters():
         print(name)
 
 # %%
+from PIL import Image
+import numpy as np
+
+img = Image.open("512_hai.tiff")
+ #convert to RGB
+img = img.convert("RGB")
+# save as png
+img.save("512_hai.png")
+# %%
+from torchvision.io import decode_image
+
+img = decode_image("512_hai.png")
+print(img.shape)
+
+
+

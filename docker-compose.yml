@@ -89,7 +89,7 @@ services:
     ports:
       - "5000:5000"
     volumes:
-      - ./app/app.py:/app/app.py
+      - ./app/app_tmp.py:/app/app.py
       - ./data/ls_data/source_storage/1:/app/data/ls_data/source_storage/1
     environment:
       - LABEL_STUDIO_URL=${LABEL_STUDIO_URL}

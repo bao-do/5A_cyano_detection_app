@@ -47,10 +47,24 @@ def generate_colors(n, seed=1337):
     return colors
 
 def hex_to_rgb(hex_color):
-    """Convert hex ('#RRGGBB') to 'rgb(r,g,b)' or 'rgba(r,g,b,a)'."""
+    """Convert hex ('#RRGGBB' or '#RGB') to 'rgb(r,g,b)'."""
     hex_color = hex_color.lstrip("#")
-    r, g, b = tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
-    return f"rgb({r},{g},{b})"
+    
+    # Handle short-form hex colors like #444 -> #444444
+    if len(hex_color) == 3:
+        hex_color = ''.join([c*2 for c in hex_color])
+    
+    # Validate hex color length
+    if len(hex_color) != 6:
+        # Return a default color if invalid
+        return "rgb(128,128,128)"
+    
+    try:
+        r, g, b = tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+        return f"rgb({r},{g},{b})"
+    except ValueError:
+        # Return default gray if conversion fails
+        return "rgb(128,128,128)"
 
 file_dir = os.path.dirname(os.path.abspath(__file__))
 # project_dir = os.path.join(file_dir, "..")/
@@ -95,8 +109,12 @@ def format_float(f):
     return "%.2f" %(float(f),)
 
 def shape_to_table_row(sh):
+    color = sh["line"]["color"]
+    # Convert hex color to rgb format if needed
+    if color.startswith("#"):
+        color = hex_to_rgb(color)
     return{
-        "Class": type_dict[sh["line"]["color"]],
+        "Class": type_dict.get(color, CLASSES[0]),  # Default to first class if color not found
         "X0": format_float(sh["x0"]),
         "Y0": format_float(sh["y0"]),
         "X1": format_float(sh["x1"]),
@@ -127,7 +145,13 @@ def empty_fig():
     fig.update_layout(
         margin=dict(l=0, r=0, t=0, b=0),
         dragmode="drawrect",
-        newshape=dict(line_color="red"),
+        newshape=dict(
+            line=dict(
+                color=color_dict[CLASSES[0]],
+                width=2
+            ),
+            fillcolor=color_dict[CLASSES[0]].replace("rgb", "rgba").replace(")", ",0.2)")
+        ),
     )
     return fig
 
@@ -402,48 +426,64 @@ annotation_table_card = dbc.Card(
 def display_uploaded_image(contents):
     debug_print("uploaded_image callback")
     if contents is not None:
-        # Decode uploaded image
-        content_type, content_string = contents.split(",")
-        decoded = base64.b64decode(content_string)
-        pil_image = Image.open(io.BytesIO(decoded))
-        
-        # Save image to source storage to import to ls after
-        image_name = f"{str(uuid4())[:8]}.png"
-        pil_image.save(os.path.join(source_storage_dir, image_name))
-        # task = ls.tasks.create(
-        #     project=PROJECT_ID,
-        #     data={
-        #         "image": f"/data/local-files/?d=source_storage/{PROJECT_ID}/{image_name}"
-        #     }
-        # )
+        try:
+            # Decode uploaded image
+            content_type, content_string = contents.split(",")
+            decoded = base64.b64decode(content_string)
+            pil_image = Image.open(io.BytesIO(decoded))
+            
+            # Convert to RGB if necessary
+            if pil_image.mode != 'RGB':
+                pil_image = pil_image.convert('RGB')
+            
+            # Save image to source storage to import to ls after
+            image_name = f"{str(uuid4())[:8]}.png"
+            pil_image.save(os.path.join(source_storage_dir, image_name))
+            # task = ls.tasks.create(
+            #     project=PROJECT_ID,
+            #     data={
+            #         "image": f"/data/local-files/?d=source_storage/{PROJECT_ID}/{image_name}"
+            #     }
+            # )
 
-        img_array = np.array(pil_image)
-        # inf = {"id": task.id, "height": img_array.shape[0], "width": img_array.shape[1]}
+            img_array = np.array(pil_image)
+            # inf = {"id": task.id, "height": img_array.shape[0], "width": img_array.shape[1]}
 
 
-        # Create figure with image
-        fig = go.Figure()
-        fig.add_trace(go.Image(z=img_array))
-        fig.update_xaxes(showticklabels=False).update_yaxes(showticklabels=False)
-        fig.update_layout(
-            margin=dict(l=0, r=0, t=0, b=0),
-            dragmode="drawrect",
-            newshape=dict(line_color="red"),
-        )
+            # Create figure with image
+            fig = go.Figure()
+            fig.add_trace(go.Image(z=img_array))
+            fig.update_xaxes(showticklabels=False).update_yaxes(showticklabels=False)
+            fig.update_layout(
+                margin=dict(l=0, r=0, t=0, b=0),
+                dragmode="drawrect",
+                newshape=dict(
+                    line=dict(
+                        color=color_dict[CLASSES[0]],
+                        width=2
+                    ),
+                    fillcolor=color_dict[CLASSES[0]].replace("rgb", "rgba").replace(")", ",0.2)")
+                ),
+            )
 
-        # Show graph and remove button, hide upload
-        graph_style = {"display": "block"}
-        upload_style = {"display": "none"}
+            # Show graph and remove button, hide upload
+            graph_style = {"display": "block"}
+            upload_style = {"display": "none"}
 
-        # return fig, graph_style, upload_style, content_string, inf
-        return fig, graph_style, upload_style, content_string
+            # return fig, graph_style, upload_style, content_string, inf
+            return fig, graph_style, upload_style, content_string
+        except Exception as e:
+            print(f"Error processing image: {e}", flush=True)
+            # On error, clear the store and show upload area
+            return empty_fig(), {"display": "none"}, {"display": "block"}, None
     
 
     # Nothing uploaded
-    return empty_fig(), {"display": "none"}, {"display": "block"}, dash.no_update, dash.no_update
+    return empty_fig(), {"display": "none"}, {"display": "block"}, None
 
 # remove image callback
 @app.callback(
+    Output("graph", "figure", allow_duplicate=True),  # Clear the figure itself
     Output("graph", "style"),
     Output("upload-div", "style"),
     Output("uploaded-image-store", "data"),
@@ -451,12 +491,13 @@ def display_uploaded_image(contents):
     Output("annotations-table","data", allow_duplicate=True),
     Output("annotations-store", "data", allow_duplicate=True),
     Output("inf-container", "data"),
+    Output("upload-image", "contents"),  # Clear the upload component
     Input("remove-image", "n_clicks"),
     prevent_initial_call=True,
 )
 def remove_image(n_clicks):
     debug_print("remove image callback")
-    return {"display": "none"}, {"display": "block"}, None, CLASSES[0], None, None, None
+    return empty_fig(), {"display": "none"}, {"display": "block"}, None, CLASSES[0], None, None, None, None
 
 # get prediction callback
 @app.callback(
@@ -520,14 +561,22 @@ def table_to_graph(current_class, table_data, figdict):
     if figdict is None:
         raise PreventUpdate
     
-    # Only update newshape color when dropdown changes
+    # Extract current shapes and data from figdict
+    current_shapes = figdict.get("layout", {}).get("shapes", [])
+    
+    # Update newshape color when dropdown changes
     if cbcontext == "annotation-type-dropdown.value":
-        print(f"first current_class: {current_class}, color {color_dict[current_class]}", flush=True)
-        # Use Patch() for efficient partial updates - only update layout.newshape
-        
+        print(f"Dropdown changed - current_class: {current_class}, color {color_dict[current_class]}", flush=True)
+        # When class changes, update the newshape configuration
         patched_figure = Patch()
-        patched_figure["layout"]["newshape"]["line_color"] = color_dict[current_class]
-        patched_figure["layout"]["newshape"]["fillcolor"] = color_dict[current_class].replace("rgb", "rgba").replace(")", ",0.2)")
+        new_color = color_dict[current_class]
+        patched_figure["layout"]["newshape"] = {
+            "line": {
+                "color": new_color,
+                "width": 2
+            },
+            "fillcolor": new_color.replace("rgb", "rgba").replace(")", ",0.2)")
+        }
         return patched_figure
     
     # Table data changed - update shapes
@@ -539,24 +588,34 @@ def table_to_graph(current_class, table_data, figdict):
     for row in table_data:
         x0, y0, x1, y1 = float(row["X0"]), float(row["Y0"]), float(row["X1"]), float(row["Y1"])
         label = row['Class']
+        new_color = color_dict[label]
         shapes.append(
-            dict(
-                type="rect",
-                x0=x0, y0=y0, x1=x1, y1=y1,
-                line=dict(color=color_dict[label], width=2),
-                fillcolor=color_dict[label].replace("rgb", "rgba").replace(")", ",0.2)"),
-                editable=True
-            )
+            {
+                "type": "rect",
+                "x0": x0, "y0": y0, "x1": x1, "y1": y1,
+                "line": {
+                    "color": new_color,
+                    "width": 2
+                },
+                "fillcolor": new_color.replace("rgb", "rgba").replace(")", ",0.2)"),
+                "editable": True
+            }
         )
     
     # Use Patch() to only update shapes - much faster than recreating entire figure
-    from dash import Patch
     patched_figure = Patch()
     patched_figure["layout"]["shapes"] = shapes
-    patched_figure["layout"]["newshape"]["line_color"] = color_dict[current_class]
-    patched_figure["layout"]["newshape"]["fillcolor"] = color_dict[current_class].replace("rgb", "rgba").replace(")", ",0.2)")
+    # Also update newshape to maintain current class selection
+    new_color = color_dict[current_class]
+    patched_figure["layout"]["newshape"] = {
+        "line": {
+            "color": new_color,
+            "width": 2
+        },
+        "fillcolor": new_color.replace("rgb", "rgba").replace(")", ",0.2)")
+    }
     
-    print(f"second current_class: {current_class}, color {color_dict[current_class]}", flush=True)
+    print(f"Table updated - current_class: {current_class}, color {new_color}", flush=True)
     
     return patched_figure
 
