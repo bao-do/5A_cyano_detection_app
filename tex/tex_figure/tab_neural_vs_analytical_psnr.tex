@@ -1,0 +1,85 @@
+\begin{table*}[ht]
+    % Define your two colors
+    \definecolor{numone}{RGB}{255,230,150} % light orange
+    \definecolor{numtwo}{RGB}{180,220,255} % light blue
+
+    % Command: \traintest{num1}{num2}
+    \newcommand{\tightcolorbox}[2]{%
+        \begingroup
+        \setlength{\fboxsep}{1pt}% reduce padding (default is ~3pt)
+        \colorbox{#1}{#2}%
+        \endgroup
+        }
+    \newcommand{\traintest}[2]{%
+            \tightcolorbox{numone}{$#1$}%
+            % $\!/\!$%
+            \tightcolorbox{numtwo}{$#2$}%
+            }
+    \caption{PSNR between trained neural networks and the analytical, physics-agnostic LE-MMSE estimator in~\cref{theorem:local_trans_estimator}. 
+        We observe a strong agreement on both \tightcolorbox{numone}{training} and \tightcolorbox{numtwo}{test} set, across architectures, tasks, datasets. 
+        A slightly lower PSNR is observed on the test set in low-noise regimes, as explained in~\cref{sec:neural_generalization} and~\cref{fig:neural_generalization_unet2d}.
+        \textcolor{red}{heatmap if possible?}
+        }
+    \label{tab:neural_vs_analytical_psnr}
+    % \vskip -0.5in
+    \vspace*{-0.3cm}
+    \begin{center}
+    \begin{small}
+    % \resizebox{\linewidth}{!}{
+        \begin{sc}
+            % Reduce horizontal padding between columns
+            \setlength{\tabcolsep}{3pt}% default is ~6pt
+            \begin{tabular}{@{}llccccccccccr@{}}
+            \toprule
+            \multirow{2}{*}{Dataset} & \multirow{2}{*}{Model} & \multicolumn{3}{c}{Denoising} & \multicolumn{3}{c}{Inpainting} & \multicolumn{3}{c}{Deconvolution} & \\
+            & & $\sigma = 0.05$ & $\sigma = 0.2$ & $\sigma = 0.8$ & $\sigma = 0.05$ & $\sigma = 0.2$ & $\sigma = 0.8$ & $\sigma = 0.05$ & $\sigma = 0.2$ & $\sigma = 0.8$ \\
+            \midrule
+            \multirow{3}{*}{\rotatebox{0}{FFHQ-32}}  
+                & UNet2D & 
+                    \traintest{31.6}{19.1}  & \traintest{23.9}{20.7}  & \traintest{28.3}{30.0}  & 
+                    \traintest{25.0}{18.3}  & \traintest{22.3}{19.8}  & \traintest{25.7}{26.7}  & 
+                    \traintest{25.4}{19.2}  & \traintest{21.5}{21.6}  & \traintest{36.3}{36.2} \\
+                & ResNet & 
+                    \traintest{30.6}{19.1}  & \traintest{23.4}{20.6}  & \traintest{27.4}{28.5}  & 
+                    \traintest{23.7}{18.2}  & \traintest{21.6}{19.7}  & \traintest{24.7}{25.6}  & 
+                    \traintest{24.4}{19.3}  & \traintest{21.1}{21.4}  & \traintest{33.6}{33.5} \\
+                & PatchMLP & 
+                    \traintest{30.6}{19.3}  & \traintest{23.4}{20.7}  & \traintest{27.3}{28.5}  & 
+                    \traintest{22.9}{18.1}  & \traintest{21.3}{19.7}  & \traintest{23.0}{24.1}  & 
+                    \traintest{24.5}{19.2}  & \traintest{21.2}{21.4}  & \traintest{32.0}{32.3} \\
+            \cmidrule(lr){2-12}
+            \multirow{3}{*}{\rotatebox{0}{CIFAR10}}  
+                & UNet2D & 
+                    \traintest{31.7}{19.7}  & \traintest{24.2}{21.8}  & \traintest{30.5}{31.5}  & 
+                    \traintest{22.4}{18.8}  & \traintest{21.7}{20.4}  & \traintest{26.9}{27.5}  & 
+                    \traintest{26.1}{19.8}  & \traintest{22.2}{22.4}  & \traintest{37.3}{37.3} \\
+                & ResNet & 
+                    \traintest{31.0}{19.7}  & \traintest{23.9}{21.8}  & \traintest{29.6}{30.4}  & 
+                    \traintest{22.2}{18.8}  & \traintest{21.4}{20.1}  & \traintest{26.2}{26.7}  & 
+                    \traintest{25.5}{19.9}  & \traintest{22.1}{22.4}  & \traintest{34.7}{34.6} \\
+                & PatchMLP & 
+                    \traintest{30.7}{19.7}  & \traintest{23.7}{21.6}  & \traintest{28.5}{29.1}  & 
+                    \traintest{21.8}{18.1}  & \traintest{21.1}{19.8}  & \traintest{24.8}{25.1}  & 
+                    \traintest{25.4}{19.9}  & \traintest{21.9}{22.3}  & \traintest{30.7}{31.5} \\
+            \cmidrule(lr){2-12}
+            \multirow{3}{*}{\rotatebox{0}{F-MNIST}}
+                & UNet2D & 
+                    \traintest{32.8}{22.0}  & \traintest{25.5}{24.3}  & \traintest{29.5}{29.8}  & 
+                    \traintest{23.1}{20.6}  & \traintest{21.7}{22.1}  & \traintest{25.4}{25.7}  & 
+                    \traintest{25.6}{22.2}  & \traintest{25.3}{26.7}  & \traintest{32.9}{32.6} \\
+                & ResNet & 
+                    \traintest{32.4}{22.0}  & \traintest{24.9}{24.1}  & \traintest{29.0}{29.6}  & 
+                    \traintest{22.3}{20.1}  & \traintest{21.4}{21.4}  & \traintest{26.1}{26.5}  & 
+                    \traintest{24.4}{22.0}  & \traintest{24.2}{25.7}  & \traintest{34.2}{34.2} \\
+                & PatchMLP & 
+                    \traintest{31.7}{21.9}  & \traintest{25.0}{24.1}  & \traintest{29.0}{29.5}  & 
+                    \traintest{22.9}{20.7}  & \traintest{21.7}{22.1}  & \traintest{24.3}{25.0}  & 
+                    \traintest{24.9}{22.3}  & \traintest{25.0}{26.0}  & \traintest{30.3}{30.7} \\
+            \toprule
+            \end{tabular}
+        \end{sc}
+    % }
+    \end{small}
+    \end{center}
+    \vskip -0.2in
+\end{table*}

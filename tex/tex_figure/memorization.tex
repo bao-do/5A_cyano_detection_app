@@ -1,0 +1,28 @@
+\begin{figure}[tb]
+    \centering
+    \def\size{0.16\linewidth}
+    % ---------- DENOISING ----------------
+    \rotatebox{90}{\hspace*{-0.5cm}\tiny denoising}
+    \figwithlabel{$\bar{x}$}{\size}{./images/memorization/denoising_x.png}%
+    \figwithlabel{$y$}{\size}{./images/memorization/denoising_y.png}%
+    \figwithlabel{$\xmmse(y)$}{\size}{./images/memorization/denoising_x_mmse.png}%
+    \figwithlabel{$\xtrans(y)$}{\size}{./images/memorization/denoising_x_equiv.png}%
+    \figwithlabel{$\xtransloc(y)$}{\size}{./images/memorization/denoising_x_loc_equiv.png}%
+    \figwithlabel{\tiny nearest neighbor}{\size}{./images/memorization/denoising_closest_train.png}%
+    % ------------------ CONVOLUTION --------------------
+    \\\rotatebox{90}{\hspace*{-0.6cm} \tiny deconvolution}
+    \figwithsize{\size}{./images/memorization/conv_gaussian_0.5_x.png}%
+    \figwithsize{\size}{./images/memorization/conv_gaussian_0.5_y.png}%
+    \figwithsize{\size}{./images/memorization/conv_gaussian_0.5_x_mmse.png}%
+    \figwithsize{\size}{./images/memorization/conv_gaussian_0.5_x_equiv.png}%
+    \figwithsize{\size}{./images/memorization/conv_gaussian_0.5_x_loc_equiv.png}%
+    \figwithsize{\size}{./images/memorization/conv_gaussian_0.5_closest_train.png}%
+    \vskip -0.05in
+    \caption{
+    The MMSE and E-MMSE estimators memorize (yield the nearest neighbor), while the LE-MMSE estimator recombines training patches to give good reconstruction.    
+    % Top: denoising. Bottom: deconvolution. 
+    % The noise level is set to $\sigma=0.02$ and $\D$ contains 50k images from FFHQ at $64 \times 64$.
+    }
+    \label{fig:memorization_illustration}
+    \vskip -0.15in
+\end{figure}

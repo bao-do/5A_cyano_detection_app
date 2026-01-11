@@ -1,0 +1,32 @@
+\begin{figure}
+    \centering
+    \def\size{0.16\linewidth}
+    % ---------- Noise 1 ----------------
+    % \rotatebox{90}{\hspace*{0.75cm} $e_1$}
+    \figwithlabel{$y$}{\size}{./images/inform_agnostic/inpainting/y_027.png}%
+    \figwithlabel{$\xtrans^{B=I}$}{\size}{./images/inform_agnostic/inpainting/x_eq_id_027.png}%
+    \figwithlabel{$\xtrans^{B=A}$}{\size}{./images/inform_agnostic/inpainting/x_eq_informed027.png}%
+    \figwithlabel{$\xtransloc^{B=I}$}{\size}{./images/inform_agnostic/inpainting/x_local_eq_id027.png}%
+    \figwithlabel{$\xtransloc^{B=A}$}{\size}{./images/inform_agnostic/inpainting/x_local_eq_informed027.png}%
+    \figwithlabel{$\bar x$}{\size}{./images/inform_agnostic/inpainting/x.png}%
+    % ------------------ Noise 2 --------------------
+    % \\\rotatebox{90}{\hspace*{0.75cm} $e_2$}
+    \\\figwithsize{\size}{./images/inform_agnostic/inpainting/y_045.png}%
+    \figwithsize{\size}{./images/inform_agnostic/inpainting/x_eq_id_045.png}%
+    \figwithsize{\size}{./images/inform_agnostic/inpainting/x_eq_informed045.png}%
+    \figwithsize{\size}{./images/inform_agnostic/inpainting/x_local_eq_id045.png}%
+    \figwithsize{\size}{./images/inform_agnostic/inpainting/x_local_eq_informed045.png}%
+    \figwithsize{\size}{./images/inform_agnostic/inpainting/x.png}%
+    % ------------------ Noise 3 --------------------
+    % \\ \rotatebox{90}{\hspace*{0.75cm} $e_3$}
+    \\\figwithsize{\size}{./images/inform_agnostic/inpainting/y_017.png}%
+    \figwithsize{\size}{./images/inform_agnostic/inpainting/x_eq_id_017.png}%
+    \figwithsize{\size}{./images/inform_agnostic/inpainting/x_eq_informed017.png}%
+    \figwithsize{\size}{./images/inform_agnostic/inpainting/x_local_eq_id017.png}%
+    \figwithsize{\size}{./images/inform_agnostic/inpainting/x_local_eq_informed017.png}%
+    \figwithsize{\size}{./images/inform_agnostic/inpainting/x.png}%
+    \vskip -0.05in
+    \caption{Physics-informed vs. physics-agnostic inpainting. Target $\bar x \notin \D$. Each row uses an independent Gaussian noise draw ($\sigma=0.1$). E-MMSE is insensitive to the pre-inverse $B$, yielding identical reconstructions. In contrast, LE-MMSE depends strongly on $B$, especially on $\ker{A}$: with $B\!=\!I$, masked-pixel values fluctuate with noise; with $B\!=\!A^+$, they are constant and equal to the average of masked pixels in $\D$. \textcolor{red}{Do we need this?} }
+    \label{fig:illustration_physic_informed_agnostic_inpainting}
+    \vskip -0.15in
+\end{figure}

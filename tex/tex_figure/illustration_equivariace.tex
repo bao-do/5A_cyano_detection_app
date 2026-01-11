@@ -1,0 +1,51 @@
+\begin{figure}[ht]
+    \centering
+    \renewcommand{\arraystretch}{0.5} % spacing between rows
+    \setlength{\tabcolsep}{0.3pt}     % spacing between columns
+    \def\size{0.16\linewidth}
+    \begin{tabular}{c c c c c c} % first col wider for row titles
+        $\bar{x}$ & $y$ & $\xmmse(y)$ & $\xtrans(y)$ & $\xmmseaug(y)$ & $\xtransaug(y)$ \\
+        % ---- Deconvolution ----
+        % \multirow{2}{*}{\centering \rotatebox{90}{Deconvolution}} &
+        \includegraphics[width=\size]{./images/translation/x.png} &
+        \includegraphics[width=\size]{./images/translation/y_conv.png} &
+        \includegraphics[width=\size]{./images/translation/x_mmse_conv.png} &
+        \includegraphics[width=\size]{./images/translation/x_mmse_equiv_conv.png} &
+        \includegraphics[width=\size]{./images/translation/x_mmse_aug_conv.png} &
+        \includegraphics[width=\size]{./images/translation/x_mmse_equiv_aug_conv.png} \\
+
+        % second row, same multirow cell
+        \includegraphics[width=\size]{./images/translation/x_g.png} &
+        \includegraphics[width=\size]{./images/translation/y_g_conv.png} &
+        \includegraphics[width=\size]{./images/translation/x_g_mmse_conv.png} &
+        \includegraphics[width=\size]{./images/translation/x_g_mmse_equiv_conv.png} &
+        \includegraphics[width=\size]{./images/translation/x_g_mmse_aug_conv.png} &
+        \includegraphics[width=\size]{./images/translation/x_g_mmse_equiv_aug_conv.png} \\
+        % ---- Inpainting ----
+        % \multirow{2}{*}{\centering \rotatebox{90}{Inpainting}} &
+        \includegraphics[width=\size]{./images/translation/x.png} &
+        \includegraphics[width=\size]{./images/translation/y_inp.png} &
+        \includegraphics[width=\size]{./images/translation/x_mmse_inp.png} &
+        \includegraphics[width=\size]{./images/translation/x_mmse_equiv_inp.png} &
+        \includegraphics[width=\size]{./images/translation/x_mmse_aug_inp.png} &
+        \includegraphics[width=\size]{./images/translation/x_mmse_equiv_aug_inp.png} \\
+        % second row, same multirow cell
+        \includegraphics[width=\size]{./images/translation/x_g.png} &
+        \includegraphics[width=\size]{./images/translation/y_g_inp.png} &
+        \includegraphics[width=\size]{./images/translation/x_g_mmse_inp.png} &
+        \includegraphics[width=\size]{./images/translation/x_g_mmse_equiv_inp.png} &
+        \includegraphics[width=\size]{./images/translation/x_g_mmse_aug_inp.png} &
+        \includegraphics[width=\size]{./images/translation/x_g_mmse_equiv_aug_inp.png} \\
+    \end{tabular}
+    \vskip -0.05in
+    \caption{
+        Architectural equivariance and data augmentation.
+        Rows 2 and 4 show shifted inputs ($\bar{x} \in \D$). 
+        Without shifts, all estimators perform well. 
+        With shifts, MMSE fails by memorizing $\D$, while E-MMSE selects the closest in $\T(\D)$. 
+        For deconvolution, equivariance suffices; for inpainting, explicit data augmentation is needed (see~\cref{cor:equivariant_mmse_properties}).
+        \textcolor{red}{remove this? replace by agnostic vs aware?}
+    }
+    \label{fig:illustration_equivariance}
+    \vskip -0.15in
+\end{figure}

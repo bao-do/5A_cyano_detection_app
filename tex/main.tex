@@ -1,8 +1,7 @@
 \documentclass{article}
 \input{template.tex}
-\input{notations.tex}
 
-\title{Cyanobacteria identification from microscope images using deep learning approaches}
+\title{Developing competences on theorical and applied aspects}
 \author{Quoc-Bao Do \\
 5th Year Student, Department of Applied Mathematics, INSA Toulouse, France \\
 Mentor: Pierre Weiss \\
@@ -14,27 +13,531 @@ Researcher, Integrative Biology Center, Toulouse, France}
 \maketitle
 
 \tableofcontents
+
 \newpage
 
 \section{Introduction}
-Harmful Algal Blooms (HABs) produce toxins that affect humans and animals health, damage ecosystems, make unlivable certain aquatic environments by releasing toxic chemicals, preventing light penetration, depleting oxygen and nutrition in water. HABs are mainly caused by rapid and uncontrolled growth of cyanobacterias in water bodies. HABs also cause subtantial eonomic losses due to additional water treatment and healthcare expenses.
-Monitering the presence of cyanobacteria is therefore crucial to prevent their harmful effects. Traditional and human-based methods for detecting cyanobacterias in water samples are time-consuming, labor-intensive, and prone to errors. Many tools and applications based on deep learning have been developed to automate this process. This work aims introduce CyDect (Cyanobacteria Detection), a web-based application that are capable of identify more than 1000 types of cyanobacterias from microscope images using the deep learning technique of faster region-based convolution neural network (RCNN).
+In this report, I present my two current projects that I had have contributed/worked on during my internship and my 5th year at INSA Toulouse. These two projects are under the supervision of my mentor and in collaboration with researchers from the Integrative Biology Center (CBI) in Toulouse, France. The first project consists of analytically analyzing the convolutional neural networks (CNNs) under the len of Minimum Mean Square Error (MMSE) estimator. We aim to gain insights into their performance, generalization capabilities, and their sensibility to various factors. This theoretical foundation will help inform the design and optimization of CNN architectures for various applications. The second project aims to develop a web-based application that utilizes deep learning techniques to detect and classify cyanobacterias from microscope images. While these two projects may seem distinct, they are done under the neccesity of advanced technologies that can solve real-world problems that the biologists and researchers from CBI are facing. In other hands, these two works form my set of skills both in theoretical and applied aspects, which are equivalently essential for my future career as a researcher in applied mathematics.
 
-\paragraph{Related works} A open-source python package named CyFi (Cyanobacteria Finder) has been developed to estimate cyanobacteria concentration in samll, inland water bodies using satellite images and machine learning techniques. SAS (Spectral Mixture Analysis for Surveillance of Harmful Algal Blooms) is a sofware application that identifies cyanobacteria genera from remotely sensed data. As best to our knowledge, our work is the first to propose a deep learning-based method to detect and classify cyanobacterias from microscope images. 
+This report is structured as follows: Section 2 presents the summary of the first project, including the mathematical formation, result and experimental validation. Section 3 introduces the web-based application for cyanobacteria detection, detailing the data acquisition process, deep learning approach, application deployment, and preliminary results. Finally, Section 4 concludes the report with a summary of key results and future directions for both projects.
 
+\newpage
 
-\paragraph{Outline} We present our works as follows:
+\section{An analytical theory of convolutional neural network inverse problem solvers}
+\noindent
+\begin{minipage}[t]{0.48\linewidth}
+\small
+\vspace{0.4cm}
+This work aims to provide a better understanding of the behavior of CNNs trained in a supervised manner for inverse problems. This is essential for defining the true domain of validity of such methods, assessing their stability, and enabling comparisons that go beyond empirical scoreboards. 
+
+Our approach is based on the derivation of a closed-form MMSE estimator by incorporating functional constraints that capture two fundamental inductive biases of CNNs: translation equivariance and locality.
+
+\paragraph{Related works} 
+Convolutional Neural Networks (CNN) and other architectures~\citep{jin2017deep,mccann2017convolutional, zhu2018image} now achieve unprecedented performance in domains ranging from medical imaging to astrophysics and computer vision.
+Yet, serious concerns have arisen regarding their reliability and robustness~\citep{antun2020instabilities}, with conflicting reports on whether small perturbations in the measurements or the forward operator lead to stable or unstable reconstructions~\citep{genzel2022solving}.
+While it is clear that the information loss due to the forward operator~\cite{gottschling2025troublesome} makes some parts of the recovery problem fundamentally ambiguous.
+In the context of generative diffusion models, \citep{kamb2025an,scarvelisclosed} derive closed-form expressions for the MMSE under additive Gaussian noise (denoising) with architectural constraints such as equivariance and locality, and use them to study memorization and generalization. 
+Locality has also been examined in~\citep{kadkhodaie2023learning} for modeling patch distributions.
+For imaging inverse problems, equivariance has been widely explored in self-supervised learning~\citep{chen2023imaging,terris2024equivariant}.
+In the supervised setting for linear inverse problems, it is standard to assume that a trained neural network approximates the MMSE~\citep{adler2018deep}. 
+To the best of our knowledge, for general inverse problems, our work is the first to introduce additional functional constraints to more accurately characterize the action of neural networks and to derive closed-form expressions for the resulting constrained MMSE estimators. \todo{to reformulate}
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.48\linewidth}
+\begin{figure}[H]
+\centering
+\includegraphics[
+  trim=30mm 0 0 0,
+  clip,
+  width=\linewidth
+]{./tex_figure/teasor_v2_standalone.pdf}
+\caption{
+Our analytic theory accurately predicts neural network outputs across settings. We consider three inverse problems: denoising, inpainting, and deconvolution (left to right), on FFHQ, CIFAR10, and FashionMNIST datasets (top to bottom) with varying noise levels $\sigma$ (columns). For each setting, we show the measurements (top row), our analytic LE-MMSE estimator (second row), and outputs of trained UNet, ResNet, and PatchMLP models (last three rows). Theory closely matches network outputs.
+}
+\label{fig:teaser}
+\end{figure}
+\end{minipage}
+
+My contribution to this works includes:
 \begin{enumerate}
-    \item In Section 2, we describe the dataset used in this work and the preprocessing steps.
-    \item In Section 3, we present our faster-rcnn model used for cyanobacteria identification.
-    \item In section 4, we describe the method used to deploy the CyDect application.
-    \item In Section 5, we show and discuss the results obtained.
+    \item Participating to derive theorical results
+    \item implementing analytical expressions and optimizing numerical computations
+    \item Training CNNs to validate to theorical results
+    \item Participating to the writing of the scientific paper presenting this work.
 \end{enumerate}
 
-\section{Data acquisition}
+\subsection{Problem formulation}
+Let $A: \mathbb{R}^{N}\to \mathbb{R}^M$ be a linear or nonlinear
+% \footnote{We focus on linear operators in the numerics for didactic reasons.} 
+mapping, $\vx$ a random vector in $\X$. We consider the forward model with additive white Gaussian noise
+\begin{equation}
+    \label{eq:forward}
+    \vy = A \vx + \ve \qquad \text{ where } \qquad \ve \sim \Normal{0, \sigma^2 \Id_M}
+\end{equation}
+and aim to construct an estimator $\hat{x}(\vy)$ of $\vx$ given $\vy$. 
+A variety of neural network architectures have been proposed for this task. 
+Some are \emph{physics-agnostic}, \textit{i.e.} do not depend on $A$ explicitly and often rely on fully connected layers. 
+Others are \emph{physics-aware}, and rely on an approximate inverse of $A$. 
+In this work, we focus on linear operators $A$ in the numerical experiments for didactic reasons, but our theory applies to nonlinear operators as well. 
+We consider estimators of the following form
+\begin{equation} %\label{eq:estimator_shape}
+    \hat{x}(\vy) = \neural(B \vy),
+\end{equation}
+where $\neural$ is a neural network with weights $w \in \Theta$ and $B \in \mathbb{R}^{N\times M}$ is an operator such as the identity when $M=N$ (physics-agnostic), or an approximate inverse of $A$ (physics-aware) such as the transpose $A^\top$, the pseudo-inverse $A^+$, or a Tikhonov-regularized inverse.  
+Such designs were popularized in~\citep{kim2016accurate, jin2017deep, schlemper2017deep, wurfl2016deep} and are still widely used in practice~\citep{mccann2017convolutional, zhou2022dudodr, wang2020deep}. 
+% \todo{Hai: more recent works? the latest one were 2022} 
+They can be considered as a robust baseline, and be interpreted as a single-step variant of unrolled neural networks~\citep{adler2018learned,Celledoni_2021_equivariant_neural_networks}, which often achieve top performance in empirical benchmarks~\citep{muckley2021results}.
 
-\section{Deep learning approach}
-\subsection{Overview of RCNN family}
+\paragraph{Empirical MMSE estimators}
+In this paper, we study neural networks $\phi^\star_\M$ trained as follows.
+\begin{graybox}
+\begin{definition}[Constrained empirical MMSE estimators\label{def:constrained_mmse}]
+    Let $\D$ be a dataset of clean images. 
+    We define the empirical MMSE estimators $\hat x_{\M} \eqdef \phi^\star_{\M} \circ B$, where % $\phi^\star_\M$ is the solution of
+\begin{equation}\label{eq:constrained_MMSE}
+    \phi^\star_\M \eqdef \argmin_{\phi \in \M} \; \frac{1}{2} \Mean{\norm{\phi (B \vy) - \vx}^2}.
+\end{equation}
+Here, $\vx$ follows the empirical distribution of the dataset $p_{\D} \!=\! \frac{1}{|\D|} \sum_{x \in \D} \delta_{x}$ and $\vy$ defined by~(\ref{eq:forward}). 
+The set $\M$ encodes the range of functions reachable by the neural network,  $\M \!=\! \{\neural : w \in \Theta\}$, with $\Theta$ a set of admissible weights.    
+\end{definition}    
+\end{graybox}
+A precise characterization of the set $\M$ is not available for a given neural network architecture $\neural$. 
+However, we can relate the trained neural network with statistical estimators constrained to abstract function classes encoding architectural constraints of the neural networks as follows.
+\begin{definition}[MMSE, E-MMSE, LE-MMSE]
+	\label{def:mmse}
+    Our estimators of interest are of the form $\hat x = \phi^\star_\M\circ B$, where $\phi^\star_\M$ is the solution of~(\ref{eq:constrained_MMSE}).
+    We define in~\cref{tab:summarize_mmse_def} these estimators with various choices of $\M$. 
+    \begin{center}
+        \begin{table}[H]
+            \centering
+            \vskip -0.1in
+            \caption{Different constraint sets correspond to different variants of the MMSE estimator.}\label{tab:summarize_mmse_def}
+            \vskip -0.1in
+            \begin{small}
+            % \resizebox{\columnwidth}{!}{
+                \setlength{\tabcolsep}{30pt}
+                \begin{sc}
+                    \begin{tabular}{llll}
+                    \toprule
+                    & Constraint $\M$ & Estimator & See\\
+                    \midrule
+                    (1) & Any measurable func. & MMSE -- $\xmmse$ &(\ref{prop:expression_MMSE}) \\
+                    (2) & (1) + Translation equiv. & E-MMSE -- $\xtrans$ &(\ref{thm:equivariant_mmse}) \\
+                        & (2) + Locality & LE-MMSE -- $\xtransloc$ &(\ref{theorem:local_trans_estimator}) \\
+                    \bottomrule
+                    \end{tabular}
+                \end{sc}
+            % }
+        \end{small}
+        \end{table}
+        \vskip -0.4in
+    \end{center}
+\end{definition}%
+These function classes capture different architectural constraints of the neural network $\neural$.  
+It is well known that sufficiently deep and wide multi-layer perceptrons (MLPs) can approximate any measurable function~\citep{hornik1989multilayer}, hence the MMSE $\xmmse$ is a proxy for unconstrained MLPs.
+The E-MMSE $\xtrans$ approximates CNNs without constraints on the receptive field, while the LE-MMSE $\xtransloc$ approximates the set of functions reachable by CNNs with finite receptive fields. 
+
+\subsection{Unconstreained MMSE estimator}
+It is well known that the MMSE estimator coincides with the \emph{conditional mean} almost surely~\citep{kay1993fundamentals}:
+\[
+    \xmmse(y) = \Mean{\vx \vert B \vy = By} = \int x \cdot p(x \vert By) \, dx.
+\]
+When the data distribution $\pdata$ is replaced by the empirical measure $\ptrain = \frac{1}{|\D|}\sum_{x\in\D}\delta_x$, with a finite dataset $\D$, the empirical MMSE estimator becomes a kernel regressor~\citep{nadaraya1964estimating,watson1964smooth}:
+\begin{graybox}
+    \begin{proposition}[Closed-form of the MMSE \label{prop:expression_MMSE}]
+	The MMSE estimator in \Cref{def:mmse} writes, for any $y \in \Y$,
+    \begin{equation}
+        \xmmse(y) = \sum_{x\in\D} x \cdot w(x \vert y), \label{eq:empirical_mmse}  \\
+    \end{equation}
+    where $w(x \vert y) = \frac{\Normal{B y; B A x, \sigma^2 B B^{\top}}}{\sum_{x'\in \D} \Normal{B y; B A x', \sigma^2 B B^{\top}}}$.
+    \end{proposition}
+\end{graybox}
+
+The weights $w(x \vert y)$ can be interpreted as the posterior probability of observing $x$ given the measurement $y$. The denominator ensures that they sum up to $1$.
+
+\begin{remark}
+    When $B \!=\! \Id$, $\xmmse$ is exactly the \emph{posterior mean}: $\xmmse(\vy) = \Mean{\vx \vert \vy}$.
+\end{remark}
+\paragraph{Physics-aware estimator} 
+To elucidate the role of $B$, we remark that the weights have the following explicit form:
+\begin{equation*}%\label{eq:empirical_mmse_with_B} 
+    w(x \vert y) \propto \exp \left( -\frac{1}{2\sigma^2}\norm{\Pi_{\Im{B^\top}}(A(\bar{x} - x) + e)}^2 \right)
+\end{equation*}
+Taking $B=A^+$ or $A^\top$, $\Im{B^T} = \Im{A}$ and the inner term is $A(\bar{x} - x) + \Pi_{\Im{A}}e$. 
+The noise $e$ is projected onto the image of $A$, reducing its magnitude.
+Therefore, for the MMSE, physics-aware estimators is preferable to physics-agnostic ones, which is consistent with a popular belief and the usual practice. 
+However, beyond the projection effect, the choice of $B$ only plays a little role, for example, the estimator is the same for any $B$ such that $\Im{B^T} = \Im{A}$. We discuss this further in~\cref{subsec:agnostic_vs_aware}.
+
+\paragraph{Memorization of the empirical MMSE} 
+The weights in~(\ref{eq:empirical_mmse}) satisfy $w(x \vert y) \geq 0$ and $\sum_{x \in \D} w(x \vert y) = 1$, hence $\xmmse(y)\in \mathrm{conv}(\D)$ --- the convex envelop of the dataset $\D$, for every $y$. 
+In particular, as $\sigma \! \to \! 0$, $\xmmse(y)$ converges to $x \in \D$ such that $BAx$ is the closest to $By$ ($1$-nearest neighbor); ties being averaged. 
+Therefore, the empirical MMSE ``memorizes'': it reconstructs by re-weighting training examples and never extrapolates outside $\mathrm{conv}(\D)$, see~\cref{fig:memorization_illustration}. 
+This aligns with recent findings related to memorization in generative models~\citep{kamb2025an,bertrand2025closed,scarvelisclosed}.
+\input{tex_figure/memorization.tex}
+
+
+\subsection{Constrained MMSE estimators}\label{sec:analytical_formula}
+We first provide details on the constraint classes and then describe our main theoretical results: analytical formulas and properties of constrained MMSE estimators.
+\subsubsection{Functional constraints: equivariance and locality}\label{subsec:constraint_classes}
+Motivated by the success of CNNs in inverse problems, we study function classes $\M$ that encode two core inductive biases -- \emph{equivariance} to geometric transformations~\citep{cohen2016group,veeling2018rotation} and \emph{locality} via bounded receptive field~\citep{kadkhodaie2023learning}. 
+
+We start with formal definition of these concepts. 
+Let $x \in \R^N$ represent an image defined on a discrete 2D grid of size $H \times W = N$.  
+\begin{graybox}
+\begin{definition}[Translation equivariant]\label{def:trans_equiv_fn}
+Let $\T = \Z_{H} \times \Z_{W}$ be the group of 2D cyclic translations, where $\Z_H = \{0, 1, \ldots, H-1\}$ and $\Z_W = \{0, 1, \ldots, W-1\}$.
+For each $g = (g_h, g_w) \in \T$, its action is represented by a permutation matrix $T_g \in \R^{N \times N}$, where $T_g x$ shifts the image $x \in \R^N$ by $g_h$ pixels vertically and $g_w$ pixels horizontally with periodic boundary conditions.
+A measurable map $\phi: \X \to \X$ is said to be \emph{translation equivariant} if it satisfies $\phi(T_g x) = T_g \phi(x)$ for all $x \in \X$ and $g \in \T$.
+We denote by $\Mtrans$ the set of all such maps.
+\end{definition}
+\end{graybox}
+\paragraph{Architecture equivariance and data augmentation}
+A standard approach to obtain equivariant estimators is by using data augmentation: the set $\D$ is replaced by $\T(\D) = \{T_g x : x \in \D,\, g \in \T\}$ at training time. 
+This promotes \emph{reconstruction equivariance}~\citep{chen2021equivariant} of $\hat{x}_{\M}$:
+\begin{equation}
+    \label{eq:reconstruction_equivariance}
+    \hat{x}_{\M}(A T_g \bar{x} + e) = T_g \hat{x}_{\M}(A \bar{x} + T_g^{-1} e).
+\end{equation} 
+The \emph{data-augmented} MMSE estimators, are defined below. 
+\begin{graybox}
+    \begin{definition}[Data-augmented MMSE estimator]\label{def:data_augmented_mmse}
+        The data-augmented MMSE estimator $\hat{x}_{\M}^{\text{\tiny aug}}$ is defined as the MMSE estimator $\hat{x}_\M$ with respect to the empirical measure on $\T(\D)$. 
+    \end{definition}
+    Reconstruction equivariance is often a desired property, but it differs from the \emph{structural equivariance} of $\phi$~\citep{chen2020group,nordenforsdata}, as illustrated in~\cref{fig:illustration_translation}.
+    
+\end{graybox}
+
+We now add locality constraint.
+For each pixel $n$,
+consider the patch extractor $\Pi_n : x \in \R^N \mapsto \Pi_n x = x[\omega_n] \in \R^P$ that extracts a square patch $x[\omega_n]$ of size $\sqrt{P} \times \sqrt{P}$ centered at pixel $n$, and $\omega_n$ is the set of pixel indices in the patch with circular boundary conditions.
+
+\begin{graybox}
+\begin{definition}[Local and translation equivariant]\label{def:transloc_equiv_fn}
+    A measurable map $\phi: \X \to \X$ is \emph{local and translation equivariant} if there exists a measurable map $f: \R^P \to \R$ such that, for all $x \in \X$ and any pixel $n$, the output of $\phi$ at pixel $n$  denoted by $\phi(x)[n]$, depends only on the local patch $x[\omega_n]$, that is $\phi(x)[n] = f(\Pi_n x)$.
+    We denote by $\Mtransloc$ the set of all such functions.
+\end{definition}
+\end{graybox}
+
+The class $\Mtransloc$ captures standard CNNs with small kernels and weight sharing or patch-based models, \eg MLPs acting on patches~\citep{glimpse_local}.
+
+\paragraph{Constraints and projection} The constrained MMSE has a simple geometric interpretation.
+\begin{proposition}\label{prop:projection_mmse}
+    For a closed set $\M$, the $\M$-constrained MMSE estimator in~\cref{def:constrained_mmse} is the \textbf{orthogonal projection} in $L^2$ of the posterior mean $\Mean{\vx \vert \vy}$ onto the subspace of random vectors of the form $\mathcal{X} = \{ \phi(B\vy) : \phi \in \M \}$, that is $\hat{x}_{\M}(\vy) = \Pi_{\mathcal{X}} \left( \Mean{\vx \vert \vy} \right)$.
+\end{proposition}
+
+\subsubsection{Translation Equivariant MMSE estimator} 
+We start by the closed-form of the E-MMSE estimator $\xtrans$ and its properties. 
+\begin{graybox}
+    \begin{theorem}[Closed-form of E-MMSE]\label{thm:equivariant_mmse}
+        The E-MMSE estimator writes, for any $y\in \R^M$
+        \begin{equation}\label{eq:formula_equivariant_mmse}
+            \xtrans(y) = \sum_{x \in \D, g \in \T} T_g x \cdot w_g(x \vert y),
+        \end{equation}
+        where $w_g(x \vert y) \propto \Normal{T_g^{-1} By; B A x, \sigma^2 BB^\top}$. 
+        % and the normalization constant is such that $\sum_{x \in \D, g \in \T} w_g(x \vert y) = 1$.  
+    \end{theorem}
+    
+\end{graybox}
+
+\begin{remark}
+    This result holds true for any group $\G$ of orthogonal transformations, not just translations.
+\end{remark}
+The normalization constant of the weights $w_g(x \vert y)$ ensures that they sum to $1$ over all $x \in \D$ and $g \in \T$, we ignore it here for brevity. 
+The E-MMSE estimator $\xtrans$ is a weighted average of the augmented dataset $\T(\D)$, which is similar to $\xmmseaug$ in~\cref{def:data_augmented_mmse}. 
+In particular, for denoising ($A=B=\Id$), they coincide. %, and it was already observed in~\citep{kamb2025an}.
+However, depending on the forward operator $A$ and the pre-inverse $B$, it can differ significantly from $\xmmseaug$.
+Some properties of the E-MMSE $\xtrans$ are presented in~\cref{cor:equivariant_mmse_properties} and illustrated in~\cref{fig:illustration_translation}.
+\begin{corollary}\label{cor:equivariant_mmse_properties}
+    % \begin{graybox}
+    The E-MMSE estimator $\xtrans$ in~\cref{thm:equivariant_mmse} satisfies the following properties:
+	\begin{itemize}[leftmargin=*,itemsep=.2em,topsep=0.pt]
+        \item The E-MMSE estimator $\xtrans$ \emph{memorizes} the augmented dataset: reconstructed images live in $\mathrm{conv}(\T(\D))$.
+        \item Data-augmentation and architecture equivariance are identical ($\xtrans = \xmmseaug$) if and only if $A$ and $B$ are circular convolution, with $B$ invertible. In this case, the E-MMSE is reconstruction equivariant (satisfies~(\ref{eq:reconstruction_equivariance})), physics-agnostic and physics-aware solvers are identical.
+    \end{itemize}
+    % \end{graybox}
+\end{corollary}
+
+
+\begin{figure}[ht]
+    \centering 
+    \vskip -0.1in
+    \includegraphics[trim = 5mm 0 0 0, clip, width=\columnwidth]{./tex_figure/translation.pdf}
+    \vskip -0.1in
+    \caption{
+        Architectural equivariance does not always guarantee reconstruction equivariance~(\ref{eq:reconstruction_equivariance}).
+        Input $y$ in 2nd row is shifted. The E-MMSE estimator $\xtrans$ is reconstruction equivariant for deconvolution but not inpainting.
+        The LE-MMSE estimator $\xtransloc$ is reconstruction equivariant for deconvolution and shows reduced sensitivity to shifts for inpainting. 
+    }\label{fig:illustration_translation}
+    \vskip -0.1in
+\end{figure}
+
+\subsubsection{Locality and Translation Equivariance}
+We now analyze the effect of local receptive fields.
+\begin{graybox}
+\begin{theorem}[Closed-form of LE-MMSE]\label{theorem:local_trans_estimator}
+    Suppose that the $N$ matrices $Q_{n} \eqdef \Pi_n B \in \R^{P \times M}$ have the \emph{same rank} $r>0$ for any $n$\footnote{This assumption can be relaxed: a general formula by rank stratification is provided in the complete paper.}.
+    The LE-MMSE estimator $\xtransloc$ admits, for any $y \in \R^M$ the following expression, defined pixel-wise for each pixel $n'$:  
+    \vskip -0.1in
+    \begin{equation}\label{eq:loc_equiv_formula}
+        \xtransloc(y)[n'] = \sum_{x \in \D} \sum_{n = 1}^{N} x[n] \cdot w_{n', n}(x \vert y),
+    \end{equation}
+    where $w_{n', n}(x \vert y) \propto \Normal{Q_{n'} y; Q_n A x, \sigma^2 Q_n Q_n^\top}$. 
+    % and the normalization constant is such that $\sum_{x \in \D} \sum_{n = 1}^{N} w_{n', n}(x \vert y) = 1$. 
+\end{theorem}
+\end{graybox}
+
+The value at pixel $n'$ of the LE-MMSE estimator is a weighted average of \emph{all} the pixels in the training images.
+This recombination can produce images outside $\mathrm{conv}(\D)$ or $\mathrm{conv}(\T(\D))$ (contrary to the MMSE or E-MMSE); see~\cref{fig:memorization_illustration} and~\cref{sec:experiments}.
+The weights $w_{n', n}(x \vert y)$ can be seen as the posterior probability of the pixel $x[n]$ given the patch $(B y)[\omega_{n'}] = Q_{n'} y$. 
+
+% \todo{Edouard: il faudrait repréciser qui sont $x$, $\bar{x}$ et $e$}
+Recall that $y = A \bar{x} + e$, with $\bar{x}$ the signal to recover and  
+let $\Delta_{n',n}(\bar x, x) \!\eqdef\! (B A \bar x) [\omega_{n'}] \!-\! (B A x) [\omega_n]$, 
+the weights can be rewritten as  $w_{n', n}(x \vert y) \!\propto\! \exp\left( - \frac{\eta^2}{2\sigma^2}\right)$ with:
+\begin{equation}\label{eq:weights_signal_vs_noise}
+    \eta \eqdef \norm{Q_n^+ \Delta_{n',n}(\bar x, x) + Q_n^+ Q_{n'} e}.
+\end{equation}
+Hence, the weights measure the similarity between \emph{local patches} of measured-then-reconstructed images with the metric $Q_n^+$. It is perturbed by the noise term $Q_n^+ Q_{n'} e$, which is responsible for the estimator's variance.
+% \cref{theorem:local_trans_estimator} generalizes the result from~\cite{kamb2025an}, which was derived for denoising.  
+Some properties of the LE-MMSE $\xtransloc$ are given in~\cref{cor:local_trans_estimator_properties}. 
+% \begin{graybox}
+    \begin{corollary}\label{cor:local_trans_estimator_properties}
+        The LE-MMSE estimator $\xtransloc$ in~\cref{theorem:local_trans_estimator} satisfies the following properties:
+		\begin{itemize}[leftmargin=*,itemsep=.2em,topsep=0.pt]
+            \item The LE-MMSE estimator $\xtransloc$ is a \emph{patchwork} of training patches. As $\sigma\! \to \! 0$, each pixel is set to the central pixel of the best matching patch from $\D$.    
+            % \item In general, architectural equivariance is different from data augmentation: $\xtransloc \neq \xtransloc^{\mathrm{\tiny aug}}$.
+            \item It is not a posterior mean: there exists no prior distribution of $\vx$ such that $\xtransloc(y)\!=\!\Mean{\vx \vert \vy \!=\! y}$.
+        \end{itemize}
+    \end{corollary}
+% \end{graybox}
+
+\subsubsection{Physics-agnostic and physics-aware estimators}\label{subsec:agnostic_vs_aware}
+
+The expectation of $\eta^2$ in~(\ref{eq:weights_signal_vs_noise}) is given by
+\begin{equation*}
+    \mathbb{E}_{\ve}\left[\eta^2\right] = \norm{Q_n^+ \Delta_{n',n}(\bar x, x)}^2 + \sigma^2 \cdot \Tr \left( \mathrm{Cov}_{n',n}\right)
+\end{equation*}
+with $\mathrm{Cov}_{n',n} = Q_n^+ Q_{n'} Q_{n'}^\top Q_n^{+\top}$.    
+This expression reveals that the pre-inverse $B$ plays two distinct roles:
+
+\begin{itemize}[leftmargin=*,itemsep=.2em,topsep=0.pt]
+	\item \emph{Signal discrimination}: the term $Q_n^+ \Delta_{n',n}(\bar x, x)$ measures the amplification/reduction of difference between dissimilar/similar patches for the pre-inverse $B$. %amplifies differences between dissimilar patches while suppressing differences between similar patches. 
+A good choice of $B$ should improve this discrimination.
+	\item \ \emph{Noise robustness}: the second term $\Tr \left( \mathrm{Cov}_{n',n}\right)$ measures noise amplification/reduction for $B$. A good choice should reduce this amplification.
+\end{itemize}
+
+Ideally, one would like to choose $B$ to optimize both criteria, but unfortunately they can be conflicting: preserving the signal $BAx\approx x$ may amplify the noise, in relation to the classical bias-variance decomposition. Most importantly this effect is operator dependent, as we now discuss.
+
+For inpainting, choosing a physics-aware estimator with $B=A^+$ is an effective way to reduce the noise sensitivity while keeping signal's information. Indeed, with this choice, the noise within the masked region is eliminated, while the signal is preserved in the unmasked region.
+For deconvolution, however, the situation is different. Choosing $B=A^+$ can result in significant noise amplification (\ie $\Tr \left( \mathrm{Cov}_{n',n}\right)$ is large), which is not counter-balanced by a better signal's discrimination. In this setting, a regularized inverse, balancing both aspects should likely be preferred.
+This effect is illustrated in~\cref{fig:aware_vs_agnostic}.
+When designing reconstruction algorithms, this trade-off between data-consistency and noise amplification must be carefully considered, in relation to the inverse problem at hand. 
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[trim=8mm 0 0 0, clip,width=\columnwidth]{./tex_figure/aware_vs_agnostic.pdf}
+    \vskip -0.1in
+    \caption{
+    %The operator $B$ should be chosen carefully to balance noise amplification and signal's discrimination trade-off.
+	Physics-aware ($B\!=\!A^+$, bottom) has lower variance for inpainting (left), while physics-agnostic ($B\!=\!\Id$, top) has lower variance for deconvolution (right).
+    Mean and pixel-wise variance are computed w.r.t $50$ noise realizations.         
+    }
+    \label{fig:aware_vs_agnostic}
+    \vskip -0.15in
+\end{figure}
+
+
+\subsection{Numerical Experiments}\label{sec:experiments}
+While the MMSE and E-MMSE estimators are interesting from a theoretical perspective, the LE-MMSE estimator is more relevant to practical neural network architectures used in imaging inverse problems.
+We validate our theoretical findings about the LE-MMSE on three representative inverse problems: denoising, inpainting, and deconvolution. 
+%\todo{We focus on LE-MMSE because \dots}
+%{\color{blue} We focus on the LE-MMSE because it corresponds to one of the most widely used architectures in imaging inverse problems: CNNs with small kernels and weight sharing.}
+\subsubsection{Experimental setup}    
+    We implement three different local and translation equivariant neural network architectures: UNet2D~\cite{ronneberger2015u}, ResNet~\cite{he2016deep} and PatchMLP (an MLP acting on patches).
+    % ; see~\cref{sec:supp_numerical} for architecture and training details.
+
+    Implementing the analytical formula in~\cref{theorem:local_trans_estimator} requires computing a huge amount of pairwise distances, which is computationally demanding. We therefore restrict our experiments to $32\times 32$ color images and datasets of $10^4$ images. To accumulate Gaussian weights robustly and stably across batches, we use a careful online log-sum-exp implementation of the weighted averages (numerator and denominator). %, see~\cref{code:supp_python_code_locequiv_mmse,code:supp_online_sum_exp}. 
+    % \todo{Je ne suis pas sûr que ce soit une bonne idée. J'aime bien personnellement, mais je trouve le relecteur moyen bête et méchant maintenant :). Edouard: Idem, on pourrait juste garder la première phrase et dire qu'on détaille les astuces d'implémentation dans l'appendice.}
+    % \todo{Hai: Je les ai mis là au cas où, on peut les supprimer aussi. Moi je trouve que ça montre qu'on a bien implémenté la formule :)}
+
+    For inpainting we use a square mask of size $15 \times 15$ at the center. For deconvolution, we use an isotropic Gaussian kernel of standard deviation of $1.0$.
+    The noise level $\sigma$ is varying uniformly between $0$ and $1.0$ during training.
+
+
+\subsubsection{Analytical formula and neural networks}\label{sec:neural_vs_analytical}
+\paragraph{Case-by-case neural outputs prediction}
+    We verify that trained networks approximate the LE-MMSE estimator, by comparing their outputs to the formula in~\cref{theorem:local_trans_estimator}.
+    The PSNR between the trained UNet2D, the formula and the ground truth are reported in~\cref{fig:neural_vs_analytical_unet2d_patch_5}. 
+    The reconstruction quality (orange and blue curves) degrades as noise level increases, which is expected as noise makes the problem harder.
+    However, the PSNR between neural networks and the analytical formula (green curves) remains high ($\gtrsim 25$ dB) across all noise levels, indicating a strong alignment between the two.
+    Similar behavior is observed in~\cref{tab:neural_vs_analytical_psnr} for other architectures and datasets. 
+    \begin{figure}[ht]
+        \centering
+        \def\base{./images/neural_vs_analytical/localequivunet2dcondmodel_patch_5/plots}
+        \vskip -0.05in
+        \includegraphics[width=\linewidth]{\base/FFHQ_images32x32_subset_10000_combined_psnr_grid.pdf}
+        \vskip -0.1in
+        \caption{The green curves reveals a strong agreement (PSNR $\gtrsim\!25$ dB) between the trained UNet2D and the analytical formula for all inverse problems. 
+        Median and interquartile range (IQR) using $50$ images per $\sigma$, $P = 5\times 5$ and $B\!=\!\Id$.
+        }
+        \label{fig:neural_vs_analytical_unet2d_patch_5} 
+        \vskip -0.1in
+    \end{figure}%
+    We provide extensive numerical results on various settings (architectures, datasets, tasks, physics-agnostic/aware, patch sizes) in the complete paper. 
+    These results confirm that \emph{trained neural networks closely approximate the analytical LE-MMSE estimator}.
+    It is remarkable that different architectures consistently yield a similar output, as shown in~\cref{fig:teaser}. \todo{include inter-model comparison}. 
+        
+    \begin{table*}[ht]
+        \centering
+        \caption{
+        \cref{theorem:local_trans_estimator} is verified across architectures, tasks, and datasets.
+        We show the median of the PSNR between neural networks and the analytical formula with $P = 5 \times 5$ and $B\!=\!\Id$.
+        The PSNR on FashionMNIST is consistently higher ($2\sim 3$ dB) than on FFHQ and CIFAR10, which we attribute to the lower complexity of FashionMNIST images.
+        A lower PSNR on the test set in low-noise regimes is explained by the low-density regions.
+        }
+        \label{tab:neural_vs_analytical_psnr}
+        \vspace*{-0.1cm}
+        \includegraphics[width=.85\textwidth]{./images/neural_vs_analytical/tab_neural_vs_analytical_psnr_patch_5_side-by-side.pdf}
+        \vskip -0.1in
+    \end{table*}
+
+\paragraph{Low-density regions}\label{sec:neural_generalization}
+    A noticeable train-test gap remains in~\cref{fig:neural_vs_analytical_unet2d_patch_5,tab:neural_vs_analytical_psnr}, most pronounced at low noise level. 
+    We attribute this to the \emph{measurement distribution} $p(y)$ induced by the empirical distribution.
+    It is a Gaussian mixture, centered at the training measurements $Ax$: $p(y) = \frac{1}{|\D|} \sum_{x\in \D} \Normal{y; Ax, \sigma^2 \Id_M}$. 
+    Its density is high near the centers $A x, x \in \D$, or for large noise levels $\sigma$, creating overlap between Gaussians. It becomes negligible far from the centers in low noise regimes.
+    \begin{figure}[ht!]
+        \centering
+        \vskip -0.1in
+        % \includegraphics[width=\columnwidth]{./images/neural_generalization/localequivunet2dcondmodel_patch_5/plots/multiop_FFHQ_images32x32_top5000_sigma_0.1_subset_10000_neg_log_density_psnr_identity_inform.pdf}
+        \includegraphics[width=\columnwidth]{./images/neural_generalization/localequivunet2dcondmodel_patch_5/plots/multiop_FFHQ_images32x32_top5000_sigma_0.05_subset_10000_neg_log_density_psnr_identity_inform.pdf}
+        \vskip -0.1in
+        \caption{
+            Higher density yield better alignment.
+            We select test images from FFHQ-32, compute $-\!\log p(y)$ and plot it against the PSNR between the outputs of the LE-MMSE formula and a trained UNet2D, $\sigma=0.05$ and $P = 5 \times 5$. 
+        }
+        \label{fig:neural_generalization_unet2d}
+        \vskip -0.1in
+    \end{figure}%
+
+    Both LE-MMSE and the networks are optimized with respect to the measurement distribution $p(y)$.   
+    The networks and the theoretical formula best align in high-density regions of $p(y)$.
+    This phenomenon is illustrated in~\cref{fig:neural_generalization_unet2d}, where we show that the alignment degrades as $-\!\log p(y)$ increases (or equivalently as $p(y)$ decreases). 
+    Note that here we select 5000 test images with equally spaced $-\!\log p(y)$ values to cover a wide range of densities. 
+    For large $\sigma$, the effect is less pronounced as the Gaussians overlap more.
+
+    \paragraph{Out-of-distribution: how do networks generalize?}
+    Neural networks often generalize well to out-of-distribution (OOD) data, but understanding this behavior remains an open question.  
+    Interestingly, our analytical formulas provide insights to explain this phenomenon. 
+    We consider here images $\bar{x}$ that lie in another dataset $\D'$ disjoint from the training set $\D$.  
+    \begin{figure}[ht!]
+        \centering
+        \includegraphics[trim=17mm 0 0 0,clip,width=\linewidth]{./tex_figure/fig_qualitative_ood_unet2d_patch_5_ffhq.pdf}
+        \caption{Our theory can predict the neural network outputs for out-of-distribution data: both UNet2D and the LE-MMSE formula are trained (or computed) on $\D = $ FFHQ-32. 
+        They are tested on $\D' = $ CIFAR10.}
+        \label{fig:ood_unet2d_patch_5}
+        \vskip -0.1in
+    \end{figure}
+    In~\cref{fig:ood_unet2d_patch_5}, we compare the output of UNet2D and the LE-MMSE formula.
+    %  on CIFAR10 images, while both are trained/computed on FFHQ-32.
+    For large $\sigma$, we observe very close outputs between the neural network and the analytical formula.
+    For small $\sigma$, as the OOD images lie in low-density regions of $p(y)$, the alignment degrades as expected from the previous discussion.
+    However, even in this regime, the PSNR between the two outputs remains reasonably high.  
+    This suggests that the network approximates the LE-MMSE estimator even on OOD data: generalization of the neural networks can be understood through the lens of the LE-MMSE estimator -- it leverages local patches from the training set to reconstruct unseen images. 
+
+\subsubsection{Hyperparameter influence}\label{sec:hyper_parameter}
+% We now investigate the influence of hyperparameters such as patch size $P$ and dataset size $|\D|$ on the alignment between neural networks and the LE-MMSE formula.
+\paragraph{Patch size}
+The patch size $P$ in the LE-MMSE estimator plays a crucial role and should be chosen carefully depending on the inverse problem and noise level $\sigma$. 
+For large noise levels, the inverse problem requires a higher degree of regularization, which can be achieved by using larger patches. On the contrary, small patches are preferred for low noise levels to capture fine details.
+This effect is illustrated in~\cref{fig:supp_analytic_vs_gt_patch_size}, where $5\times 5$ patches should be preferred for the test set at low noise levels, while $11 \times 11$ patches perform better at high noise levels.
+
+On the other hand, the match between the analytical formula and the neural networks output is higher for small patches, as they depend on the density of the \emph{measurement patches} distribution $p\!\left(y[\omega]\right)$, see~\cref{fig:supp_neural_analytic_vs_patch_size}. There are $N \cdot |\D|$ patches, but the space dimension is $P$. Consequently, for a fixed dataset size $|\D|$, increasing $P$ lowers the density of $p\!\left(y[\omega]\right)$ (as the volume of the space increases). A similar conclusion was already reached in denoising diffusion models, where~\citep{kamb2025an} proposed to vary the patch sizes from large to small across noise levels to guarantee a better match.
+% For general inverse problems, the optimal choice of $P$ is more complex.
+% The theory aligns best with network outputs in regions where this distribution has substantial mass.
+% This mass depends on the patch size: 
+% Note that this effect is more pronounced at low noise levels, where the Gaussians overlap less. 
+% \todo{Je trouve la conclusion faible. On ne parle pas de balance entre gros patches pour avoir un réguilariseur significatif et petits patches pour avoir de la densité? Je pense qu'il faut reprendre}
+% \todo{Pas mal cette figure, mais pourquoi P5 fonctionne moins à haut niveau de bruit...}
+% \todo{Hai: peut-être parce que les patchs sont trop petits pour capturer les structures à haut niveau de bruit, et les Gaussiennes overlap déjà beaucoup ? Après la difference n'est pas énorme non plus}
+
+\paragraph{Dataset size}
+We further investigate the influence of the dataset size $|\D|$ on the alignment between neural networks and the LE-MMSE formula.
+Specifically, we vary $|\D|$ from $10^3$ to $5\times 10^4$ images on FFHQ-32 and trained UNet2D with $P = 5 \times 5$ and $B = \Id$.
+As shown in~\cref{fig:dataset_size_influence}, our theory holds for all dataset sizes, with small variations in PSNR between the neural network and the formula.
+
+\subsubsection{Smoothed LE-MMSE and spectral bias}\label{subsec:smoothed_formula}
+Deep neural networks also exhibit a \emph{spectral bias}~\citep{xu2019frequency,rahaman2019spectral}, \ie a preference for low-frequency functions, which yields smoother reconstructions in practice. 
+Describing this spectral bias with functional constraints is missing from our derivation.
+We model this effect by considering a \emph{randomized smoothing}~\citep{duchi2012randomized} variant: 
+for a smoothing parameter $\epsilon > 0$ and $\vz \sim \Normal{0, \Id_M}$, define 
+$\xtransloc^{\mathrm{sm}}(y) \eqdef \Mean{\xtrans(y + \epsilon \cdot \vz)}$. 
+This averages the estimates over random perturbations, acting as a nonlinear low-pass filter that attenuates high-frequency variability in the output. 
+\begin{figure}[ht!]
+    \centering
+    \vskip -0.1in
+    \includegraphics[width=\columnwidth]{images/comparison_smoothed_vs_original/FFHQ_images32x32_subset_10000_sigma_0.05_patch_5_comparison_box.pdf}
+    \vskip -0.1in
+    \caption{
+        Smoothed LE-MMSE ($\epsilon=0.05$) better matches neural network and improves reconstruction quality.}
+        \label{fig:smoothed_vs_original}
+    \vskip -0.1in
+\end{figure}
+It also mirrors standard neural network training, where different noise realizations are seen across epochs.
+In~\cref{fig:smoothed_vs_original}, we compare the smoothed estimator $\xtransloc^{\mathrm{sm}}$ with the original $\xtransloc$, both computed with $P = 5 \times 5, \sigma=0.05$ and $B = \Id$ on FFHQ-32 images. 
+We observe that the smoothed LE-MMSE better matches the neural network output ($1\sim3$ dB) and improves reconstruction quality ($\sim 1$dB).
+This suggests that we can better capture neural network behavior by incorporating carefully designed smoothness constraints.
+
+\begin{figure*}[ht!]
+    \centering
+    \includegraphics[trim=16mm 0 0 0,clip,width=\linewidth]{./tex_figure/fig_qualitative_neural_vs_analytical_patch_11_64x64_standalone.pdf}
+    \caption{Our theory is validated at higher resolution:
+    comparison of UNet2D output and the analytical formula on FFHQ-64.}
+    \vskip -0.1in
+    \label{fig:qualitative_64x64}
+\end{figure*}
+
+\section{Cyanobacteria recognition using deep learning techniques}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+% Harmful Algal Blooms (HABs) produce toxins that affect humans and animals health, damage ecosystems, make certain aquatic environments unlivable by releasing toxic chemicals, preventing light penetration, and depleting oxygen and nutrition in water. HABs are mainly caused by rapid and uncontrolled growth of cyanobacterias in bodies of water. HABs also cause subtantial economic losses due to additional water treatment and healthcare expenses.
+% Monitering the presence of cyanobacteria is therefore crucial to prevent their harmful effects. Traditional and human-based methods for detecting cyanobacterias in water samples are time-consuming, labor-intensive, and prone to errors.   Various deep learning aproaches have been developed to automate this process. This work aims to introduce CyDect (Cyanobacteria Detection), a web-based application that is capable of identifying more than 1000 types of cyanobacterias from microscope images using the deep learning techniques. \todo{Add more details about the project}. Our application deploys interfaces addressed to both expert users (researchers and biologists) and also incooporate the citizen science aspect, allowing the public to upload microscope images, view detection results given by a well-adapted and well-trained faster region-based convolution neural network (RCNN) model, and download the results for further analysis.
+
+% \paragraph{Related works} \todo {put an introduction sentence, put authors at beginning} A open-source python package named CyFi (Cyanobacteria Finder) has been developed to estimate cyanobacteria concentration in small, inland water bodies using satellite images and machine learning techniques \citep{dorne2024cyanobacteria}. SAS (Spectral Mixture Analysis for Surveillance of Harmful Algal Blooms) is a sofware application that identifies cyanobacteria genera from remotely sensed data \citep{legleiter2022spectral}. As best to our knowledge, our work is the first to propose a deep learning-based method to detect and classify cyanobacterias from microscope images. 
+
+
+
+
+\subsection{Data acquisition}
+The dataset consists of microscope images of water samples containing cyanobacterias, these images are captured using high-resolution microscopes by our collaborators, biologists specialized in cyanobacteria study. To enhance the model robustness and generalization ability, the dataset includes images taken under various conditions, such as different lighting, magnification levels, and sample preparations. Each image is annotated with bounding boxes around individual cyanobacteria along with their corresponding species labels by our biologist experts. Initially, the dataset contains over \todo{number of images} images covering more than \todo{number of classes} different cyanobacteria species, but the dataset is continously enriched with new images and annotations as more samples are collected and processed.
+
+\todo{Add more detail about the dataset}.
+
+\subsection{Deep learning approach}
+\subsubsection{Overview of RCNN family}
 Faster-RCNN is a variant of the RCNN, which are a family of machine learning model for computer vision, and specifically object detection and localization. A RCNN model takes an image as input and then output bouding boxes around the detected objects along with their predicted class labels. In particular, a RCNN model taskes an input image, extracts region proposals that are likely to contain objects using Seletive Search algorithm \citep{uijlings2013selective}, computes features for each proposal using a learge convolutional neural network (CNN), then and then classifies each region using class-specific linear SVMSs \citep{girshick2014richfeaturehierarchiesaccurate}, as shown in Figure \ref{fig:rcnn_demo}. Originally, RCNN encounter several inefficiencies, one of these is training RCNN models involves multiple stages, including pre-training the CNN on a large dataset, fine-tuning it on the target dataset, and training class-specific SVMs, which makes the training process complex and time-consuming. Moreover, RCNN requires significant storage space as it needs to store the features for each region proposal, the model also suffers from botllenect as each region proposal need to be processed independently by the CNN, selective search for region proposals is also slow and not computationally expensive. These limitations are addressed by the fast-RCNN and faster-RCNN models which are presented below.
 \begin{figure}[H]
     \centering
@@ -55,8 +558,9 @@ Fast-RCNN response to this inefficiency by (1) performing feature extraction ove
 
 However, Fast-RCNN still rely on selective search for region proposals, which is not computationally efficient. Faster-RCNN solve this issue by replacing slow selective search with a region proposal network (RPN), which is a fully convolutional network that shares the convolutional layers with the object detection network \citep{ren2016fasterrcnnrealtimeobject}. The RPN takes the feature maps generated by the shared convolutional layers as input and outputs a set bounding box coordinates, each with an objectness score indicating the likelihood of containing an object, if this score is above a certain threshold, i.e the corresponding box has a good objectness, its coordinate get passed forward as a region proposal. The RPN uses a sliding window approach to generate boxes at different scales with certain fixed ratios, called anchor boxes, as shown in Figure \ref{fig:anchor_box}. By sharing the convolutional layers between the RPN and the object detection network, faster-RCNN significantly reduces the computational cost of region proposal generation, leading to faster inference times. The general architecture of a faster-RCNN is shown in Figure \ref{fig:fasterrcnn_demo}. 
 
-\subsection{Faster-RCNN for cyanobacteria identification}
-At the day this paper is written, the faster-RCNN model is no longer the state-of-the-art for object detection tasks, however, we still choose this model for this cyanobacteria identification task due to its robustness and high accuracy for small object detection, which is crucial as cyanobacterias are often small and densely packed in microscope images. Moreover, training faster-RCNN is easier compared to more recent models such as YOLO-family models and transformer-based models, which often require more complex training procedures, hyperparameter tuning and larger datasets to achieve good performance. To enhance the performance of our faster-RCNN model, we employ the ResNet50 architecture as the the backbone CNN for feature extraction, we also utilize Feature Pyramid Network (FPN) technique to improve the model's ability to detect cyanobacterias at different scales.
+\subsubsection{Faster-RCNN for cyanobacteria identification}
+At the day this paper is written, the faster-RCNN model is no longer the state-of-the-art for object detection tasks, however, we still choose this model for this cyanobacteria identification task due to its robustness and high accuracy for small object detection, which is crucial as cyanobacterias are often small and densely packed in microscope images. Moreover, training faster-RCNN is easier compared to more recent models such as YOLO-family models and transformer-based models, which often require more complex training procedures, hyperparameter tuning and larger datasets to achieve good performance. To enhance the performance of our faster-RCNN model, we employ the ResNet (Residual Network) architecture integrating with Feature Pyramid Network (FPN) technique as the backbone network for feature extraction. This combination allows us to improve the model's ability to detect cyanobacterias at different scales, as we show now.
+
 
 
 \begin{figure}[htbp]
@@ -80,10 +584,30 @@ At the day this paper is written, the faster-RCNN model is no longer the state-o
     \label{fig:both_images}
 \end{figure}
 
+% \paragraph{ResNet architecture}
+% ResNet (Residual Network) is a deep convolutional neural network architecture that introduces the concept of residual learning by stacking residual blocks. The residual blocks learn residual functions with reference to the layer inputs, instead of learning unreferenced functions by connecting the input of a layer directly to its output via shortcut connections. Formally, let $\mathbf{x}$ be the input to a certain layer, and let $\mathcal{F}(\mathbf{x})$ be the desired underlying mapping to be learned by the layer. Instead of directly approximating $\mathcal{F}(\mathbf{x})$, residual blocks reformulate the mapping as $\mathcal{F}(\mathbf{x}) = \mathcal{H}(\mathbf{x}) - \mathbf{x}$, where $\mathcal{H}(\mathbf{x})$ is the original mapping. The layer then learns the residual function $\mathcal{F}(\mathbf{x})$, and the output of the layer becomes $\mathcal{H}(\mathbf{x}) = \mathcal{F}(\mathbf{x}) + \mathbf{x}$, as illustrated in Figure \ref{fig:residual_block}. This reformulation allows the network to learn identity mappings more easily, which helps to mitigate the vanishing gradient problem and enables the training of much deeper networks \citep{he2015deepresiduallearningimage}, often leading to improved performance on various computer vision tasks. 
 
+% \begin{figure}
+%     \centering
+%     \includegraphics[width=0.5\textwidth]{figures/residual_block.png}
+%     \caption{An example of residual block in ResNet architecture \citep{he2015deepresiduallearningimage}.}
+%     \label{fig:residual_block}
+% \end{figure}
 
-\section{Application deployment}
+% \paragraph{Feature Pyramid Network (FPN)}
+% Feature Pyramid Network (FPN) is a multi-scale feature extraction technique that enhances the ability of convolutional neural networks to detect objects at different scales. FPN constructs a feature pyramid by combining low-resolution, semantically strong features with high-resolution, semantically weak features through a top-down pathway and lateral connections \citep{lin2017feature}, as illustrated in Figure \ref{fig:fpn_architecture}. This approach allows the network to leverage both high-level semantic information and fine-grained spatial details, which is particularly beneficial for detecting objects with different scales like cyanobacterias in microscope images with varying magnifications.
 
+% \begin{figure}
+%     \centering
+%     \includegraphics[width=0.8\textwidth]{figures/fpn_architecture.png}
+%     \caption{Feature Pyramid Network \citep{lin2017feature}: blue outlines denote feature maps, with thicker lines indicating stronger semantic features. A top-down pathway upsamples high-level features and combines them with corresponding lower-level maps through lateral connections, generating rich multi-scale representations.}
+%     \label{fig:fpn_architecture}
+% \end{figure}
+
+\paragraph{Combining ResNet and FPN to form the backbone of Faster-RCNN}
+We integrate the ResNet architecture with FPN to form the backbone of our faster-RCNN model. The ResNet layers extract hierarchical features from the input images, while the FPN enhances these features by creating a multi-scale feature pyramid. This combination allows the faster-RCNN model to effectively detect cyanobacterias of various sizes and scales in microscope images, improving overall detection accuracy and robustness.
+
+\subsection{Application deployment}
 Our application has two interfaces: one for the expert users (researchers and biologists) and one for general public users. Both of these interfaces are user-friendly and intuitive, they do not require users to have any technical knowledge or informatic background. These interfaces allow users to upload microscope images, view the detection results from backend deep learning model, and download the results for further analysis. These two interfaces share common features such as enable users to zoom in and out of the images, annotate the detected cyanobacterias.The expert interface has additional features such as authentication, dataset management, model retraining triggering. The regular user interface is publicly accessible without authentication, this interface also allows users to give feedback on detection results, under user-corrected labels, which will be send to experts for review and will be added to the dataset for future model retraining if approved by experts.
 
 The application architecture consists of three main components: the expert interface, the general public interface, and the API backend server. The work flow of the application is described in Figure \ref{fig:app_workflow}. 
@@ -98,11 +622,11 @@ The application architecture consists of three main components: the expert inter
 \paragraph{API backend server}
 The API backend server is built using \href{https://flask.palletsprojects.com/en/stable/}{Flask}, a lightweight and flexible web framework for Python. The server hosts the trained faster-RCNN model and the training scripts that allow experts to retrain the model with more enriched dataset. When users request predictions, the corresponding images are sent to the API backend server via an HTTP POST request. The server processes the image using the faster-RCNN model, generates detection results, and sends them back to the user interface in JSON format for display.
 
-\paragraph{General user interface} The general user interface is developed using \href{https://dash.plotly.com/}{Plotly Dash}, a popular framework for building interactive web applications in Python, allowing users. The interface is shown in Figure \ref{fig:general_ui}.
+\paragraph{General user interface} The general user interface is developed using \href{https://dash.plotly.com/}{Plotly Dash}, a popular framework for building interactive web applications in Python. The interface is shown in Figure \ref{fig:general_ui}.
 
 \paragraph{Expert interface} We use \href{https://labelstud.io/}{Label Studio}, an open-source data labeling tool, for the expert interface. This interface provides advanced features that facilitate the annotation workflow and other userful functionalities such as authentication, dataset management, and model retraining triggering, enabling experts to manage and enrich the dataset effectively. The interface is shown in Figure \ref{fig:expert_ui}.
 
-\section{Results and discussion}
+\subsection{Results and discussion}
 
 
 \bibliography{biblio.bib}

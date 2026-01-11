@@ -1,0 +1,145 @@
+\begin{figure*}
+% \begin{table}[h]
+\def\h{0.077\linewidth}
+\centering
+\begin{tabular}{c@{\hspace{4pt}}c@{\hspace{0pt}}c@{\hspace{2pt}}c@{\hspace{0pt}}c@{\hspace{2pt}}c@{\hspace{0pt}}c@{\hspace{12pt}}c@{\hspace{0pt}}c@{\hspace{2pt}}c@{\hspace{0pt}}c@{\hspace{2pt}}c@{\hspace{0pt}}cc} % 13 columns
+\multicolumn{1}{c@{\hspace{4pt}}}{} &
+\multicolumn{6}{c@{\hspace{12pt}}}{$x\in\D$} &
+\multicolumn{6}{c}{$x\notin\D$} &
+\multicolumn{1}{c}{} \\
+\multicolumn{1}{c@{\hspace{4pt}}}{} &
+\multicolumn{2}{c@{\hspace{2pt}}}{Denoising} &
+\multicolumn{2}{c@{\hspace{2pt}}}{Inpainting} &
+\multicolumn{2}{c@{\hspace{12pt}}}{Deblurring} &
+\multicolumn{2}{c@{\hspace{2pt}}}{Denoising} &
+\multicolumn{2}{c@{\hspace{2pt}}}{Inpainting} &
+\multicolumn{2}{c}{Deblurring} &
+\multicolumn{1}{c}{}\\
+$\sigma$ &Theory&CNN&Theory&CNN&Theory&CNN&Theory&CNN&Theory&CNN&Theory&CNN\\
+ \rotatebox{90}{\hspace*{0.15cm} $0.05$} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/denoising/denoising/sigma_0.05/train_set/xeqloc.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/denoising/denoising/sigma_0.05/train_set/x_neural.png}&
+\includegraphics[width=\h]{./images/neural_vs_analytical/inp/inp_ag/sigma_0.05/train_set/xeqloc.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/inp/inp_ag/sigma_0.05/train_set/x_neural.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/deconv/deconv_ag/sigma_0.05/train_set/xeqloc.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/deconv/deconv_ag/sigma_0.05/train_set/x_neural.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/denoising/denoising/sigma_0.05/test_set/xeqloc.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/denoising/denoising/sigma_0.05/test_set/x_neural.png}&
+\includegraphics[width=\h]{./images/neural_vs_analytical/inp/inp_ag/sigma_0.05/test_set/xeqloc.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/inp/inp_ag/sigma_0.05/test_set/x_neural.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/deconv/deconv_ag/sigma_0.05/test_set/xeqloc.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/deconv/deconv_ag/sigma_0.05/test_set/x_neural.png}&
+\multirow{6}{*}{\rotatebox{270}{\large\textbf{Physics Agnostic $B=I$}}}\\
+ \rotatebox{90}{\hspace*{0.15cm} $0.1$} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/denoising/denoising/sigma_0.1/train_set/xeqloc.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/denoising/denoising/sigma_0.1/train_set/x_neural.png}&
+\includegraphics[width=\h]{./images/neural_vs_analytical/inp/inp_ag/sigma_0.1/train_set/xeqloc.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/inp/inp_ag/sigma_0.1/train_set/x_neural.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/deconv/deconv_ag/sigma_0.1/train_set/xeqloc.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/deconv/deconv_ag/sigma_0.1/train_set/x_neural.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/denoising/denoising/sigma_0.1/test_set/xeqloc.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/denoising/denoising/sigma_0.1/test_set/x_neural.png}&
+\includegraphics[width=\h]{./images/neural_vs_analytical/inp/inp_ag/sigma_0.1/test_set/xeqloc.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/inp/inp_ag/sigma_0.1/test_set/x_neural.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/deconv/deconv_ag/sigma_0.1/test_set/xeqloc.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/deconv/deconv_ag/sigma_0.1/test_set/x_neural.png}\\
+ \rotatebox{90}{\hspace*{0.15cm} $0.2$} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/denoising/denoising/sigma_0.2/train_set/xeqloc.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/denoising/denoising/sigma_0.2/train_set/x_neural.png}&
+\includegraphics[width=\h]{./images/neural_vs_analytical/inp/inp_ag/sigma_0.2/train_set/xeqloc.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/inp/inp_ag/sigma_0.2/train_set/x_neural.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/deconv/deconv_ag/sigma_0.2/train_set/xeqloc.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/deconv/deconv_ag/sigma_0.2/train_set/x_neural.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/denoising/denoising/sigma_0.2/test_set/xeqloc.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/denoising/denoising/sigma_0.2/test_set/x_neural.png}&
+\includegraphics[width=\h]{./images/neural_vs_analytical/inp/inp_ag/sigma_0.2/test_set/xeqloc.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/inp/inp_ag/sigma_0.2/test_set/x_neural.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/deconv/deconv_ag/sigma_0.2/test_set/xeqloc.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/deconv/deconv_ag/sigma_0.2/test_set/x_neural.png}\\
+ \rotatebox{90}{\hspace*{0.15cm} $0.3$} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/denoising/denoising/sigma_0.3/train_set/xeqloc.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/denoising/denoising/sigma_0.3/train_set/x_neural.png}&
+\includegraphics[width=\h]{./images/neural_vs_analytical/inp/inp_ag/sigma_0.3/train_set/xeqloc.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/inp/inp_ag/sigma_0.3/train_set/x_neural.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/deconv/deconv_ag/sigma_0.3/train_set/xeqloc.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/deconv/deconv_ag/sigma_0.3/train_set/x_neural.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/denoising/denoising/sigma_0.3/test_set/xeqloc.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/denoising/denoising/sigma_0.3/test_set/x_neural.png}&
+\includegraphics[width=\h]{./images/neural_vs_analytical/inp/inp_ag/sigma_0.3/test_set/xeqloc.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/inp/inp_ag/sigma_0.3/test_set/x_neural.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/deconv/deconv_ag/sigma_0.3/test_set/xeqloc.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/deconv/deconv_ag/sigma_0.3/test_set/x_neural.png}\\
+\vspace{1cm}
+\rotatebox{90}{\hspace*{0.15cm} $0.6$} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/denoising/denoising/sigma_0.6/train_set/xeqloc.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/denoising/denoising/sigma_0.6/train_set/x_neural.png}&
+\includegraphics[width=\h]{./images/neural_vs_analytical/inp/inp_ag/sigma_0.6/train_set/xeqloc.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/inp/inp_ag/sigma_0.6/train_set/x_neural.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/deconv/deconv_ag/sigma_0.6/train_set/xeqloc.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/deconv/deconv_ag/sigma_0.6/train_set/x_neural.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/denoising/denoising/sigma_0.6/test_set/xeqloc.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/denoising/denoising/sigma_0.6/test_set/x_neural.png}&
+\includegraphics[width=\h]{./images/neural_vs_analytical/inp/inp_ag/sigma_0.6/test_set/xeqloc.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/inp/inp_ag/sigma_0.6/test_set/x_neural.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/deconv/deconv_ag/sigma_0.6/test_set/xeqloc.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/deconv/deconv_ag/sigma_0.6/test_set/x_neural.png}\\
+ \rotatebox{90}{\hspace*{0.15cm} $0.05$} &
+ & &
+\includegraphics[width=\h]{./images/neural_vs_analytical/inp/inp_inf/sigma_0.05/train_set/xeqloc.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/inp/inp_inf/sigma_0.05/train_set/x_neural.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/deconv/deconv_inf/sigma_0.05/train_set/xeqloc.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/deconv/deconv_inf/sigma_0.05/train_set/x_neural.png} &
+&&
+\includegraphics[width=\h]{./images/neural_vs_analytical/inp/inp_inf/sigma_0.05/test_set/xeqloc.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/inp/inp_inf/sigma_0.05/test_set/x_neural.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/deconv/deconv_inf/sigma_0.05/test_set/xeqloc.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/deconv/deconv_inf/sigma_0.05/test_set/x_neural.png}&
+\multirow{6}{*}{\rotatebox{270}{\large\textbf{Physics Informed $B=A^+$}}}\\
+ \rotatebox{90}{\hspace*{0.15cm} $0.1$} &
+&&
+\includegraphics[width=\h]{./images/neural_vs_analytical/inp/inp_inf/sigma_0.1/train_set/xeqloc.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/inp/inp_inf/sigma_0.1/train_set/x_neural.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/deconv/deconv_inf/sigma_0.1/train_set/xeqloc.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/deconv/deconv_inf/sigma_0.1/train_set/x_neural.png} &
+&&
+\includegraphics[width=\h]{./images/neural_vs_analytical/inp/inp_inf/sigma_0.1/test_set/xeqloc.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/inp/inp_inf/sigma_0.1/test_set/x_neural.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/deconv/deconv_inf/sigma_0.1/test_set/xeqloc.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/deconv/deconv_inf/sigma_0.1/test_set/x_neural.png}\\
+ \rotatebox{90}{\hspace*{0.15cm} $0.2$} &
+&&
+\includegraphics[width=\h]{./images/neural_vs_analytical/inp/inp_inf/sigma_0.2/train_set/xeqloc.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/inp/inp_inf/sigma_0.2/train_set/x_neural.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/deconv/deconv_inf/sigma_0.2/train_set/xeqloc.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/deconv/deconv_inf/sigma_0.2/train_set/x_neural.png} &
+&&
+\includegraphics[width=\h]{./images/neural_vs_analytical/inp/inp_inf/sigma_0.2/test_set/xeqloc.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/inp/inp_inf/sigma_0.2/test_set/x_neural.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/deconv/deconv_inf/sigma_0.2/test_set/xeqloc.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/deconv/deconv_inf/sigma_0.2/test_set/x_neural.png}\\
+ \rotatebox{90}{\hspace*{0.15cm} $0.3$} &
+  & &
+\includegraphics[width=\h]{./images/neural_vs_analytical/inp/inp_inf/sigma_0.3/train_set/xeqloc.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/inp/inp_inf/sigma_0.3/train_set/x_neural.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/deconv/deconv_inf/sigma_0.3/train_set/xeqloc.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/deconv/deconv_inf/sigma_0.3/train_set/x_neural.png} &
+ & &
+\includegraphics[width=\h]{./images/neural_vs_analytical/inp/inp_inf/sigma_0.3/test_set/xeqloc.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/inp/inp_inf/sigma_0.3/test_set/x_neural.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/deconv/deconv_inf/sigma_0.3/test_set/xeqloc.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/deconv/deconv_inf/sigma_0.3/test_set/x_neural.png}\\
+ \rotatebox{90}{\hspace*{0.15cm} $0.6$} & & &
+\includegraphics[width=\h]{./images/neural_vs_analytical/inp/inp_inf/sigma_0.6/train_set/xeqloc.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/inp/inp_inf/sigma_0.6/train_set/x_neural.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/deconv/deconv_inf/sigma_0.6/train_set/xeqloc.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/deconv/deconv_inf/sigma_0.6/train_set/x_neural.png} &
+& &
+\includegraphics[width=\h]{./images/neural_vs_analytical/inp/inp_inf/sigma_0.6/test_set/xeqloc.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/inp/inp_inf/sigma_0.6/test_set/x_neural.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/deconv/deconv_inf/sigma_0.6/test_set/xeqloc.png} &
+\includegraphics[width=\h]{./images/neural_vs_analytical/deconv/deconv_inf/sigma_0.6/test_set/x_neural.png}\\
+\end{tabular}
+% \end{table}
+\caption{Analytical and CNN outputs on FFHQ/32x32 dataset. As the noise level $\sigma$ increases, the CNN outputs exhibit a closer match to the analytical solutions, indicating that the network begins to learn the analytical formula once $\sigma$ reaches certain threshold. The choice of the pre-inverse operator $B$ play a critical role: in the inpainting task, setting $B = A^+$ yields better performance, whereas in the deconvolution task, selecting $B = \Id$ leads to better results.}
+\label{fig:theory_vs_cnn}
+\end{figure*}

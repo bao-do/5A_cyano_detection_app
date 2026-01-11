@@ -1,0 +1,28 @@
+
+\begin{figure*}[ht]
+    \centering
+    \def\base{./images/neural_vs_analytical/minimalresnet_patch}
+    \def\size{0.32\linewidth}
+    \begin{minipage}{\linewidth}
+        \includegraphics[width=\size]{\base_9/plots/FFHQ_images32x32_subset_10000_combined_psnr_grid.pdf}
+        \includegraphics[width=\size]{\base_7/plots/FFHQ_images32x32_subset_10000_combined_psnr_grid.pdf}
+        \includegraphics[width=\size]{\base_5/plots/FFHQ_images32x32_subset_10000_combined_psnr_grid.pdf}
+        \subcaption{FFHQ-32}
+    \end{minipage}
+    \begin{minipage}{\linewidth}
+        \includegraphics[width=\size]{\base_9/plots/CIFAR10_subset_10000_combined_psnr_grid.pdf}
+        \includegraphics[width=\size]{\base_7/plots/CIFAR10_subset_10000_combined_psnr_grid.pdf}
+        \includegraphics[width=\size]{\base_5/plots/CIFAR10_subset_10000_combined_psnr_grid.pdf}
+        \subcaption{CIFAR-10}
+    \end{minipage}
+    \begin{minipage}{\linewidth}
+        \includegraphics[width=\size]{\base_9/plots/FashionMNIST_subset_10000_combined_psnr_grid.pdf}
+        \includegraphics[width=\size]{\base_7/plots/FashionMNIST_subset_10000_combined_psnr_grid.pdf}
+        \includegraphics[width=\size]{\base_5/plots/FashionMNIST_subset_10000_combined_psnr_grid.pdf}
+        \subcaption{Fashion-MNIST}
+    \end{minipage}
+    \caption{PSNR between trained ResNet and the analytical formula of the LE-MMSE for different inverse problems on both training and test sets of various datasets. 
+    % We recover the same conclusions as in~\cref{fig:neural_vs_analytical_unet2d,fig:supp_neural_vs_analytical_unet2d}.
+    }
+    \label{fig:neural_vs_analytical_patch_size_ablation} 
+\end{figure*}

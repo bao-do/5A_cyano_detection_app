@@ -1,0 +1,80 @@
+\documentclass[border=0pt]{standalone}
+% The standalone class creates a PDF cropped to content
+% border=2mm adds a small margin around the content
+
+\usepackage{graphicx}
+\usepackage{tikz} % If you want to create diagrams
+\usepackage{amssymb}
+% \usepackage[percent]{overpic}
+
+\begin{document}
+    \centering
+    \centering
+    \renewcommand{\arraystretch}{0.5} % spacing between rows
+    \setlength{\tabcolsep}{0pt}     % spacing between columns (default 0)
+    \def\size{1.5cm}
+    \def\colgap{-1pt} % gap between specific column groups
+    % \def\root{../images/physics_aware_agnostic/FFHQ_images32x32_50000}
+    \def\root{/home/minhhai/Works/phd_project/analytical_mmse/code/illustration_script/physics_aware_agnostic/FFHQ_images32x32_50000}
+    \def\idx{3}
+    \def\idxconv{2}
+    % Keep 8 columns; default spacing 0; we'll add gaps in-cell after 2nd and 4th
+
+    % ----------------------------------------- 1st version -----------------------------------------
+    % \begin{tabular}{c c c c c c c c} % first col wider for row titles
+    %     \vspace*{0.1cm}
+    %     & \hspace{\colgap} & \multicolumn{3}{c}{Physics-agnostic LE-MMSE} & \multicolumn{3}{c}{Physics-aware LE-MMSE} \\
+    %         {$\bar{x}$} & {$y$}\hspace{\colgap} & {$\hat{x}$} & {$\mathbb{E}[\hat{x}]$} & {$\mathrm{Var}(\hat{x})$} \hspace{\colgap} 
+    %     &   {$\hat{x}$} & {$\mathbb{E}[\hat{x}]$} & {$\mathrm{Var}(\hat{x})$} \\
+    %     % ---- Informed ----
+    %     \includegraphics[width=\size]{\root_inpainting_center_11_sigma_0.05_GT_\idx.png} & 
+    %     \includegraphics[width=\size]{\root_inpainting_center_11_sigma_0.05_y_\idx.png} \hspace{\colgap} &
+    %     \includegraphics[width=\size]{\root_inpainting_center_11_sigma_0.05_x_hat_agnostic_\idx.png} & 
+    %     \includegraphics[width=\size]{\root_inpainting_center_11_sigma_0.05_mean_agnostic_\idx.png}&
+    %     \includegraphics[width=\size]{\root_inpainting_center_11_sigma_0.05_var_agnostic_\idx.png} \hspace{\colgap} &
+    %     \includegraphics[width=\size]{\root_inpainting_center_11_sigma_0.05_x_hat_informed_\idx.png} & 
+    %     \includegraphics[width=\size]{\root_inpainting_center_11_sigma_0.05_mean_informed_\idx.png} &
+    %     \includegraphics[width=\size]{\root_inpainting_center_11_sigma_0.05_var_informed_\idx.png} \\
+
+    %     \includegraphics[width=\size]{\root_convolution_gaussian_1.0_sigma_0.05_GT_\idxconv.png} & 
+    %     \includegraphics[width=\size]{\root_convolution_gaussian_1.0_sigma_0.05_y_\idxconv.png} \hspace{\colgap} &
+    %     \includegraphics[width=\size]{\root_convolution_gaussian_1.0_sigma_0.05_x_hat_agnostic_\idxconv.png} & 
+    %     \includegraphics[width=\size]{\root_convolution_gaussian_1.0_sigma_0.05_mean_agnostic_\idxconv.png}&
+    %     \includegraphics[width=\size]{\root_convolution_gaussian_1.0_sigma_0.05_var_agnostic_\idxconv.png} \hspace{\colgap} &
+    %     \includegraphics[width=\size]{\root_convolution_gaussian_1.0_sigma_0.05_x_hat_informed_\idxconv.png} & 
+    %     \includegraphics[width=\size]{\root_convolution_gaussian_1.0_sigma_0.05_mean_informed_\idxconv.png} &
+    %     \includegraphics[width=\size]{\root_convolution_gaussian_1.0_sigma_0.05_var_informed_\idxconv.png} \\
+    % \end{tabular}
+
+    % ----------------------------------------- 2nd version -----------------------------------------
+    \begin{tabular}{c c c c c c c c c} % first col wider for row titles
+        \vspace*{0.1cm}
+        & \multicolumn{4}{c}{Inpainting} \hspace{\colgap} & \multicolumn{4}{c}{Deconvolution} \\
+        &   {$\bar{x}$ and $y$} &   {$\hat{x}$} & {$\mathbb{E}[\hat{x}]$} & {$\mathrm{Var}(\hat{x})$} \hspace{\colgap} &
+            {$\bar{x}$ and $y$} &   {$\hat{x}$} & {$\mathbb{E}[\hat{x}]$} & {$\mathrm{Var}(\hat{x})$} \\
+        % ---- Informed ----
+        \rotatebox{90}{\makebox[\size][c]{\centering Agnostic}}
+        & \includegraphics[width=\size]{\root_inpainting_center_11_sigma_0.05_GT_\idx.png}&
+        \includegraphics[width=\size]{\root_inpainting_center_11_sigma_0.05_x_hat_agnostic_\idx.png} & 
+        \includegraphics[width=\size]{\root_inpainting_center_11_sigma_0.05_mean_agnostic_\idx.png}&
+        \includegraphics[width=\size]{\root_inpainting_center_11_sigma_0.05_var_agnostic_\idx.png} \hspace{\colgap} &
+        \includegraphics[width=\size]{\root_convolution_gaussian_1.0_sigma_0.05_GT_\idxconv.png}& 
+        \includegraphics[width=\size]{\root_convolution_gaussian_1.0_sigma_0.05_x_hat_agnostic_\idxconv.png} & 
+        \includegraphics[width=\size]{\root_convolution_gaussian_1.0_sigma_0.05_mean_agnostic_\idxconv.png}&
+        \includegraphics[width=\size]{\root_convolution_gaussian_1.0_sigma_0.05_var_agnostic_\idxconv.png} \\
+
+        
+        \rotatebox{90}{\makebox[\size][c]{\centering Aware}}
+        & \includegraphics[width=\size]{\root_inpainting_center_11_sigma_0.05_y_\idx.png}&
+        \includegraphics[width=\size]{\root_inpainting_center_11_sigma_0.05_x_hat_informed_\idx.png} & 
+        \includegraphics[width=\size]{\root_inpainting_center_11_sigma_0.05_mean_informed_\idx.png} &
+        \includegraphics[width=\size]{\root_inpainting_center_11_sigma_0.05_var_informed_\idx.png} \hspace{\colgap} &
+        \includegraphics[width=\size]{\root_convolution_gaussian_1.0_sigma_0.05_y_\idxconv.png}&
+        \includegraphics[width=\size]{\root_convolution_gaussian_1.0_sigma_0.05_x_hat_informed_\idxconv.png} & 
+        \includegraphics[width=\size]{\root_convolution_gaussian_1.0_sigma_0.05_mean_informed_\idxconv.png} &
+        \includegraphics[width=\size]{\root_convolution_gaussian_1.0_sigma_0.05_var_informed_\idxconv.png} \\
+         \\
+        
+    \end{tabular}
+
+\end{document}

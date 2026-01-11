@@ -1,0 +1,366 @@
+\newcommand{\verticallabel}[1]{%
+  \begin{minipage}[c]{0.025\textwidth} % narrow column for shared label
+		\centering
+		\rotatebox{90}{#1} 
+	\end{minipage}%
+}
+
+
+\begin{figure*}
+    \centering
+    \def\size{0.08\linewidth}
+	\def\file{./images/neural_vs_analytical/exported_images/denoising_FFHQ_images32x32_subset_10000}
+
+	\verticallabel{$\bar{x}$}%
+	\begin{minipage}[c]{0.97\textwidth}
+		\centering
+		\figwithsize{\size}{\file_on_train/sigma_0.0100_x_img_00.png}%
+		\figwithsize{\size}{\file_on_train/sigma_0.0100_x_img_01.png}%
+		\figwithsize{\size}{\file_on_train/sigma_0.0100_x_img_02.png}%
+		\figwithsize{\size}{\file_on_train/sigma_0.0100_x_img_03.png}
+		% GT on test
+		% \hfill
+		\figwithsize{\size}{\file_on_test/sigma_0.0100_x_img_00.png}%
+		\figwithsize{\size}{\file_on_test/sigma_0.0100_x_img_01.png}%
+		\figwithsize{\size}{\file_on_test/sigma_0.0100_x_img_02.png}%
+		\figwithsize{\size}{\file_on_test/sigma_0.0100_x_img_03.png}%
+	\end{minipage}%
+
+    % GT on train
+	\foreach \s in {0.01, 0.05, 0.10,  0.30, 0.80}
+	% \foreach \s in {0.0100, 0.0500,  0.1000, 0.3000,  0.6000, 0.8000, 1.0000}
+	{		
+  			\par\nointerlineskip
+			\hrule height 0.5pt
+			\nointerlineskip
+			% ----------------------------- Y train -----------------------------------------
+			\verticallabel{$\sigma = \num{\s}$}%
+			\begin{minipage}[c]{0.97\textwidth}
+					\centering
+					\figwithsize{\size}{\file_on_train/sigma_\s00_y_img_00.png}%
+					\figwithsize{\size}{\file_on_train/sigma_\s00_y_img_01.png}%
+					\figwithsize{\size}{\file_on_train/sigma_\s00_y_img_02.png}%
+					\figwithsize{\size}{\file_on_train/sigma_\s00_y_img_03.png}
+					% on test 
+					% \hfill
+					\figwithsize{\size}{\file_on_test/sigma_\s00_y_img_00.png}%
+					\figwithsize{\size}{\file_on_test/sigma_\s00_y_img_01.png}%
+					\figwithsize{\size}{\file_on_test/sigma_\s00_y_img_02.png}%
+					\figwithsize{\size}{\file_on_test/sigma_\s00_y_img_03.png}%
+				% ------------------------------ ANALYTICAL -----------------
+					\\\figwithsize{\size}{\file_on_train/sigma_\s00_x_analytical_img_00.png}%
+					\figwithsize{\size}{\file_on_train/sigma_\s00_x_analytical_img_01.png}%
+					\figwithsize{\size}{\file_on_train/sigma_\s00_x_analytical_img_02.png}%
+					\figwithsize{\size}{\file_on_train/sigma_\s00_x_analytical_img_03.png}
+					% on test
+					% \hfill
+					\figwithsize{\size}{\file_on_test/sigma_\s00_x_analytical_img_00.png}%
+					\figwithsize{\size}{\file_on_test/sigma_\s00_x_analytical_img_01.png}%
+					\figwithsize{\size}{\file_on_test/sigma_\s00_x_analytical_img_02.png}%
+					\figwithsize{\size}{\file_on_test/sigma_\s00_x_analytical_img_03.png}%
+				% ---------------------------------- NEURAL -------------------------------------
+					\\\figwithsize{\size}{\file_on_train/sigma_\s00_x_neural_img_00.png}%
+					\figwithsize{\size}{\file_on_train/sigma_\s00_x_neural_img_01.png}%
+					\figwithsize{\size}{\file_on_train/sigma_\s00_x_neural_img_02.png}%
+					\figwithsize{\size}{\file_on_train/sigma_\s00_x_neural_img_03.png}
+					% on test
+					% \hfill
+					\figwithsize{\size}{\file_on_test/sigma_\s00_x_neural_img_00.png}%
+					\figwithsize{\size}{\file_on_test/sigma_\s00_x_neural_img_01.png}%
+					\figwithsize{\size}{\file_on_test/sigma_\s00_x_neural_img_02.png}%
+					\figwithsize{\size}{\file_on_test/sigma_\s00_x_neural_img_03.png}%
+			\end{minipage}%
+	}
+	\caption{Denoising results on FFHQ 32x32 images with different noise levels $\sigma$. The first row show the ground truth (GT) clean images $\bar{x}$ on training and test sets. Each subsequent pair of rows corresponds to a specific noise level $\sigma$, with the first row in the pair displaying the noisy observation $y$ and the analytical MMSE estimate and the second row showing the neural MMSE estimate. The results demonstrate that both analytical and neural MMSE estimates effectively denoise the images, with neural estimates closely matching the analytical ones across various noise levels.}
+	\label{fig:neural_vs_analytical_denoising_grid}
+\end{figure*}
+
+
+\begin{figure*}
+    \centering
+    \def\size{0.122\textwidth}
+	\def\file{./images/neural_vs_analytical/exported_images/inpainting_center_15_FFHQ_images32x32_subset_10000}
+
+	\verticallabel{\hspace*{-0.75cm} $\bar{x}$}%
+	\begin{minipage}[c]{0.485\textwidth}
+		\centering
+		\begin{minipage}[c][1cm]{\textwidth}
+			\centering
+			\textbf{Agnostic} \\ %[0.5ex]
+			\begin{minipage}[c][0.5cm]{0.49\textwidth}
+				\centering
+				On training set 
+			\end{minipage}
+			\begin{minipage}[c][0.5cm]{0.49\textwidth}
+				\centering
+				On test set 
+			\end{minipage}
+		\end{minipage}
+		\figwithsize{\size}{\file_on_train/sigma_0.0100_x_img_00.png}%
+		\figwithsize{\size}{\file_on_train/sigma_0.0100_x_img_01.png}%
+		\figwithsize{\size}{\file_on_train/sigma_0.0100_x_img_02.png}%
+		\figwithsize{\size}{\file_on_train/sigma_0.0100_x_img_03.png}
+		% GT on test
+		% \hfill
+		\figwithsize{\size}{\file_on_test/sigma_0.0100_x_img_00.png}%
+		\figwithsize{\size}{\file_on_test/sigma_0.0100_x_img_01.png}%
+		\figwithsize{\size}{\file_on_test/sigma_0.0100_x_img_02.png}%
+		\figwithsize{\size}{\file_on_test/sigma_0.0100_x_img_03.png}%
+	\end{minipage}%
+	\hfill
+	\begin{minipage}[c]{0.485\textwidth}
+		\centering
+		\begin{minipage}[c][1cm]{\textwidth}
+			\centering
+			\textbf{Informed} \\ %[0.5ex]
+			\begin{minipage}[c][0.5cm]{0.49\textwidth}
+				\centering
+				On training set \\ [0.5ex]
+			\end{minipage}
+			\begin{minipage}[c][0.5cm]{0.49\textwidth}
+				\centering
+				On test set 
+			\end{minipage}
+		\end{minipage}
+		\figwithsize{\size}{\file_on_train/sigma_0.0100_x_img_00.png}%
+		\figwithsize{\size}{\file_on_train/sigma_0.0100_x_img_01.png}%
+		\figwithsize{\size}{\file_on_train/sigma_0.0100_x_img_02.png}%
+		\figwithsize{\size}{\file_on_train/sigma_0.0100_x_img_03.png}
+		% GT on test
+		% \hfill
+		\figwithsize{\size}{\file_on_test/sigma_0.0100_x_img_00.png}%
+		\figwithsize{\size}{\file_on_test/sigma_0.0100_x_img_01.png}%
+		\figwithsize{\size}{\file_on_test/sigma_0.0100_x_img_02.png}%
+		\figwithsize{\size}{\file_on_test/sigma_0.0100_x_img_03.png}%
+	\end{minipage}%
+
+    % GT on train
+	\foreach \s in {0.01, 0.05, 0.10, 0.20, 0.30, 0.80}
+	% \foreach \s in {0.0100, 0.0500,  0.1000, 0.3000,  0.6000, 0.8000, 1.0000}
+	{		
+  			\par\nointerlineskip
+			\hrule height 0.5pt
+			\nointerlineskip
+			% ----------------------------- Y train -----------------------------------------
+			\verticallabel{$\sigma = \num{\s}$}%
+			\begin{minipage}[c]{0.485\textwidth}
+					\centering
+					\figwithsize{\size}{\file_on_train/sigma_\s00_y_img_00.png}%
+					\figwithsize{\size}{\file_on_train/sigma_\s00_y_img_01.png}%
+					\figwithsize{\size}{\file_on_train/sigma_\s00_y_img_02.png}%
+					\figwithsize{\size}{\file_on_train/sigma_\s00_y_img_03.png}
+					% on test 
+					% \hfill
+					\figwithsize{\size}{\file_on_test/sigma_\s00_y_img_00.png}%
+					\figwithsize{\size}{\file_on_test/sigma_\s00_y_img_01.png}%
+					\figwithsize{\size}{\file_on_test/sigma_\s00_y_img_02.png}%
+					\figwithsize{\size}{\file_on_test/sigma_\s00_y_img_03.png}%
+				% ------------------------------ ANALYTICAL -----------------
+					\\\figwithsize{\size}{\file_on_train/sigma_\s00_x_analytical_img_00.png}%
+					\figwithsize{\size}{\file_on_train/sigma_\s00_x_analytical_img_01.png}%
+					\figwithsize{\size}{\file_on_train/sigma_\s00_x_analytical_img_02.png}%
+					\figwithsize{\size}{\file_on_train/sigma_\s00_x_analytical_img_03.png}
+					% on test
+					% \hfill
+					\figwithsize{\size}{\file_on_test/sigma_\s00_x_analytical_img_00.png}%
+					\figwithsize{\size}{\file_on_test/sigma_\s00_x_analytical_img_01.png}%
+					\figwithsize{\size}{\file_on_test/sigma_\s00_x_analytical_img_02.png}%
+					\figwithsize{\size}{\file_on_test/sigma_\s00_x_analytical_img_03.png}%
+				% ---------------------------------- NEURAL -------------------------------------
+					\\\figwithsize{\size}{\file_on_train/sigma_\s00_x_neural_img_00.png}%
+					\figwithsize{\size}{\file_on_train/sigma_\s00_x_neural_img_01.png}%
+					\figwithsize{\size}{\file_on_train/sigma_\s00_x_neural_img_02.png}%
+					\figwithsize{\size}{\file_on_train/sigma_\s00_x_neural_img_03.png}
+					% on test
+					% \hfill
+					\figwithsize{\size}{\file_on_test/sigma_\s00_x_neural_img_00.png}%
+					\figwithsize{\size}{\file_on_test/sigma_\s00_x_neural_img_01.png}%
+					\figwithsize{\size}{\file_on_test/sigma_\s00_x_neural_img_02.png}%
+					\figwithsize{\size}{\file_on_test/sigma_\s00_x_neural_img_03.png}%
+			\end{minipage}%
+			\hfill
+			\begin{minipage}[c]{0.485\textwidth}
+					\centering
+					\figwithsize{\size}{\file_inform_on_train/sigma_\s00_y_img_00.png}%
+					\figwithsize{\size}{\file_inform_on_train/sigma_\s00_y_img_01.png}%
+					\figwithsize{\size}{\file_inform_on_train/sigma_\s00_y_img_02.png}%
+					\figwithsize{\size}{\file_inform_on_train/sigma_\s00_y_img_03.png}
+					% on test
+					% \hfill
+					\figwithsize{\size}{\file_inform_on_test/sigma_\s00_y_img_00.png}%
+					\figwithsize{\size}{\file_inform_on_test/sigma_\s00_y_img_01.png}%
+					\figwithsize{\size}{\file_inform_on_test/sigma_\s00_y_img_02.png}%
+					\figwithsize{\size}{\file_inform_on_test/sigma_\s00_y_img_03.png}%
+				% ------------------------------ ANALYTICAL -----------------
+					\\\figwithsize{\size}{\file_inform_on_train/sigma_\s00_x_analytical_img_00.png}%
+					\figwithsize{\size}{\file_inform_on_train/sigma_\s00_x_analytical_img_01.png}%
+					\figwithsize{\size}{\file_inform_on_train/sigma_\s00_x_analytical_img_02.png}%
+					\figwithsize{\size}{\file_inform_on_train/sigma_\s00_x_analytical_img_03.png}
+					% on test
+					% \hfill
+					\figwithsize{\size}{\file_inform_on_test/sigma_\s00_x_analytical_img_00.png}%
+					\figwithsize{\size}{\file_inform_on_test/sigma_\s00_x_analytical_img_01.png}%
+					\figwithsize{\size}{\file_inform_on_test/sigma_\s00_x_analytical_img_02.png}%
+					\figwithsize{\size}{\file_inform_on_test/sigma_\s00_x_analytical_img_03.png}%
+				% ---------------------------------- NEURAL -------------------------------------
+					\\\figwithsize{\size}{\file_inform_on_train/sigma_\s00_x_neural_img_00.png}%
+					\figwithsize{\size}{\file_inform_on_train/sigma_\s00_x_neural_img_01.png}%
+					\figwithsize{\size}{\file_inform_on_train/sigma_\s00_x_neural_img_02.png}%
+					\figwithsize{\size}{\file_inform_on_train/sigma_\s00_x_neural_img_03.png}
+					% on test
+					% \hfill
+					\figwithsize{\size}{\file_inform_on_test/sigma_\s00_x_neural_img_00.png}%
+					\figwithsize{\size}{\file_inform_on_test/sigma_\s00_x_neural_img_01.png}%
+					\figwithsize{\size}{\file_inform_on_test/sigma_\s00_x_neural_img_02.png}%
+					\figwithsize{\size}{\file_inform_on_test/sigma_\s00_x_neural_img_03.png}%
+			\end{minipage}%
+	}
+	\caption{Inpainting results on FFHQ 32x32 images with different noise levels $\sigma$. The first row show the ground truth (GT) clean images $\bar{x}$ on training and test sets. 
+	Each subsequent three rows correspond to a specific noise level $\sigma$, with the first row in the triplet displaying the masked observation $y$, the second row showing the analytical MMSE estimate, and the third row presenting the neural network estimate. The left half of the figure represents the agnostic model results, while the right half displays the informed model results. %Both analytical and neural MMSE estimates effectively inpaint the images, with neural estimates closely matching the analytical ones across various noise levels and both model types.
+	}
+	\label{fig:neural_vs_analytical_inpainting_grid}
+\end{figure*}
+
+
+\begin{figure*}
+    \centering
+    \def\size{0.122\textwidth}
+	\def\file{./images/neural_vs_analytical/exported_images/convolution_gaussian_1.0_FFHQ_images32x32_subset_10000}
+
+	\verticallabel{\hspace*{-0.75cm} $\bar{x}$}%
+	\begin{minipage}[c]{0.485\textwidth}
+		\centering
+		\begin{minipage}[c][1cm]{\textwidth}
+			\centering
+			\textbf{Agnostic} \\ %[0.5ex]
+			\begin{minipage}[c][0.5cm]{0.49\textwidth}
+				\centering
+				On training set 
+			\end{minipage}
+			\begin{minipage}[c][0.5cm]{0.49\textwidth}
+				\centering
+				On test set 
+			\end{minipage}
+		\end{minipage}
+		\figwithsize{\size}{\file_on_train/sigma_0.0100_x_img_00.png}%
+		\figwithsize{\size}{\file_on_train/sigma_0.0100_x_img_01.png}%
+		\figwithsize{\size}{\file_on_train/sigma_0.0100_x_img_02.png}%
+		\figwithsize{\size}{\file_on_train/sigma_0.0100_x_img_03.png}
+		% GT on test
+		% \hfill
+		\figwithsize{\size}{\file_on_test/sigma_0.0100_x_img_00.png}%
+		\figwithsize{\size}{\file_on_test/sigma_0.0100_x_img_01.png}%
+		\figwithsize{\size}{\file_on_test/sigma_0.0100_x_img_02.png}%
+		\figwithsize{\size}{\file_on_test/sigma_0.0100_x_img_03.png}%
+	\end{minipage}%
+	\hfill
+	\begin{minipage}[c]{0.485\textwidth}
+		\centering
+		\begin{minipage}[c][1cm]{\textwidth}
+			\centering
+			\textbf{Informed} \\ %[0.5ex]
+			\begin{minipage}[c][0.5cm]{0.49\textwidth}
+				\centering
+				On training set \\ [0.5ex]
+			\end{minipage}
+			\begin{minipage}[c][0.5cm]{0.49\textwidth}
+				\centering
+				On test set 
+			\end{minipage}
+		\end{minipage}
+		\figwithsize{\size}{\file_on_train/sigma_0.0100_x_img_00.png}%
+		\figwithsize{\size}{\file_on_train/sigma_0.0100_x_img_01.png}%
+		\figwithsize{\size}{\file_on_train/sigma_0.0100_x_img_02.png}%
+		\figwithsize{\size}{\file_on_train/sigma_0.0100_x_img_03.png}
+		% GT on test
+		% \hfill
+		\figwithsize{\size}{\file_on_test/sigma_0.0100_x_img_00.png}%
+		\figwithsize{\size}{\file_on_test/sigma_0.0100_x_img_01.png}%
+		\figwithsize{\size}{\file_on_test/sigma_0.0100_x_img_02.png}%
+		\figwithsize{\size}{\file_on_test/sigma_0.0100_x_img_03.png}%
+	\end{minipage}%
+
+    % GT on train
+	\foreach \s in {0.01, 0.05, 0.10, 0.20, 0.30, 0.80}
+	% \foreach \s in {0.0100, 0.0500,  0.1000, 0.3000,  0.6000, 0.8000, 1.0000}
+	{		
+  			\par\nointerlineskip
+			\hrule height 0.5pt
+			\nointerlineskip
+			% ----------------------------- Y train -----------------------------------------
+			\verticallabel{$\sigma = \num{\s}$}%
+			\begin{minipage}[c]{0.485\textwidth}
+					\centering
+					\figwithsize{\size}{\file_on_train/sigma_\s00_y_img_00.png}%
+					\figwithsize{\size}{\file_on_train/sigma_\s00_y_img_01.png}%
+					\figwithsize{\size}{\file_on_train/sigma_\s00_y_img_02.png}%
+					\figwithsize{\size}{\file_on_train/sigma_\s00_y_img_03.png}
+					% on test 
+					% \hfill
+					\figwithsize{\size}{\file_on_test/sigma_\s00_y_img_00.png}%
+					\figwithsize{\size}{\file_on_test/sigma_\s00_y_img_01.png}%
+					\figwithsize{\size}{\file_on_test/sigma_\s00_y_img_02.png}%
+					\figwithsize{\size}{\file_on_test/sigma_\s00_y_img_03.png}%
+				% ------------------------------ ANALYTICAL -----------------
+					\\\figwithsize{\size}{\file_on_train/sigma_\s00_x_analytical_img_00.png}%
+					\figwithsize{\size}{\file_on_train/sigma_\s00_x_analytical_img_01.png}%
+					\figwithsize{\size}{\file_on_train/sigma_\s00_x_analytical_img_02.png}%
+					\figwithsize{\size}{\file_on_train/sigma_\s00_x_analytical_img_03.png}
+					% on test
+					% \hfill
+					\figwithsize{\size}{\file_on_test/sigma_\s00_x_analytical_img_00.png}%
+					\figwithsize{\size}{\file_on_test/sigma_\s00_x_analytical_img_01.png}%
+					\figwithsize{\size}{\file_on_test/sigma_\s00_x_analytical_img_02.png}%
+					\figwithsize{\size}{\file_on_test/sigma_\s00_x_analytical_img_03.png}%
+				% ---------------------------------- NEURAL -------------------------------------
+					\\\figwithsize{\size}{\file_on_train/sigma_\s00_x_neural_img_00.png}%
+					\figwithsize{\size}{\file_on_train/sigma_\s00_x_neural_img_01.png}%
+					\figwithsize{\size}{\file_on_train/sigma_\s00_x_neural_img_02.png}%
+					\figwithsize{\size}{\file_on_train/sigma_\s00_x_neural_img_03.png}
+					% on test
+					% \hfill
+					\figwithsize{\size}{\file_on_test/sigma_\s00_x_neural_img_00.png}%
+					\figwithsize{\size}{\file_on_test/sigma_\s00_x_neural_img_01.png}%
+					\figwithsize{\size}{\file_on_test/sigma_\s00_x_neural_img_02.png}%
+					\figwithsize{\size}{\file_on_test/sigma_\s00_x_neural_img_03.png}%
+			\end{minipage}%
+			\hfill
+			\begin{minipage}[c]{0.485\textwidth}
+					\centering
+					\figwithsize{\size}{\file_inform_on_train/sigma_\s00_y_img_00.png}%
+					\figwithsize{\size}{\file_inform_on_train/sigma_\s00_y_img_01.png}%
+					\figwithsize{\size}{\file_inform_on_train/sigma_\s00_y_img_02.png}%
+					\figwithsize{\size}{\file_inform_on_train/sigma_\s00_y_img_03.png}
+					% on test
+					% \hfill
+					\figwithsize{\size}{\file_inform_on_test/sigma_\s00_y_img_00.png}%
+					\figwithsize{\size}{\file_inform_on_test/sigma_\s00_y_img_01.png}%
+					\figwithsize{\size}{\file_inform_on_test/sigma_\s00_y_img_02.png}%
+					\figwithsize{\size}{\file_inform_on_test/sigma_\s00_y_img_03.png}%
+				% ------------------------------ ANALYTICAL -----------------
+					\\\figwithsize{\size}{\file_inform_on_train/sigma_\s00_x_analytical_img_00.png}%
+					\figwithsize{\size}{\file_inform_on_train/sigma_\s00_x_analytical_img_01.png}%
+					\figwithsize{\size}{\file_inform_on_train/sigma_\s00_x_analytical_img_02.png}%
+					\figwithsize{\size}{\file_inform_on_train/sigma_\s00_x_analytical_img_03.png}
+					% on test
+					% \hfill
+					\figwithsize{\size}{\file_inform_on_test/sigma_\s00_x_analytical_img_00.png}%
+					\figwithsize{\size}{\file_inform_on_test/sigma_\s00_x_analytical_img_01.png}%
+					\figwithsize{\size}{\file_inform_on_test/sigma_\s00_x_analytical_img_02.png}%
+					\figwithsize{\size}{\file_inform_on_test/sigma_\s00_x_analytical_img_03.png}%
+				% ---------------------------------- NEURAL -------------------------------------
+					\\\figwithsize{\size}{\file_inform_on_train/sigma_\s00_x_neural_img_00.png}%
+					\figwithsize{\size}{\file_inform_on_train/sigma_\s00_x_neural_img_01.png}%
+					\figwithsize{\size}{\file_inform_on_train/sigma_\s00_x_neural_img_02.png}%
+					\figwithsize{\size}{\file_inform_on_train/sigma_\s00_x_neural_img_03.png}
+					% on test
+					% \hfill
+					\figwithsize{\size}{\file_inform_on_test/sigma_\s00_x_neural_img_00.png}%
+					\figwithsize{\size}{\file_inform_on_test/sigma_\s00_x_neural_img_01.png}%
+					\figwithsize{\size}{\file_inform_on_test/sigma_\s00_x_neural_img_02.png}%
+					\figwithsize{\size}{\file_inform_on_test/sigma_\s00_x_neural_img_03.png}%
+			\end{minipage}%
+	}
+	\caption{Convolution results on FFHQ 32x32 images with different noise levels $\sigma$. }
+	\label{fig:neural_vs_analytical_convolution_grid}
+\end{figure*}

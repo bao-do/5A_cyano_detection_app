@@ -1,0 +1,70 @@
+\documentclass[border=0pt]{standalone}
+% The standalone class creates a PDF cropped to content
+% border=2mm adds a small margin around the content
+
+\usepackage{graphicx}
+\usepackage{tikz} % If you want to create diagrams
+
+\begin{document}
+    \centering
+    \renewcommand{\arraystretch}{0.25} % spacing between rows
+    \setlength{\tabcolsep}{0.3pt}     % spacing between columns
+
+    \def\size{1.6cm}
+    \def\root{/home/minhhai/Works/phd_project/analytical_mmse/code/illustration_script/neural_vs_analytical}
+    \def\unet{localequivunet2dcondmodel_patch}
+    \def\ffhq{FFHQ_images64x64_subset_10000}
+    \def\test{on_test_nearest}
+
+    \def\denoising{denoising}
+    \def\inpainting{inpainting_center_15}
+    \def\deconvolution{convolution_gaussian_1.0}
+    \def\sigmas{0.0500, 0.2000, 0.5000, 0.8000}
+
+    \newcommand{\meas}[5]{%
+        \foreach \sigma in \sigmas {%
+            \includegraphics[width=\size]{\root/#1/images/#2_#3_#4/sigma-\sigma_y_#5.png}%
+        }%
+        }
+    \newcommand{\analytic}[5]{%
+        \foreach \sigma in \sigmas {%
+            \includegraphics[width=\size]{\root/#1/images/#2_#3_#4/sigma-\sigma_x_analytical_#5.png}%
+        }%
+        }
+    \newcommand{\neural}[5]{%
+        \foreach \sigma in \sigmas {%
+            \includegraphics[width=\size]{\root/#1/images/#2_#3_#4/sigma-\sigma_x_neural_#5.png}%
+        }%
+        }
+    \newcommand{\legend}[1]{
+        \rotatebox{90}{\makebox[\size][c]{\centering \scriptsize #1}}%
+        }
+
+    \begin{tabular}{@{}l@{}c@{\hspace{1pt}}c@{\hspace{1pt}}c@{}}
+    % \begin{tabular}{@{}l@{}c@{\hspace{1pt}}c@{\hspace{1pt}}c@{}}
+    % \begin{tabular}{@{}r@{}c@{\hspace{1pt}}c@{\hspace{1pt}}c@{}}
+    % \begin{tabular}{cccc}
+        \centering
+        % ------------------------------------------------------------------------
+        & Denoising & Inpainting & Deconvolution  \\
+        $\sigma$ 
+            & {\footnotesize \hfill  $0.05$ \hfill \hfill $0.2$ \hfill \hfill $0.5$ \hfill \hfill $0.8$ \hfill} 
+            & {\footnotesize \hfill $0.05$ \hfill \hfill $0.2$ \hfill \hfill $0.5$ \hfill \hfill $0.8$ \hfill} 
+            & {\footnotesize \hfill $0.05$ \hfill \hfill $0.2$ \hfill \hfill $0.5$ \hfill \hfill $0.8$ \hfill} \\
+        % ------------------------- FFHQ ----------------------------------------
+        \legend{Meas.}
+                    & \meas{\unet_11}{\denoising}{\ffhq}{\test}{000} 
+                    & \meas{\unet_11}{\inpainting}{\ffhq}{\test}{001} 
+                    & \meas{\unet_11}{\deconvolution}{\ffhq}{\test}{006}\\
+        %    ----------------------  ANALYTIC  --------------------------------
+        \legend{Analytic} 
+                        & \analytic{\unet_11}{\denoising}{\ffhq}{\test}{000} 
+                        & \analytic{\unet_11}{\inpainting}{\ffhq}{\test}{001} 
+                        & \analytic{\unet_11}{\deconvolution}{\ffhq}{\test}{006} \\
+        %    --------------------  UNET2D  --------------------------------
+        \legend{UNet2D} 
+                        & \neural{\unet_11}{\denoising}{\ffhq}{\test}{000} 
+                        & \neural{\unet_11}{\inpainting}{\ffhq}{\test}{001} 
+                        & \neural{\unet_11}{\deconvolution}{\ffhq}{\test}{006}\\
+    \end{tabular}
+\end{document}

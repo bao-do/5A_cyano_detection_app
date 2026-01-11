@@ -1,0 +1,64 @@
+                \begin{figure*}
+                {\raggedright \underline{\makebox[6cm][l]{Denoising}} \par}
+                \vspace{0.5cm}
+                \centering
+                % Prob of being nearest neighbor
+                $x \in \D$ \hspace{6cm} $x \notin \D$ \\
+                \vspace{0.5cm}
+                \begin{minipage}{0.49\linewidth}
+                \centering
+                \def\h{0.28\linewidth}
+                \rotatebox{90}{\hspace*{0.75cm} $x$}
+                \figwithlabel{$\sigma = 0.02$}{\h}{./images/illustration_eqloc/denoising/denoising/sigma_0.02/train_set/x.png}
+                \figwithlabel{$\sigma = 0.2$}{\h}{./images/illustration_eqloc/denoising/denoising/sigma_0.20/train_set/x.png}
+                \figwithlabel{$\sigma = 0.7$}{\h}{./images/illustration_eqloc/denoising/denoising/sigma_0.70/train_set/x.png} 
+                \\\rotatebox{90}{\hspace*{0.75cm} $y$}
+                \figwithsize{\h}{./images/illustration_eqloc/denoising/denoising/sigma_0.02/train_set/y.png}
+                \figwithsize{\h}{./images/illustration_eqloc/denoising/denoising/sigma_0.20/train_set/y.png}
+                \figwithsize{\h}{./images/illustration_eqloc/denoising/denoising/sigma_0.70/train_set/y.png} 
+                \\\rotatebox{90}{\hspace*{0.75cm} $x_{CNN}$}
+                \figwithsize{\h}{./images/illustration_eqloc/denoising/denoising/sigma_0.02/train_set/x_neural.png}
+                \figwithsize{\h}{./images/illustration_eqloc/denoising/denoising/sigma_0.20/train_set/x_neural.png}
+                \figwithsize{\h}{./images/illustration_eqloc/denoising/denoising/sigma_0.70/train_set/x_neural.png} 
+                \\ \rotatebox{90}{\hspace*{0.75cm} $\xeqloc$}
+                \figwithsize{\h}{./images/illustration_eqloc/denoising/denoising/sigma_0.02/train_set/xhat.png}
+                \figwithsize{\h}{./images/illustration_eqloc/denoising/denoising/sigma_0.20/train_set/xhat.png}
+                \figwithsize{\h}{./images/illustration_eqloc/denoising/denoising/sigma_0.70/train_set/xhat.png} 
+                \\ \rotatebox{90}{\hspace{0.1cm}\tiny\#active weights}
+                \figwithsize{\h}{./images/illustration_eqloc/denoising/denoising/sigma_0.02/train_set/n_active_weights.png}
+                \figwithsize{\h}{./images/illustration_eqloc/denoising/denoising/sigma_0.20/train_set/n_active_weights.png}
+                \figwithsize{\h}{./images/illustration_eqloc/denoising/denoising/sigma_0.70/train_set/n_active_weights.png} 
+                \\ \rotatebox{90}{\hspace{0.25cm}\tiny source index}
+                \figwithsize{\h}{./images/illustration_eqloc/denoising/denoising/sigma_0.02/train_set/est_pixel_src_no_anno.png}
+                \figwithsize{\h}{./images/illustration_eqloc/denoising/denoising/sigma_0.20/train_set/est_pixel_src_no_anno.png}
+                \figwithsize{\h}{./images/illustration_eqloc/denoising/denoising/sigma_0.70/train_set/est_pixel_src_no_anno.png} 
+                \end{minipage}
+                \begin{minipage}{0.49\linewidth}
+                \centering
+                \def\h{0.28\linewidth}
+                \figwithlabel{$\sigma = 0.02$}{\h}{./images/illustration_eqloc/denoising/denoising/sigma_0.02/test_set/x.png}
+                \figwithlabel{$\sigma = 0.01$}{\h}{./images/illustration_eqloc/denoising/denoising/sigma_0.20/test_set/x.png}
+                \figwithlabel{$\sigma = 0.7$}{\h}{./images/illustration_eqloc/denoising/denoising/sigma_0.70/test_set/x.png} \\
+                \figwithsize{\h}{./images/illustration_eqloc/denoising/denoising/sigma_0.02/test_set/y.png}
+                \figwithsize{\h}{./images/illustration_eqloc/denoising/denoising/sigma_0.20/test_set/y.png}
+                \figwithsize{\h}{./images/illustration_eqloc/denoising/denoising/sigma_0.70/test_set/y.png} \\
+                \figwithsize{\h}{./images/illustration_eqloc/denoising/denoising/sigma_0.02/test_set/x_neural.png}
+                \figwithsize{\h}{./images/illustration_eqloc/denoising/denoising/sigma_0.20/test_set/x_neural.png}
+                \figwithsize{\h}{./images/illustration_eqloc/denoising/denoising/sigma_0.70/test_set/x_neural.png} \\
+                \figwithsize{\h}{./images/illustration_eqloc/denoising/denoising/sigma_0.02/test_set/xhat.png}
+                \figwithsize{\h}{./images/illustration_eqloc/denoising/denoising/sigma_0.20/test_set/xhat.png}
+                \figwithsize{\h}{./images/illustration_eqloc/denoising/denoising/sigma_0.70/test_set/xhat.png} \\
+                \figwithsize{\h}{./images/illustration_eqloc/denoising/denoising/sigma_0.02/test_set/n_active_weights.png}
+                \figwithsize{\h}{./images/illustration_eqloc/denoising/denoising/sigma_0.20/test_set/n_active_weights.png}
+                \figwithsize{\h}{./images/illustration_eqloc/denoising/denoising/sigma_0.70/test_set/n_active_weights.png} \\
+                \figwithsize{\h}{./images/illustration_eqloc/denoising/denoising/sigma_0.02/test_set/est_pixel_src_no_anno.png}
+                \figwithsize{\h}{./images/illustration_eqloc/denoising/denoising/sigma_0.20/test_set/est_pixel_src_no_anno.png}
+                \figwithsize{\h}{./images/illustration_eqloc/denoising/denoising/sigma_0.70/test_set/est_pixel_src_no_anno.png} 
+                \end{minipage}
+
+                \begin{minipage}{0.8\linewidth}
+                    \includegraphics[width=\linewidth]{./images/illustration_eqloc/denoising/n_active_weight_sigma_train.pdf}
+                \end{minipage}
+                \caption{Experimental results illustrating local and equivariant for the denoiser. The first row shows sample $x$ either in the database $\D$ (left column) or not in $\D$ (right column), for different values of noise level $\sigma$. The third row shows the corresponding estimations, which become increasingly blurred as $\sigma$ increases, consistent with the number of active weights maps in the fourth row. For each pixel $n'$, the number of active weights is determined by $\argmin_{n \in \llbracket 0, N-1\rrbracket} \sum_{i=1}^{n}\omega_{n',n}(x|y) \geq 0.95$, assuming that the weights are sorted in descending order, \eg $\omega_{n',i} > \omega_{n',j}$ for $i < j$ \todo{not clear enough}. The fifth row shows contours indicating the source of groups of nearby pixels, i.e., pixels within a cluster originate mostly from the same image in the dataset $\D$. The plot at final row illustrates the increasing dependence of the number of active weights on the noise level $\sigma$, and also reveals the fact that the number of active weights is higher in the case $\x \in \D$ than the case $\x \notin \D$.}
+                \label{fig:illustration_eqloc_denoising}
+            \end{figure*}

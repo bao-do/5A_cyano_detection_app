@@ -1,0 +1,46 @@
+\documentclass[border=0pt]{standalone}
+% The standalone class creates a PDF cropped to content
+% border=2mm adds a small margin around the content
+
+\usepackage{graphicx}
+\usepackage{tikz} % If you want to create diagrams
+\usepackage{amssymb}
+% \usepackage[percent]{overpic}
+\newcommand{\xtrans}{\hat{x}_{\mathcal{T}}}
+\newcommand{\xtransloc}{\hat{x}_{\mathcal{T}, \mathrm{loc}}}
+
+\begin{document}
+    \centering
+    \centering
+    \renewcommand{\arraystretch}{0.5} % spacing between rows
+    \setlength{\tabcolsep}{0.5pt}     % spacing between columns (default 0)
+    \def\size{1.5cm}
+    \def\colgap{-0.1pt} % gap between specific column groups
+    % \def\root{../images/physics_aware_agnostic/FFHQ_images32x32_50000}
+    \def\root{/home/minhhai/Works/phd_project/analytical_mmse/code/illustration_script/translation}
+    % Keep 8 columns; default spacing 0; we'll add gaps in-cell after 2nd and 4th
+    \begin{tabular}{c c c c c c} % first col wider for row titles
+        \multicolumn{3}{c}{Inpainting} & \multicolumn{3}{c}{Deconvolution}         \vspace*{0.1pt}
+    \\
+        {$y$} & {$\xtrans(y)$} & {$\xtransloc(y)$} \hspace{\colgap} &
+         {$y$} & {$\xtrans(y)$} & {$\xtransloc(y)$} \\
+        % ---- Informed ----
+        % \includegraphics[width=\size]{\root/inpainting_center_15_agnostic_sigma_0.05_x_bar.png} & 
+        \includegraphics[width=\size]{\root/inpainting_center_15_agnostic_sigma_0.05_y.png}     &
+        \includegraphics[width=\size]{\root/inpainting_center_15_agnostic_sigma_0.05_x_hat.png} &
+        \includegraphics[width=\size]{\root/inpainting_center_15_agnostic_sigma_0.05_x_hat_loc.png} \hspace{\colgap} & 
+        % ----
+        \includegraphics[width=\size]{\root/convolution_gaussian_1.0_agnostic_sigma_0.05_y.png}     &
+        \includegraphics[width=\size]{\root/convolution_gaussian_1.0_agnostic_sigma_0.05_x_hat.png} &
+        \includegraphics[width=\size]{\root/convolution_gaussian_1.0_agnostic_sigma_0.05_x_hat_loc.png} \\
+        % ---------------------------------------------------------------------------------------
+        \includegraphics[width=\size]{\root/inpainting_center_15_agnostic_sigma_0.05_y_shifted.png}  &
+        \includegraphics[width=\size]{\root/inpainting_center_15_agnostic_sigma_0.05_x_hat_shifted.png}    &
+        \includegraphics[width=\size]{\root/inpainting_center_15_agnostic_sigma_0.05_x_hat_shifted_loc.png} \hspace{\colgap}  &
+        % --- 
+        \includegraphics[width=\size]{\root/convolution_gaussian_1.0_agnostic_sigma_0.05_y_shifted.png}  &
+        \includegraphics[width=\size]{\root/convolution_gaussian_1.0_agnostic_sigma_0.05_x_hat_shifted.png}  &
+        \includegraphics[width=\size]{\root/convolution_gaussian_1.0_agnostic_sigma_0.05_x_hat_shifted_loc.png} \\
+    \end{tabular}
+
+\end{document}

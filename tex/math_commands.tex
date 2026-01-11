@@ -1,4 +1,4 @@
-%!TEX root = iclr_2026.tex 
+%!TEX root = iclr_2026.tex
 %%%%% NEW MATH DEFINITIONS %%%%%
 
 \usepackage{amsmath,amsfonts,bm}
@@ -461,7 +461,7 @@
 \def\etZ{{\etens{Z}}}
 
 % The true underlying data generating distribution
-\newcommand{\pdata}{p_x}
+\newcommand{\pdata}{p_{\vx}}
 % The empirical distribution defined by the training set
 \newcommand{\ptrain}{p_{\D}}
 \newcommand{\paugmented}{p_{\G\D}}
@@ -480,6 +480,7 @@
 \newcommand{\E}{\mathbb{E}}
 \newcommand{\Ls}{\mathcal{L}}
 \newcommand{\R}{\mathbb{R}}
+\newcommand{\Z}{\mathbb{Z}}
 \newcommand{\emp}{\tilde{p}}
 \newcommand{\lr}{\alpha}
 \newcommand{\reg}{\lambda}
@@ -524,7 +525,7 @@
 \newcommand{\Normal}[1]{\mathcal{N}\left( {#1} \right)}
 \newcommand{\Id}{\mathrm{I}}
 \newcommand{\id}{\iota}
-\newcommand{\Mean}[1]{\mathbb{E} \left[ {#1} \right] }  % expection
+\newcommand{\Mean}[1]{\mathbb{E} \left[ {#1} \right] }  % expectation
 \newcommand{\X}{\mathbb{R}^N}    % \newcommand{\X}{\mathcal{X}}
 \newcommand{\Y}{\mathbb{R}^M}    % \newcommand{\Y}{\mathcal{Y}}
 
@@ -541,23 +542,25 @@
 \newcommand{\Mtrans}{\mathcal{M}_{\T}}     % Set of translation equivariant estimator
 \newcommand{\Mloc}{\mathcal{M}_{\text{loc}}}    % Set of local estimator
 \newcommand{\Meqloc}{\mathcal{M}_{\G, \text{loc}}}      % Set of local and group equivariant estimator
-\newcommand{\Mtransloc}{\mathcal{M}_{\T, \text{loc}}} 
+\newcommand{\Mtransloc}{\mathcal{M}_{\T, \text{loc}}}
 
 \newcommand{\inner}[1]{\left\langle #1 \right\rangle}
 \newcommand{\x}{\bm{x}}
 \newcommand{\y}{\bm{y}}
 \newcommand{\z}{\bm{z}}
 \newcommand{\w}{\bm{w}}
-\newcommand{\todo}[1]{\textcolor{red}{\textbf{TODO:} #1}}
+%
 
 \newcommand{\rank}[1]{\mathrm{rank}\left( {#1} \right)}
 \newcommand{\eqdef}{\stackrel{\mathrm{def}}{=}}     % Set of translation equivariant estimator
 
 
 % Command for estimators
-\newcommand{\xmmse}{\hat{x}_{\text{\tiny MMSE}}} 
+\newcommand{\xmmse}{\hat{x}_{\text{\tiny MMSE}}}
+\newcommand{\xmmseaug}{\hat{x}^{\text{\tiny aug}}_{\text{\tiny MMSE}}}
 \newcommand{\xeq}{\hat{x}_{\G}}
 \newcommand{\xtrans}{\hat{x}_{\T}}
+\newcommand{\xtransaug}{\hat{x}^{\text{\tiny aug}}_{\T}}
 \newcommand{\xloc}{\hat{x}_{\text{loc}}}
 \newcommand{\xeqloc}{\hat{x}_{\G, \text{loc}}}
 \newcommand{\xtransloc}{\hat{x}_{\T, \text{loc}}}
@@ -566,3 +569,5 @@
 \newcommand{\phieq}{\phi^{\star}_{\G} }
 \newcommand{\philoc}{\phi^{\star}_{\text{loc}} }
 \newcommand{\phieqloc}{\phi^{\star}_{\G, \text{loc}}}
+\newcommand{\neural}{N_{w}}
+\newcommand{\neuralopt}{N_{w^{\star}}}

@@ -1,0 +1,81 @@
+            \begin{figure*}
+                {\raggedright \underline{\makebox[6cm][l]{Inpainting}} \par}
+                \vspace{0.5cm}
+                \centering
+                % Prob of being nearest neighbor
+                $x \in \D$ \hspace{6cm} $x \notin \D$ \\
+                \vspace{0.5cm}
+                \begin{minipage}{0.49\linewidth}
+                \centering
+                $\sigma=0.02$ \hspace{2cm} $\sigma=0.7$\\
+                \def\h{0.216\linewidth}
+                \rotatebox{90}{\hspace*{0.25cm} $x$}
+                \figwithlabel{$B=I$}{\h}{./images/illustration_eqloc/inp/inp_ag/sigma_0.02/train_set/x.png}
+                \figwithlabel{$B=A^+$}{\h}{./images/illustration_eqloc/inp/inp_inf/sigma_0.02/train_set/x.png}
+                \figwithlabel{$B=I$}{\h}{./images/illustration_eqloc/inp/inp_ag/sigma_0.50/train_set/x.png}
+                \figwithlabel{$B=A^+$}{\h}{./images/illustration_eqloc/inp/inp_inf/sigma_0.50/train_set/x.png}
+                \\ \rotatebox{90}{\hspace*{0.25cm} $y$}
+                \figwithsize{\h}{./images/illustration_eqloc/inp/inp_ag/sigma_0.02/train_set/y.png}
+                \figwithsize{\h}{./images/illustration_eqloc/inp/inp_inf/sigma_0.02/train_set/y.png}
+                \figwithsize{\h}{./images/illustration_eqloc/inp/inp_ag/sigma_0.50/train_set/y.png}
+                \figwithsize{\h}{./images/illustration_eqloc/inp/inp_inf/sigma_0.50/train_set/y.png}
+                \\ \rotatebox{90}{\hspace*{0.25cm} $x_{CNN}$}
+                \figwithsize{\h}{./images/illustration_eqloc/inp/inp_ag/sigma_0.02/train_set/x_neural.png}
+                \figwithsize{\h}{./images/illustration_eqloc/inp/inp_inf/sigma_0.02/train_set/x_neural.png}
+                \figwithsize{\h}{./images/illustration_eqloc/inp/inp_ag/sigma_0.50/train_set/x_neural.png}
+                \figwithsize{\h}{./images/illustration_eqloc/inp/inp_inf/sigma_0.50/train_set/x_neural.png}
+                \\ \rotatebox{90}{\hspace*{0.25cm} $\xeqloc$}
+                \figwithsize{\h}{./images/illustration_eqloc/inp/inp_ag/sigma_0.02/train_set/xhat.png}
+                \figwithsize{\h}{./images/illustration_eqloc/inp/inp_inf/sigma_0.02/train_set/xhat.png}
+                \figwithsize{\h}{./images/illustration_eqloc/inp/inp_ag/sigma_0.50/train_set/xhat.png}
+                \figwithsize{\h}{./images/illustration_eqloc/inp/inp_inf/sigma_0.50/train_set/xhat.png}
+                \\ \rotatebox{90}{\tiny\#active weights}
+                \figwithsize{\h}{./images/illustration_eqloc/inp/inp_ag/sigma_0.02/train_set/n_active_weights.png}
+                \figwithsize{\h}{./images/illustration_eqloc/inp/inp_inf/sigma_0.02/train_set/n_active_weights.png}
+                \figwithsize{\h}{./images/illustration_eqloc/inp/inp_ag/sigma_0.50/train_set/n_active_weights.png}
+                \figwithsize{\h}{./images/illustration_eqloc/inp/inp_inf/sigma_0.50/train_set/n_active_weights.png}
+                \\ \rotatebox{90}{\hspace{0.20cm}\tiny source index}
+                \figwithsize{\h}{./images/illustration_eqloc/inp/inp_ag/sigma_0.02/train_set/est_pixel_src_no_anno.png}
+                \figwithsize{\h}{./images/illustration_eqloc/inp/inp_inf/sigma_0.02/train_set/est_pixel_src_no_anno.png}
+                \figwithsize{\h}{./images/illustration_eqloc/inp/inp_ag/sigma_0.50/train_set/est_pixel_src_no_anno.png}
+                \figwithsize{\h}{./images/illustration_eqloc/inp/inp_inf/sigma_0.50/train_set/est_pixel_src_no_anno.png}
+                \end{minipage}
+                \begin{minipage}{0.49\linewidth}
+                \centering
+                $\sigma=0.02$ \hspace{2cm} $\sigma=0.7$\\
+                \def\h{0.216\linewidth}
+                \figwithlabel{$B=I$}{\h}{./images/illustration_eqloc/inp/inp_ag/sigma_0.02/test_set/x.png}
+                \figwithlabel{$B=A^+$}{\h}{./images/illustration_eqloc/inp/inp_inf/sigma_0.02/test_set/x.png}
+                \figwithlabel{$B=I$}{\h}{./images/illustration_eqloc/inp/inp_ag/sigma_0.50/test_set/x.png}
+                \figwithlabel{$B=A^+$}{\h}{./images/illustration_eqloc/inp/inp_inf/sigma_0.50/test_set/x.png}\\
+                \figwithsize{\h}{./images/illustration_eqloc/inp/inp_ag/sigma_0.02/test_set/y.png}
+                \figwithsize{\h}{./images/illustration_eqloc/inp/inp_inf/sigma_0.02/test_set/y.png}
+                \figwithsize{\h}{./images/illustration_eqloc/inp/inp_ag/sigma_0.50/test_set/y.png}
+                \figwithsize{\h}{./images/illustration_eqloc/inp/inp_inf/sigma_0.50/test_set/y.png}\\
+                \figwithsize{\h}{./images/illustration_eqloc/inp/inp_ag/sigma_0.02/test_set/x_neural.png}
+                \figwithsize{\h}{./images/illustration_eqloc/inp/inp_inf/sigma_0.02/test_set/x_neural.png}
+                \figwithsize{\h}{./images/illustration_eqloc/inp/inp_ag/sigma_0.50/test_set/x_neural.png}
+                \figwithsize{\h}{./images/illustration_eqloc/inp/inp_inf/sigma_0.50/test_set/x_neural.png}\\
+                \figwithsize{\h}{./images/illustration_eqloc/inp/inp_ag/sigma_0.02/test_set/xhat.png}
+                \figwithsize{\h}{./images/illustration_eqloc/inp/inp_inf/sigma_0.02/test_set/xhat.png}
+                \figwithsize{\h}{./images/illustration_eqloc/inp/inp_ag/sigma_0.50/test_set/xhat.png}
+                \figwithsize{\h}{./images/illustration_eqloc/inp/inp_inf/sigma_0.50/test_set/xhat.png}\\
+                \figwithsize{\h}{./images/illustration_eqloc/inp/inp_ag/sigma_0.02/test_set/n_active_weights.png}
+                \figwithsize{\h}{./images/illustration_eqloc/inp/inp_inf/sigma_0.02/test_set/n_active_weights.png}
+                \figwithsize{\h}{./images/illustration_eqloc/inp/inp_ag/sigma_0.50/test_set/n_active_weights.png}
+                \figwithsize{\h}{./images/illustration_eqloc/inp/inp_inf/sigma_0.50/test_set/n_active_weights.png}\\
+                \figwithsize{\h}{./images/illustration_eqloc/inp/inp_ag/sigma_0.02/test_set/est_pixel_src_no_anno.png}
+                \figwithsize{\h}{./images/illustration_eqloc/inp/inp_inf/sigma_0.02/test_set/est_pixel_src_no_anno.png}
+                \figwithsize{\h}{./images/illustration_eqloc/inp/inp_ag/sigma_0.50/test_set/est_pixel_src_no_anno.png}
+                \figwithsize{\h}{./images/illustration_eqloc/inp/inp_inf/sigma_0.50/test_set/est_pixel_src_no_anno.png}
+                \end{minipage}
+
+                \begin{minipage}{0.49\linewidth}
+                    \includegraphics[width=\linewidth]{./images/illustration_eqloc/inp/n_active_weight_sigma_train.pdf}
+                \end{minipage}
+                \begin{minipage}{0.49\linewidth}
+                    \includegraphics[width=\linewidth]{./images/illustration_eqloc/inp/n_active_weight_sigma_test.pdf}
+                \end{minipage}
+                \caption{Experimental results illustrate the behavior of local and equivariant estimators for the inpainting task. Outside the kernel of $A$, both the physics-agnostic ($B=\Id$) and physics-informed ($B=A^+$, which equals $A$ since $A$ is a diagonal matrix with $0$ and $1$ entries on the diagonal) estimators behave almost identically. The key advantage of the physics-informed approach lies inside the kernel of $A^+$. There, the estimator makes a "safe" decision by averaging over all pixels from $\D$ that lie within the kernel, whereas the physics-agnostic estimator ($B=\Id$) produces inconsistent, noise-driven estimates. Consequently, for the inpainting task, the physics-informed solver achieves superior performance.}
+                \label{fig:illustration_eqloc_inpaitning}
+            \end{figure*}

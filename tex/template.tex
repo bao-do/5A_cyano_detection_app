@@ -2,16 +2,15 @@
 \bibpunct{(}{)}{;}{a}{,}{,}
 \bibliographystyle{abbrvnat}
 
+\usepackage{booktabs}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc} 
-\usepackage{amsfonts,amssymb,amsthm}
+\usepackage{amsfonts,amssymb,amsthm, mathtools}
 \usepackage{amsmath,amscd}
 \usepackage{algorithmicx,algorithm}
 \usepackage[noend]{algpseudocode}
 \usepackage{fullpage}
-\usepackage{subcaption}
 \usepackage{bm}
-\usepackage{bbm}
 \usepackage{centernot} 
 \usepackage{enumerate} 
 \usepackage{parskip}
@@ -19,30 +18,106 @@
 \usepackage{mathrsfs}
 \usepackage[OT2,T1]{fontenc}
 \usepackage{seqsplit}
-\usepackage{enumitem}
 \usepackage{color}
-\usepackage{array}
 \usepackage{verbatim}
-\usepackage{url}
 \usepackage{tikz, graphicx}
-\usepackage{mathtools} %For mapsto
 \usetikzlibrary{shapes, arrows, calc, positioning}
 \usepackage{wrapfig, blindtext}
 \usepackage{mleftright}
-\usepackage{pgffor} %The for loop
-%\usepackage{euler} %For the \mathscr
 \usepackage{float} % For figure
-%Bibtex
-% \usepackage[nottoc]{tocbibind}
+
+\usepackage{microtype}
+
+
+% Attempt to make hyperref and algorithmic work together better:
+\newcommand{\theHalgorithm}{\arabic{algorithm}}
+
+
+
+% ------------------- OUR (NOT ICML) OPTIONAL PACKAGES -----------------------
+% Optional math commands from https://github.com/goodfeli/dlbook_notation.
+\input{math_commands.tex}
+\usepackage{listings} % for code snippets
+\usepackage{url}
+\usepackage{stmaryrd}
+\usepackage{bbm}
+\usepackage{tabularx}
+\usepackage{array} % for m{..} column type and \extrarowheight
+\usepackage{multirow}
+\usepackage{pgffor}
+\usepackage{siunitx}
+\usepackage{dashrule}
+\usepackage{subcaption}
+\newtheorem{claim}{Claim}
+
+\usepackage{enumitem} %% to customize itemize
+
+\newcommand{\figwithlabel}[3]{%
+  \begin{minipage}{#2}
+    \centering
+    % #1 \\ [0.5ex]
+    \makebox[\linewidth][c]{\parbox[t][0.8em][t]{\linewidth}{\centering #1}}\\[0.5ex]
+    \includegraphics[width=\linewidth]{#3}
+  \end{minipage}%
+}
+
+\newcommand{\figwithsize}[2]{%
+  \begin{minipage}{#1}
+    \centering
+    \includegraphics[width=\linewidth]{#2}
+  \end{minipage}%
+}
+
+\usepackage{xcolor}
+\usepackage{tcolorbox}
+
+\newtcolorbox{graybox}[1][]{%
+    colback=gray!10, % background color
+    colframe=gray!10, % no visible border
+    boxrule=0pt,     % border thickness
+    arc=2pt,         % rounded corners
+    left=2pt,        % left padding
+    right=2pt,       % right padding
+    top=2pt,         % top padding
+    bottom=2pt,      % bottom padding
+    enlarge left by=-1mm, enlarge right by=-1mm, % tighten horizontal space
+    boxsep=0pt,          % remove internal space
+    % before skip=0pt, after skip=0pt, % remove vertical space before/after box
+    % nobeforeafter,       % ignore paragraph skips before/after
+    #1
+}
+\newcommand{\eg}{\emph{e.g.}\ }
+\newcommand{\etc}{\emph{etc.}\ }
+\newcommand{\ie}{\emph{i.e.}\ }
+
+% TODO: CHANGE THIS TO THE GITHUB REPO OF THE PAPER
+\newcommand{\gitrepo}{anonymous_git_repo}
+
+\graphicspath{./images}
+
+% ------------------- OUR (NOT ICML) OPTIONAL PACKAGES -----------------------
+
+
+
 
 
 \newcommand{\todo}[1]{\textcolor{red}{\textbf{TODO:} #1}}
-%encadre
 \usepackage{tcolorbox}
 
 \usepackage[colorlinks=true,
-            linkcolor=blue,
-            citecolor=blue,
-            urlcolor=blue]{hyperref}
-\usepackage{cleveref}
+linkcolor=blue,
+citecolor=blue,
+urlcolor=blue]{hyperref}
 
+\usepackage[capitalize,noabbrev]{cleveref}
+
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{assumption}[theorem]{Assumption}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}

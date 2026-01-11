@@ -1,0 +1,3 @@
+\traintest{31.7}{19.7}  & \traintest{24.2}{21.8}  & \traintest{30.5}{31.5}  & 
+ \traintest{22.4}{18.8}  & \traintest{21.7}{20.4}  & \traintest{26.9}{27.5}  & 
+ \traintest{26.1}{19.8}  & \traintest{22.2}{22.4}  & \traintest{37.3}{37.3} \\

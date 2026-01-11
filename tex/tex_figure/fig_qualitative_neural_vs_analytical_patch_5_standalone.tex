@@ -1,0 +1,220 @@
+\documentclass[border=0pt]{standalone}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{siunitx}
+\usepackage{amsmath,amssymb,mathtools}
+\usepackage{tikz}
+\usepackage{pgffor}
+\usepackage{rotating}
+
+% Fallback macros so this compiles standalone
+\newcommand{\figwithsize}[2]{\includegraphics[width=#1]{#2}}
+\newcommand{\figwithlabel}[3]{\begin{minipage}{#2}\centering\includegraphics[width=\linewidth]{#3}\\[-2pt]\scriptsize #1\end{minipage}}
+\newcommand{\D}{\mathcal{D}}
+\newcommand{\Id}{I}
+\newcommand{\xmmse}{\hat{x}_{\mathrm{MMSE}}}
+\newcommand{\xtrans}{\hat{x}_{\mathrm{E}}}
+\newcommand{\xmmseaug}{\hat{x}_{\mathrm{MMSE}}^{\mathrm{aug}}}
+\newcommand{\xtransaug}{\hat{x}_{\mathrm{E}}^{\mathrm{aug}}}
+\newcommand{\xtransloc}{\hat{x}_{\mathrm{LE}}}
+\newcommand{\xeqloc}{\hat{x}_{\mathrm{LE}}}
+
+% Neutralize float envs and captions
+\makeatletter
+\renewenvironment{figure}{}{}
+\renewenvironment{figure*}{}{}
+\renewenvironment{table}{}{}
+\renewenvironment{table*}{}{}
+\renewcommand{\caption}[2][]{}
+\newcommand{\subcaption}[2][]{}
+\makeatother
+
+\begin{document}
+\centering
+    \centering
+    \renewcommand{\arraystretch}{0.5} % spacing between rows
+    \setlength{\tabcolsep}{0.3pt}     % spacing between columns
+    \def\size{1.15cm}
+    \def\sigmass{0.0100, 0.2000, 0.8000}
+    \def\root{/home/minhhai/Works/phd_project/analytical_mmse/code/illustration_script/neural_vs_analytical}
+    \def\unet{localequivunet2dcondmodel_patch}
+    \def\resnet{minimalresnet_patch}
+    \def\mlp{patchmlp_patch}
+    \def\ffhq{FFHQ_images32x32_subset_10000}
+    \def\cifar{CIFAR10_subset_10000}
+    \def\fmnist{FashionMNIST_subset_10000}
+    \def\train{on_train}
+    \def\test{on_test}
+
+    \def\denoising{denoising}
+    \def\inpainting{inpainting_center_15}
+    \def\deconvolution{convolution_gaussian_1.0}
+    \def\sigmas{0.0500, 0.2000, 0.8000}
+    
+    \newcommand{\meas}[5]{%
+        \foreach \sigma in \sigmas {%
+            \includegraphics[width=\size]{\root/#1/images/#2_#3_#4/sigma-\sigma_y_#5.png}%
+        }%
+        }
+    \newcommand{\analytic}[5]{%
+        \foreach \sigma in \sigmas {%
+            \includegraphics[width=\size]{\root/#1/images/#2_#3_#4/sigma-\sigma_x_analytical_#5.png}%
+        }%
+        }
+    \newcommand{\neural}[6]{%
+        \foreach \sigma in #6 {%
+            \includegraphics[width=\size]{\root/#1/images/#2_#3_#4/sigma-\sigma_x_neural_#5.png}%
+        }%
+        }
+    \newcommand{\legend}[1]{
+        \rotatebox{90}{\makebox[\size][c]{\centering \scriptsize #1}}%
+    }
+
+    \def\sigmassmooth{0.2000, 0.8000}
+    \def\rootsmooth{/home/minhhai/Works/phd_project/analytical_mmse/code/illustration_script/analytical_smoothed_50}
+    \newcommand{\analyticsmooth}[5]{%
+        \includegraphics[width=\size]{\rootsmooth/patch_#1/images/#2_#3_#4/sigma-0.0500_x_analytical_#5.png}%
+        \foreach \sigma in \sigmassmooth {%
+            \includegraphics[width=\size]{\root/\unet_#1/images/#2_#3_#4/sigma-\sigma_x_analytical_#5.png}%
+        }%
+        }
+
+    \def\ffhqtrainidx{015} % index of the example image to show
+    \def\ffhqtestidx{013}
+    \def\cifartrainidx{015}
+    \def\cifartestidx{013}
+    \def\fmnisttrainidx{015}
+    \def\fmnisttestidx{013}
+    \begin{tabular}{l@{}c@{\hspace{1pt}}c@{\hspace{1pt}}c@{\hspace{4pt}}c@{\hspace{1pt}}c@{\hspace{1pt}}c@{}}
+        % ------------------------------------------------------------------------
+        & Denoising & Inpainting & Deconvolution & Denoising & Inpainting & Deconvolution \\
+        % ------------------------- FFHQ ----------------------------------------
+        \legend{Meas.} & \meas{\unet_5}{\denoising}{\ffhq}{\train}{\ffhqtrainidx} 
+                    & \meas{\unet_5}{\inpainting}{\ffhq}{\train}{\ffhqtrainidx} 
+                    & \meas{\unet_5}{\deconvolution}{\ffhq}{\train}{\ffhqtrainidx} 
+                    %   TEST
+                    & \meas{\unet_5}{\denoising}{\ffhq}{\test}{\ffhqtestidx} 
+                    & \meas{\unet_5}{\inpainting}{\ffhq}{\test}{\ffhqtestidx} 
+                    & \meas{\unet_5}{\deconvolution}{\ffhq}{\test}{\ffhqtestidx}\\
+        %    ----------------------  ANALYTIC  --------------------------------
+        \legend{Analytic} %    TRAIN
+                        & \analytic{\unet_5}{\denoising}{\ffhq}{\train}{\ffhqtrainidx} 
+                        & \analytic{\unet_5}{\inpainting}{\ffhq}{\train}{\ffhqtrainidx} 
+                        & \analytic{\unet_5}{\deconvolution}{\ffhq}{\train}{\ffhqtrainidx} 
+                        %    TEST
+                        & \analyticsmooth{5}{\denoising}{\ffhq}{\test}{\ffhqtestidx} 
+                        & \analyticsmooth{5}{\inpainting}{\ffhq}{\test}{\ffhqtestidx} 
+                        & \analyticsmooth{5}{\deconvolution}{\ffhq}{\test}{\ffhqtestidx} \\
+        %    --------------------  UNET2D  --------------------------------
+        \legend{UNet2D} & \neural{\unet_5}{\denoising}{\ffhq}{\train}{\ffhqtrainidx}{\sigmass}
+                        & \neural{\unet_5}{\inpainting}{\ffhq}{\train}{\ffhqtrainidx}{\sigmass}
+                        & \neural{\unet_5}{\deconvolution}{\ffhq}{\train}{\ffhqtrainidx}{\sigmass}
+                        %   TEST
+                        & \neural{\unet_5}{\denoising}{\ffhq}{\test}{\ffhqtestidx}{\sigmas}
+                        & \neural{\unet_5}{\inpainting}{\ffhq}{\test}{\ffhqtestidx}{\sigmas}
+                        & \neural{\unet_5}{\deconvolution}{\ffhq}{\test}{\ffhqtestidx}{\sigmas}\\
+        %    ----------------------  RESNET  --------------------------------
+        \legend{ResNet} & \neural{\resnet_5}{\denoising}{\ffhq}{\train}{\ffhqtrainidx}{\sigmass}
+                        & \neural{\resnet_5}{\inpainting}{\ffhq}{\train}{\ffhqtrainidx}{\sigmass}
+                        & \neural{\resnet_5}{\deconvolution}{\ffhq}{\train}{\ffhqtrainidx}{\sigmass}
+                        %   TEST
+                        & \neural{\resnet_5}{\denoising}{\ffhq}{\test}{\ffhqtestidx}{\sigmas}
+                        & \neural{\resnet_5}{\inpainting}{\ffhq}{\test}{\ffhqtestidx}{\sigmas} 
+                        & \neural{\resnet_5}{\deconvolution}{\ffhq}{\test}{\ffhqtestidx}{\sigmas}\\
+        %    ----------------------  PATCHMLP  --------------------------------
+        \legend{PatchMLP} & \neural{\mlp_5}{\denoising}{\ffhq}{\train}{\ffhqtrainidx}{\sigmass} 
+                        & \neural{\mlp_5}{\inpainting}{\ffhq}{\train}{\ffhqtrainidx}{\sigmass} 
+                        & \neural{\mlp_5}{\deconvolution}{\ffhq}{\train}{\ffhqtrainidx}{\sigmass} 
+                        %   TEST
+                        & \neural{\mlp_5}{\denoising}{\ffhq}{\test}{\ffhqtestidx}{\sigmas} 
+                        & \neural{\mlp_5}{\inpainting}{\ffhq}{\test}{\ffhqtestidx}{\sigmas} 
+                        & \neural{\mlp_5}{\deconvolution}{\ffhq}{\test}{\ffhqtestidx}{\sigmas}\\
+        % ------------------------------------------------------------------------
+        % ------------------------- CIFAR10 --------------------------------------
+        \legend{Meas.} & \meas{\unet_5}{\denoising}{\cifar}{\train}{\cifartrainidx}
+                        & \meas{\unet_5}{\inpainting}{\cifar}{\train}{\cifartrainidx}
+                        & \meas{\unet_5}{\deconvolution}{\cifar}{\train}{\cifartrainidx}
+                        %  TEST
+                       & \meas{\unet_5}{\denoising}{\cifar}{\test}{\cifartestidx}
+                       & \meas{\unet_5}{\inpainting}{\cifar}{\test}{\cifartestidx}
+                       & \meas{\unet_5}{\deconvolution}{\cifar}{\test}{\cifartestidx}\\
+        % ----------------------  ANALYTIC  --------------------------------
+        \legend{Analytic} & \analytic{\unet_5}{\denoising}{\cifar}{\train}{\cifartrainidx}
+                        & \analytic{\unet_5}{\inpainting}{\cifar}{\train}{\cifartrainidx}
+                        & \analytic{\unet_5}{\deconvolution}{\cifar}{\train}{\cifartrainidx}
+                        %  TEST
+                       & \analyticsmooth{5}{\denoising}{\cifar}{\test}{\cifartestidx}
+                       & \analyticsmooth{5}{\inpainting}{\cifar}{\test}{\cifartestidx}
+                       & \analyticsmooth{5}{\deconvolution}{\cifar}{\test}{\cifartestidx}\\
+        % --------------------  UNET2D  --------------------------------
+        \legend{UNet2D} & \neural{\unet_5}{\denoising}{\cifar}{\train}{\cifartrainidx}{\sigmass}
+                    & \neural{\unet_5}{\inpainting}{\cifar}{\train}{\cifartrainidx}{\sigmass}
+                    & \neural{\unet_5}{\deconvolution}{\cifar}{\train}{\cifartrainidx}{\sigmass}
+                    % TEST
+                    & \neural{\unet_5}{\denoising}{\cifar}{\test}{\cifartestidx}{\sigmass}
+                    & \neural{\unet_5}{\inpainting}{\cifar}{\test}{\cifartestidx}{\sigmass}
+                    & \neural{\unet_5}{\deconvolution}{\cifar}{\test}{\cifartestidx}{\sigmass}\\
+        % ----------------------  RESNET  --------------------------------
+        \legend{ResNet} & \neural{\resnet_5}{\denoising}{\cifar}{\train}{\cifartrainidx}{\sigmass}
+                    & \neural{\resnet_5}{\inpainting}{\cifar}{\train}{\cifartrainidx}{\sigmass}
+                    & \neural{\resnet_5}{\deconvolution}{\cifar}{\train}{\cifartrainidx}{\sigmass}
+                    % TEST
+                    & \neural{\resnet_5}{\denoising}{\cifar}{\test}{\cifartestidx}{\sigmas}
+                    & \neural{\resnet_5}{\inpainting}{\cifar}{\test}{\cifartestidx}{\sigmas}
+                    & \neural{\resnet_5}{\deconvolution}{\cifar}{\test}{\cifartestidx}{\sigmas}\\
+        % ----------------------  PATCHMLP  --------------------------------
+        \legend{PatchMLP} & \neural{\mlp_5}{\denoising}{\cifar}{\train}{\cifartrainidx}{\sigmass}
+                    & \neural{\mlp_5}{\inpainting}{\cifar}{\train}{\cifartrainidx}{\sigmass}
+                    & \neural{\mlp_5}{\deconvolution}{\cifar}{\train}{\cifartrainidx}{\sigmass}
+                    % TEST
+                    & \neural{\mlp_5}{\denoising}{\cifar}{\test}{\cifartestidx}{\sigmas}
+                    & \neural{\mlp_5}{\inpainting}{\cifar}{\test}{\cifartestidx}{\sigmas}
+                    & \neural{\mlp_5}{\deconvolution}{\cifar}{\test}{\cifartestidx}{\sigmas}\\
+        % ------------------------------------------------------------------------
+        % ------------------------- FashionMNIST ---------------------------------
+        \legend{Meas.} & \meas{\unet_5}{\denoising}{\fmnist}{\train}{\fmnisttrainidx} 
+                        & \meas{\unet_5}{\inpainting}{\fmnist}{\train}{\fmnisttrainidx} 
+                        & \meas{\unet_5}{\deconvolution}{\fmnist}{\train}{\fmnisttrainidx} 
+                        %  TEST
+                       & \meas{\unet_5}{\denoising}{\fmnist}{\test}{\fmnisttestidx} 
+                       & \meas{\unet_5}{\inpainting}{\fmnist}{\test}{\fmnisttestidx} 
+                       & \meas{\unet_5}{\deconvolution}{\fmnist}{\test}{\fmnisttestidx}\\
+        % ----------------------  ANALYTIC  --------------------------------
+        \legend{Analytic} & \analytic{\unet_5}{\denoising}{\fmnist}{\train}{\fmnisttrainidx} 
+                        & \analytic{\unet_5}{\inpainting}{\fmnist}{\train}{\fmnisttrainidx} 
+                        & \analytic{\unet_5}{\deconvolution}{\fmnist}{\train}{\fmnisttrainidx} 
+                        % TEST
+                       & \analytic{\unet_5}{\denoising}{\fmnist}{\test}{\fmnisttestidx} 
+                       & \analytic{\unet_5}{\inpainting}{\fmnist}{\test}{\fmnisttestidx} 
+                       & \analytic{\unet_5}{\deconvolution}{\fmnist}{\test}{\fmnisttestidx} \\
+        % --------------------  UNET2D  --------------------------------
+        \legend{UNet2D} & \neural{\unet_5}{\denoising}{\fmnist}{\train}{\fmnisttrainidx}{\sigmass} 
+                    & \neural{\unet_5}{\inpainting}{\fmnist}{\train}{\fmnisttrainidx}{\sigmass} 
+                    & \neural{\unet_5}{\deconvolution}{\fmnist}{\train}{\fmnisttrainidx}{\sigmass}
+                    % TEST  
+                    & \neural{\unet_5}{\denoising}{\fmnist}{\test}{\fmnisttestidx}{\sigmas} 
+                    & \neural{\unet_5}{\inpainting}{\fmnist}{\test}{\fmnisttestidx}{\sigmas} 
+                    & \neural{\unet_5}{\deconvolution}{\fmnist}{\test}{\fmnisttestidx}{\sigmas}\\
+        % ----------------------  RESNET  --------------------------------
+        \legend{ResNet} & \neural{\resnet_5}{\denoising}{\fmnist}{\train}{\fmnisttrainidx}{\sigmass} 
+                    & \neural{\resnet_5}{\inpainting}{\fmnist}{\train}{\fmnisttrainidx}{\sigmass} 
+                    & \neural{\resnet_5}{\deconvolution}{\fmnist}{\train}{\fmnisttrainidx}{\sigmass} 
+                    % TEST
+                    & \neural{\resnet_5}{\denoising}{\fmnist}{\test}{\fmnisttestidx}{\sigmas} 
+                    & \neural{\resnet_5}{\inpainting}{\fmnist}{\test}{\fmnisttestidx}{\sigmas} 
+                    & \neural{\resnet_5}{\deconvolution}{\fmnist}{\test}{\fmnisttestidx}{\sigmas}\\
+        % ----------------------  PATCHMLP  --------------------------------
+        \legend{PatchMLP} & \neural{\mlp_5}{\denoising}{\fmnist}{\train}{\fmnisttrainidx}{\sigmass} 
+                    & \neural{\mlp_5}{\inpainting}{\fmnist}{\train}{\fmnisttrainidx}{\sigmass} 
+                    & \neural{\mlp_5}{\deconvolution}{\fmnist}{\train}{\fmnisttrainidx}{\sigmass} 
+                    % TEST
+                    & \neural{\mlp_5}{\denoising}{\fmnist}{\test}{\fmnisttestidx}{\sigmas} 
+                    & \neural{\mlp_5}{\inpainting}{\fmnist}{\test}{\fmnisttestidx}{\sigmas} 
+                    & \neural{\mlp_5}{\deconvolution}{\fmnist}{\test}{\fmnisttestidx}{\sigmas}\\
+        % ------------------------------------------------------------------------
+        & \multicolumn{3}{c}{Train} & \multicolumn{3}{c}{Test} \\
+    \end{tabular}
+\end{document}

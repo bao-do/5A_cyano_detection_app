@@ -1,0 +1,38 @@
+\documentclass[border=0pt]{standalone}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{siunitx}
+\usepackage{amsmath,amssymb,mathtools}
+\usepackage{tikz}
+\usepackage{pgffor}
+\usepackage{rotating}
+
+% Fallback macros so this compiles standalone
+\newcommand{\figwithsize}[2]{\includegraphics[width=#1]{#2}}
+\newcommand{\figwithlabel}[3]{\begin{minipage}{#2}\centering\includegraphics[width=\linewidth]{#3}\\[-2pt]\scriptsize #1\end{minipage}}
+\newcommand{\D}{\mathcal{D}}
+\newcommand{\Id}{I}
+\newcommand{\xmmse}{\hat{x}_{\mathrm{MMSE}}}
+\newcommand{\xtrans}{\hat{x}_{\mathrm{E}}}
+\newcommand{\xmmseaug}{\hat{x}_{\mathrm{MMSE}}^{\mathrm{aug}}}
+\newcommand{\xtransaug}{\hat{x}_{\mathrm{E}}^{\mathrm{aug}}}
+\newcommand{\xtransloc}{\hat{x}_{\mathrm{LE}}}
+\newcommand{\xeqloc}{\hat{x}_{\mathrm{LE}}}
+
+% Neutralize float envs and captions
+\makeatletter
+\renewenvironment{figure}{}{}
+\renewenvironment{figure*}{}{}
+\renewenvironment{table}{}{}
+\renewenvironment{table*}{}{}
+\renewcommand{\caption}[2][]{}
+\newcommand{\subcaption}[2][]{}
+\makeatother
+
+\begin{document}
+\centering
+\input{fig_qualitative_neural_vs_analytical.tex}
+\end{document}

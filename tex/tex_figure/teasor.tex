@@ -1,0 +1,94 @@
+
+\begin{figure*}[tbht]
+    \centering
+    \renewcommand{\arraystretch}{0.5} % spacing between rows
+    \setlength{\tabcolsep}{0.3pt}     % spacing between columns
+    \def\size{0.195\linewidth}
+    \def\root{./images/neural_vs_analytical}
+    \def\unet{localequivunet2dcondmodel_patch_11}
+    \def\resnet{minimalresnet_patch_11}
+    \def\patchmodel{patchmlp_patch_11}
+    \def\denoising{denoising_FFHQ_images32x32_subset_10000_on_train}
+    \def\inpainting{inpainting_center_15_FFHQ_images32x32_subset_10000_on_train}
+    \def\deconvolution{convolution_gaussian_1.0_FFHQ_images32x32_subset_10000_on_train}
+
+    \begin{minipage}{0.33\linewidth}
+        \begin{tabular}{c c c c c} % first col wider for row titless
+            \footnotesize Meas. & \footnotesize Theory & \footnotesize UNet & \footnotesize ResNet & \footnotesize MLP \\
+            % ---- Denoising ----
+            \includegraphics[width=\size]{\root/\unet/images/\denoising/sigma-0.0300_y_003.png} &
+            \includegraphics[width=\size]{\root/\unet/images/\denoising/sigma-0.0300_x_analytical_003.png} &
+            \includegraphics[width=\size]{\root/\unet/images/\denoising/sigma-0.0300_x_neural_003.png} &
+            \includegraphics[width=\size]{\root/\resnet/images/\denoising/sigma-0.0300_x_neural_003.png} &
+            \includegraphics[width=\size]{\root/\patchmodel/images/\denoising/sigma-0.0300_x_neural_003.png} \\
+
+            \includegraphics[width=\size]{\root/\unet/images/\denoising/sigma-0.3000_y_005.png} &
+            \includegraphics[width=\size]{\root/\unet/images/\denoising/sigma-0.3000_x_analytical_005.png} &
+            \includegraphics[width=\size]{\root/\unet/images/\denoising/sigma-0.3000_x_neural_005.png} &
+            \includegraphics[width=\size]{\root/\resnet/images/\denoising/sigma-0.3000_x_neural_005.png} &
+            \includegraphics[width=\size]{\root/\patchmodel/images/\denoising/sigma-0.3000_x_neural_005.png} \\
+
+            \includegraphics[width=\size]{\root/\unet/images/\denoising/sigma-0.7000_y_007.png} &
+            \includegraphics[width=\size]{\root/\unet/images/\denoising/sigma-0.7000_x_analytical_007.png} &
+            \includegraphics[width=\size]{\root/\unet/images/\denoising/sigma-0.7000_x_neural_007.png} &
+            \includegraphics[width=\size]{\root/\resnet/images/\denoising/sigma-0.7000_x_neural_007.png} &
+            \includegraphics[width=\size]{\root/\patchmodel/images/\denoising/sigma-0.7000_x_neural_007.png} \\
+        \end{tabular}
+        \subcaption{Denoising}
+    \end{minipage}
+    \begin{minipage}{0.33\linewidth}
+        \begin{tabular}{c c c c c} % first col wider for row titles
+            \footnotesize Meas. & \footnotesize Theory & \footnotesize UNet & \footnotesize ResNet & \footnotesize MLP \\
+            % ---- Inpainting ----
+            \includegraphics[width=\size]{\root/\unet/images/\inpainting/sigma-0.0300_y_002.png} &
+            \includegraphics[width=\size]{\root/\unet/images/\inpainting/sigma-0.0300_x_analytical_002.png} &
+            \includegraphics[width=\size]{\root/\unet/images/\inpainting/sigma-0.0300_x_neural_002.png} &
+            \includegraphics[width=\size]{\root/\resnet/images/\inpainting/sigma-0.0300_x_neural_002.png} &
+            \includegraphics[width=\size]{\root/\patchmodel/images/\inpainting/sigma-0.0300_x_neural_002.png} \\
+
+            \includegraphics[width=\size]{\root/\unet/images/\inpainting/sigma-0.3000_y_008.png} &
+            \includegraphics[width=\size]{\root/\unet/images/\inpainting/sigma-0.3000_x_analytical_008.png} &
+            \includegraphics[width=\size]{\root/\unet/images/\inpainting/sigma-0.3000_x_neural_008.png} &
+            \includegraphics[width=\size]{\root/\resnet/images/\inpainting/sigma-0.3000_x_neural_008.png} &
+            \includegraphics[width=\size]{\root/\patchmodel/images/\inpainting/sigma-0.3000_x_neural_008.png} \\
+
+            \includegraphics[width=\size]{\root/\unet/images/\inpainting/sigma-0.7000_y_006.png} &
+            \includegraphics[width=\size]{\root/\unet/images/\inpainting/sigma-0.7000_x_analytical_006.png} &
+            \includegraphics[width=\size]{\root/\unet/images/\inpainting/sigma-0.7000_x_neural_006.png} &
+            \includegraphics[width=\size]{\root/\resnet/images/\inpainting/sigma-0.7000_x_neural_006.png} &
+            \includegraphics[width=\size]{\root/\patchmodel/images/\inpainting/sigma-0.7000_x_neural_006.png} \\
+        \end{tabular}
+        \subcaption{Inpainting}
+    \end{minipage}
+    \begin{minipage}{0.33\linewidth}
+        \begin{tabular}{c c c c c} % first col wider for row titles
+            \footnotesize Meas. & \footnotesize Theory & \footnotesize UNet & \footnotesize ResNet & \footnotesize MLP \\
+            % ---- Deconvolution ----
+            \includegraphics[width=\size]{\root/\unet/images/\deconvolution/sigma-0.0300_y_001.png} &
+            \includegraphics[width=\size]{\root/\unet/images/\deconvolution/sigma-0.0300_x_analytical_001.png} &
+            \includegraphics[width=\size]{\root/\unet/images/\deconvolution/sigma-0.0300_x_neural_001.png} &
+            \includegraphics[width=\size]{\root/\resnet/images/\deconvolution/sigma-0.0300_x_neural_001.png} &
+            \includegraphics[width=\size]{\root/\patchmodel/images/\deconvolution/sigma-0.0300_x_neural_001.png} \\
+
+            \includegraphics[width=\size]{\root/\unet/images/\deconvolution/sigma-0.3000_y_009.png} &
+            \includegraphics[width=\size]{\root/\unet/images/\deconvolution/sigma-0.3000_x_analytical_009.png} &
+            \includegraphics[width=\size]{\root/\unet/images/\deconvolution/sigma-0.3000_x_neural_009.png} &
+            \includegraphics[width=\size]{\root/\resnet/images/\deconvolution/sigma-0.3000_x_neural_009.png} & 
+            \includegraphics[width=\size]{\root/\patchmodel/images/\deconvolution/sigma-0.3000_x_neural_009.png} \\
+
+            \includegraphics[width=\size]{\root/\unet/images/\deconvolution/sigma-0.7000_y_000.png} &
+            \includegraphics[width=\size]{\root/\unet/images/\deconvolution/sigma-0.7000_x_analytical_000.png} &
+            \includegraphics[width=\size]{\root/\unet/images/\deconvolution/sigma-0.7000_x_neural_000.png} &
+            \includegraphics[width=\size]{\root/\resnet/images/\deconvolution/sigma-0.7000_x_neural_000.png} &
+            \includegraphics[width=\size]{\root/\patchmodel/images/\deconvolution/sigma-0.7000_x_neural_000.png} \\
+        \end{tabular}
+        \subcaption{Deconvolution}
+    \end{minipage}
+    \vskip -0.05in
+    \caption{Our analytic theory accurately predicts the outputs of neural networks trained on FFHQ dataset (see~\cref{sec:experiments} for details) to solve various inverse problems. The noise level $\sigma$ is varying from top to bottom.  
+    See~\cref{fig:neural_vs_analytical_unet2d,fig:neural_vs_analytical_resnet,fig:neural_vs_analytical_patchmlp} for quantitative comparisons and~\cref{fig:qualitative_neural_vs_analytical} for more results.
+    \textcolor{red}{Change this? Similar to the one in the experiments section?}
+    }
+	\label{fig:teaser}
+    \vskip -0.15in
+\end{figure*}
