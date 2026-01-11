@@ -4,4 +4,3 @@ torch==2.3.1
 numpy==2.2.6
 rq
 redis
-label-studio-sdk

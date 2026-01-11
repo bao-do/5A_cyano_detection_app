@@ -1,1 +1,1 @@
-from .FasterRCNNMobile import FasterRCNNMobile
+from .FasterRCNN import FasterRcnnPredictor

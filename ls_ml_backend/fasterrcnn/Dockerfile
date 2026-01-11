@@ -1,4 +1,4 @@
-FROM pytorch/pytorch:2.1.2-cuda12.1-cudnn8-devel
+FROM python:3.10-slim
 ARG TEST_ENV
 
 WORKDIR /app
@@ -21,24 +21,24 @@ RUN --mount=type=cache,target="/var/cache/apt",sharing=locked \
     apt-get autoremove -y
 
 # install base requirements
-COPY ls_ml_backend/fasterrcnn_mobilenet_fpn/requirements-base.txt .
+COPY ls_ml_backend/fasterrcnn/requirements-base.txt .
 RUN --mount=type=cache,target=${PIP_CACHE_DIR},sharing=locked \
     pip install -r requirements-base.txt
 
 # install custom requirements
-COPY ls_ml_backend/fasterrcnn_mobilenet_fpn/requirements.txt .
+COPY ls_ml_backend/fasterrcnn/requirements.txt .
 RUN --mount=type=cache,target=${PIP_CACHE_DIR},sharing=locked \
     pip install -r requirements.txt
 
 # install test requirements if needed
-COPY ls_ml_backend/fasterrcnn_mobilenet_fpn/requirements-test.txt .
+COPY ls_ml_backend/fasterrcnn/requirements-test.txt .
 # build only when TEST_ENV="true"
 RUN --mount=type=cache,target=${PIP_CACHE_DIR},sharing=locked \
     if [ "$TEST_ENV" = "true" ]; then \
       pip install -r requirements-test.txt; \
     fi
 
-COPY ls_ml_backend/fasterrcnn_mobilenet_fpn .
+COPY ls_ml_backend/fasterrcnn .
 
 
 EXPOSE 9090

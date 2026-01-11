@@ -279,125 +279,229 @@ def training_loop(
 
                 
 
-if __name__ == "__main__":
 
 #%%
-    from dataset import VOCDataset, collate_fn
-    from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
-    from torchvision.models.detection import fasterrcnn_resnet50_fpn_v2, FasterRCNN_ResNet50_FPN_V2_Weights
-    import torch.utils.data as data
-    import argparse  
-    from utils import get_model
+from dataset import VOCDataset, collate_fn
+from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
+from torchvision.models.detection import fasterrcnn_resnet50_fpn_v2, FasterRCNN_ResNet50_FPN_V2_Weights
+import torch.utils.data as data
+import argparse  
 
 
-    ######################## Training arguments ############################################
-    parser = argparse.ArgumentParser(description="Training script for fasterrcnn_resnet50_fpn_v2")
-    parser.add_argument("--images_train", type=str, default='data/VOC/VOCtrainval_06-Nov-2007/VOCdevkit/VOC2007/JPEGImages', help="Images to use for training")
-    parser.add_argument("--annotations_train", type=str, default='data/VOC/VOCtrainval_06-Nov-2007/VOCdevkit/VOC2007/Annotations', help="Annotations to use for training")
-    parser.add_argument("--images_val", type=str, default='data/VOC/VOCtest_06-Nov-2007/VOCdevkit/VOC2007/JPEGImages', help="Dataset to use for validation")
-    parser.add_argument("--annotations_val", type=str, default='data/VOC/VOCtest_06-Nov-2007/VOCdevkit/VOC2007/Annotations', help="Dataset to use for validation")
-    parser.add_argument("--train_dataset_size", type=int, default=None, help="Number of images used for training")
-    parser.add_argument("--test_dataset_size", type=int, default=None, help="Number of images used for validation")
-    parser.add_argument("--num_epochs", type=int, default=300, help="Numeber of training epochs")
-    parser.add_argument("--batch_size", type=int, default=128, help="Batch size for training")
-    parser.add_argument("--save_dir", type=str, help="Saved directory",
-                        default='/home/bao/School/5A/research_project/bacteria_detection_app/exp/default')
-    parser.add_argument("--model_name", type=str, default="fasterrcnn_mobilenet_v3_large_320_fpn", choices=[
-                        "fasterrcnn_resnet18_fpn", "fasterrcnn_resnet34_fpn", "fasterrcnn_mobilenet_v3_large_320_fpn"], help="Model name")
-    args = parser.parse_args()
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    dtype = torch.float32
-
-    abs_path = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+args = dict(images_train = 'data/VOC/VOCtrainval_06-Nov-2007/VOCdevkit/VOC2007/JPEGImages',
+            annotations_train = 'data/VOC/VOCtrainval_06-Nov-2007/VOCdevkit/VOC2007/Annotations',
+            images_val = 'data/VOC/VOCtest_06-Nov-2007/VOCdevkit/VOC2007/JPEGImages',
+            annotations_val = 'data/VOC/VOCtest_06-Nov-2007/VOCdevkit/VOC2007/Annotations',
+            train_dataset_size = 1000,
+            test_dataset_size = 200,
+            num_epochs = 40,
+            batch_size = 10,
+            save_dir = 'exp/object_detection',
+            exp_name = f"VOC_fasterrcnn_resnet50_fpn_v2_test",)
 
 
-    #################################### DEFINE MODEL #########################
+abs_path = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+
+#################################### DEFINE MODEL #########################
+    
+model = fasterrcnn_resnet50_fpn_v2(weights=FasterRCNN_ResNet50_FPN_V2_Weights.DEFAULT)
+
+# Freeze everything first
+for param in model.parameters():
+    param.requires_grad = False
+
+# Unfreeze box predictor (detection head)
+in_features = model.roi_heads.box_predictor.cls_score.in_features
+model.roi_heads.box_predictor = FastRCNNPredictor(in_features, 21)
+
+# # Unfreeze specific backbone layers (layer3, layer4)
+# resnet = model.backbone.body
+# for layer_name in ["layer3", "layer4"]:
+#     layer = getattr(resnet, layer_name)
+#     for param in layer.parameters():
+#         param.requires_grad = True
+
+# # Unfreeze RPN head
+# for param in model.rpn.head.parameters():
+#     param.requires_grad = True
+
+# Unfreeze ROI box head
+for param in model.roi_heads.box_head.parameters():
+    param.requires_grad = True
+
+trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
+total = sum(p.numel() for p in model.parameters())
+
+print(f"Trainable params: {trainable / 1e6:.2f}M")
+print(f"Total params: {total / 1e6:.2f}M")
+
+
+############################## DEFINE DATASET ###########################################
+transform_test = v2.Compose([
+    v2.ToDtype(dtype=torch.float32, scale=True)
+])
+
+transform_train = v2.Compose([
+    v2.ToDtype(dtype=torch.float32, scale=True),
+    v2.RandomHorizontalFlip(),
+    v2.RandomGrayscale(p=0.1),
+    v2.GaussianNoise(),
+    v2.ColorJitter(),
+])
+train_dataset = VOCDataset(os.path.join(abs_path, args['images_train']), os.path.join(abs_path, args['annotations_train']), transform=transform_train)
+
+#%%
+if args['train_dataset_size'] is not None:
+    print(f"Using the first {min(args['train_dataset_size'], len(train_dataset))} images from the training set")
+    train_dataset = data.Subset(train_dataset, range(min(args['train_dataset_size'], len(train_dataset))))
+
+if len(train_dataset) < args['batch_size']:
+    sampler = data.RandomSampler(train_dataset, replacement=True, num_samples=args['batch_size'])
+    shuffle = False
+else:
+    sampler = None
+    shuffle = True
+
+train_loader_generator = torch.Generator()
+train_loader_generator.manual_seed(42)
+train_loader = data.DataLoader(train_dataset, batch_size=args['batch_size'], collate_fn=collate_fn,
+                                shuffle=shuffle, pin_memory=True, sampler=sampler, drop_last=False,
+                                num_workers=8, generator=train_loader_generator)
+
+val_dataset = VOCDataset(os.path.join(abs_path, args['images_val']), os.path.join(abs_path, args['annotations_val']), transform=transform_test)
+if len(val_dataset) == 0:
+    test_loader=None
+else:
+    if args['test_dataset_size'] is not None:
+        print(f"Using the first {min(args['test_dataset_size'], len(val_dataset))} images as validation set")
+        val_dataset = data.Subset(val_dataset, range(min(args['test_dataset_size'], len(val_dataset))))
+    test_loader = data.DataLoader(val_dataset, batch_size=args['batch_size'], shuffle=True, collate_fn=collate_fn, drop_last=False)
+
+
+################################ Training and Saving Configuration #####################
+training_config = TrainingConfig()
+training_config.update(**args)
+
+
+# Save checkpoint every 200 steps
+monitor_metric = "val_avg_map" if test_loader is not None else "train_avg_map"
+monitor_mode = "max"
+num_step_per_epoch = max(len(train_loader), 1)
+freq = max(1, int(200 // num_step_per_epoch))
+save_freq = freq
+val_epoch_freq = freq
+log_loss_freq = 5
+log_image_freq = 200
+num_log_images = 2
+logger_args = dict(monitor_metric=monitor_metric,
+                    monitor_mode=monitor_mode,
+                    save_freq=save_freq,
+                    val_epoch_freq=val_epoch_freq,
+                    log_loss_freq=log_loss_freq,
+                    log_image_freq=log_image_freq,
+                    num_log_images=num_log_images)
+
+logger = LoggingConfig(project_dir=os.path.join(abs_path,args['save_dir']),
+                        exp_name=args['exp_name'],
+                        **logger_args
+                        )
+batch_size_to_calculate_grad = 100
+num_step_to_accumulate = max(1, batch_size_to_calculate_grad // args['batch_size'])
+
+logger.initialize()
+logger.log_hyperparameters(args, main_key="training_config")
+
+optim_config = OptimizationConfig()
+optimizer = optim_config.get_optimizer(model)
+lr_scheduler = optim_config.get_scheduler(optimizer)
+
+########################### LANCE TRAINING LOOP ##############################################
+training_loop(model, optimizer, lr_scheduler, train_loader, test_loader, training_config, logger, num_step_to_accumulate)
+
+
+# %%
+sample = val_dataset[0][0].unsqueeze(0).to(training_config.device)
+model.eval()
+
+with torch.no_grad():
+    output = model(sample)
+
+model_from_ckpt = fasterrcnn_resnet50_fpn_v2(weights=FasterRCNN_ResNet50_FPN_V2_Weights.DEFAULT)
+model_from_ckpt.roi_heads.box_predictor = FastRCNNPredictor(in_features, 21)
+
+state = logger.load_best_checkpoint()
+model_from_ckpt.load_state_dict(state['model_state_dict'])
+model_from_ckpt = model_from_ckpt.to(training_config.device)
+model_from_ckpt.eval()
+
+with torch.no_grad():
+    output_from_ckpt = model_from_ckpt(sample)
+
+draw_img = draw_bounding_boxes(sample[0], output[0]['boxes'], colors='red').float()/255.0
+draw_img_ckpt = draw_bounding_boxes(sample[0], output_from_ckpt[0]['boxes'], colors='red').float()/255.0
+
+from deepinv.utils import plot
+
+plot([draw_img.unsqueeze(0), draw_img_ckpt.unsqueeze(0)], titles=['Original', 'loaded cpkt'], figsize=(8,4))
+
+# model state dicts match
+
+# %% check optimizer state dict
+opt_state_ckpt = state['optimizer_state_dict']
+optimizer_state = optimizer.state_dict()
+def compare_optimizer_states(state1, state2):
+    """Compare two optimizer state dicts."""
+    if state1['param_groups'] != state2['param_groups']:
+        print("param_groups differ")
+        return False
+    
+    if set(state1['state'].keys()) != set(state2['state'].keys()):
+        print("state keys differ")
+        return False
+    
+    for key in state1['state']:
+        for param_name in state1['state'][key]:
+            val1 = state1['state'][key][param_name]
+            val2 = state2['state'][key][param_name]
+            
+            if torch.is_tensor(val1) and torch.is_tensor(val2):
+                if not torch.allclose(val1, val2):
+                    print(f"Tensor mismatch at state[{key}][{param_name}]")
+                    return False
+            elif val1 != val2:
+                print(f"Value mismatch at state[{key}][{param_name}]: {val1} vs {val2}")
+                return False
+    
+    print("Optimizers are the same!")
+    return True
+
+compare_optimizer_states(opt_state_ckpt, optimizer_state)
+
+# Optimizers match
+
+
+
+
+# %% check learning rate scheduler state
+
+sched_state_ckpt = state['scheduler_state_dict']
+sched_state = lr_scheduler.state_dict()
+
+def compare_scheduler_states(state1, state2):
+    """Compare two scheduler state dicts."""
+    for key in state1:
+        val1 = state1[key]
+        val2 = state2[key]
         
-    model = get_model(model_name=args.model_name, num_classes=21)
-    
-    trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    total = sum(p.numel() for p in model.parameters())
-    
-    print(f"Trainable params: {trainable / 1e6:.2f}M")
-    print(f"Total params: {total / 1e6:.2f}M")
-    
+        if val1 != val2:
+            print(f"Value mismatch at {key}: {val1} vs {val2}")
+            return False
+    print("Schedulers are the same!")
+    return True
+compare_scheduler_states(sched_state_ckpt, sched_state)
 
-    ############################## DEFINE DATASET ###########################################
-    transform_test = v2.Compose([
-        v2.ToDtype(dtype=torch.float32, scale=True)
-    ])
+# learning rate schedulers match
 
-    transform_train = v2.Compose([
-        v2.ToDtype(dtype=torch.float32, scale=True),
-        v2.RandomHorizontalFlip(),
-        v2.RandomGrayscale(p=0.1),
-        v2.GaussianNoise(),
-        v2.ColorJitter(),
-    ])
-    train_dataset = VOCDataset(args.images_train, args.annotations_train, transform=transform_train)
-
-    if args.train_dataset_size is not None:
-        print(f"Using the first {min(args.train_dataset_size, len(train_dataset))} images from the training set")
-        train_dataset = data.Subset(train_dataset, range(min(args.train_dataset_size, len(train_dataset))))
-
-    if len(train_dataset) < args.batch_size:
-        sampler = data.RandomSampler(train_dataset, replacement=True, num_samples=args.batch_size)
-        shuffle = False
-    else:
-        sampler = None
-        shuffle = True
-    
-    train_loader_generator = torch.Generator()
-    train_loader_generator.manual_seed(42)
-    train_loader = data.DataLoader(train_dataset, batch_size=args.batch_size, collate_fn=collate_fn,
-                                   shuffle=shuffle, pin_memory=True, sampler=sampler, drop_last=False,
-                                   num_workers=8, generator=train_loader_generator)
-    
-    val_dataset = VOCDataset(args.images_val, args.annotations_val, transform=transform_test)
-    if len(val_dataset) == 0:
-        test_loader=None
-    else:
-        if args.test_dataset_size is not None:
-           print(f"Using the first {min(args.test_dataset_size, len(val_dataset))} images as validation set")
-           val_dataset = data.Subset(val_dataset, range(min(args.test_dataset_size, len(val_dataset))))
-        test_loader = data.DataLoader(val_dataset, batch_size=args.batch_size, shuffle=True, collate_fn=collate_fn, drop_last=False)
-
-
-    ################################ Training and Saving Configuration #####################
-    training_config = TrainingConfig()
-    training_config.update(**vars(args))
-
-
-    # Save checkpoint every 200 steps
-    monitor_metric = "val_avg_map" if test_loader is not None else "train_avg_map"
-    monitor_mode = "max"
-    num_step_per_epoch = max(len(train_loader), 1)
-    save_freq =  max(1, int(500 // num_step_per_epoch))
-    log_loss_freq = 50
-    log_image_freq = 500
-    num_log_images = 3
-    logger_args = dict(monitor_metric=monitor_metric,
-                        monitor_mode=monitor_mode,
-                        save_freq=save_freq,
-                        log_loss_freq=log_loss_freq,
-                        log_image_freq=log_image_freq,
-                        num_log_images=num_log_images)
-    
-    logger = LoggingConfig(project_dir=os.path.join(abs_path,'exp/object_detection'),
-                           exp_name=f"VOC_{args.model_name}_{args.train_dataset_size}",
-                           **logger_args
-                           )
-    batch_size_to_calculate_grad = 100
-    num_step_to_accumulate = max(1, batch_size_to_calculate_grad // args.batch_size)
-    
-    logger.initialize()
-    logger.log_hyperparameters(vars(args), main_key="training_config")
-
-    optim_config = OptimizationConfig()
-    optimizer = optim_config.get_optimizer(model)
-    lr_scheduler = optim_config.get_scheduler(optimizer)
-
-    ########################### LANCE TRAINING LOOP ##############################################
-    training_loop(model, optimizer, lr_scheduler, train_loader, test_loader, training_config, logger, num_step_to_accumulate)
 

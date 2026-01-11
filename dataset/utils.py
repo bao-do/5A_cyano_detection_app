@@ -147,6 +147,7 @@ class VOCDataset(torch.utils.data.Dataset):
     def __getitem__(self, index: int):
         img_path = self.df.loc[index, 'image_path']
         img = decode_image(img_path)
+        img = tv_tensors.Image(img)
 
         annot_path = self.df.loc[index, 'annotation_path']
         tree = ET.parse(annot_path)

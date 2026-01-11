@@ -1,1 +1,2 @@
-    PYTHONPATH=./ nohup python ./training/train.py --train_dataset_size 3000 --test_dataset_size 200  --num_epochs 60 --batch_size 10 > output.log 2>&1 &
+PYTHONPATH=./ nohup python ./training/train.py --test_dataset_size 200  --num_epochs 60 --batch_size 10 --model_name fasterrcnn_resnet18_fpn > output.log 2>&1 &
+# PYTHONPATH=./ python ./training/train.py --train_dataset_size 3000 --test_dataset_size 200  --num_epochs 120 --batch_size 10

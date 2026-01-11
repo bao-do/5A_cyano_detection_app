@@ -125,7 +125,6 @@ def ema_avg_fn(averaged_model_parameter, model_parameter, n_averaged):
 class LoggingConfig:
     # Logging frequencies
     log_freq = 10
-    save_freq = 1
 
     # Tensorboard settings
     tensorboard = True
@@ -148,13 +147,12 @@ class LoggingConfig:
     log_image_freq = 200
     num_log_images= 4 
     log_loss_freq: int=10
-    val_epoch_freq: int=5
 
     # System monitoring
     log_gpu_stats = False  # Log GPU utilization
     log_memory_stats = False    # Log memory usage
 
-    def __init__(self, project_dir: str=None, exp_name: str="default", **kwargs):
+    def __init__(self, project_dir: str=None, exp_name: str="default", load_old_ckpt=True,**kwargs):
         self.writer = None
         self.project_dir = "" if project_dir is None else project_dir
         self.exp_dir = os.path.join(self.project_dir, exp_name)
@@ -162,30 +160,26 @@ class LoggingConfig:
         self.tensorboard_dir = os.path.join(self.exp_dir, "runs")
         self.metadata_file = os.path.join(self.exp_dir,"metadata.json")
 
-        metadata = None
-        if os.path.exists(self.metadata_file):
-            print(f"Loading metadata from {self.metadata_file}")
-            with open(self.metadata_file, "r") as f:
-                metadata = json.load(f)
-
-        if metadata is not None:
-            self.global_step = metadata['global_step']
-            self.epoch = metadata['epoch']
-        
-        else:
-            self.global_step = 0
-            self.epoch = 0
-            
-
         for key, val in kwargs.items():
             if not hasattr(self, key):
                 warnings.warn(f"Unknown argment {key}")
             setattr(self, key, val)
         
+        if (not load_old_ckpt) or (not os.path.exists(self.metadata_file)):
+            warnings.warn(f"Starting new experiment, removing old metadata file {self.metadata_file}")
+            if os.path.exists(self.metadata_file):
+                os.remove(self.metadata_file)
+            self.global_step = 0
+            self.epoch = 0
+            self.best_metric = float("inf") if self.monitor_mode=="min" else -float("inf")
 
-        self.best_metric = float("inf") if self.monitor_mode=="min" else -float("inf")
+        else: 
+            print(f"Loading metadata from {self.metadata_file}")
+            with open(self.metadata_file, "r") as f:
+                metadata = json.load(f)
+                self.global_step = metadata['global_step']
+                self.epoch = metadata['epoch']
 
-        if metadata is not None:
             if (self.monitor_metric == metadata['monitor_metric']) and (self.monitor_mode == metadata['monitor_mode']):
                 self.best_metric = metadata['best_metric']
         
@@ -294,14 +288,16 @@ class LoggingConfig:
                 warnings.warn(f"Checkpoint {checkpoint_path} does not exist.")
                 return None
             
-        state = torch.load(checkpoint_path)
-        self.global_step = state.get("global_step",0) + 1 
-        self.epoch = state.get("epoch", 0) + 1
+        state = torch.load(checkpoint_path, map_location='cpu')
+        # Don't add +1 here - let the training loop handle incrementing
+        # This ensures global_step matches what was saved
+        self.global_step = state.get("global_step", 0)
+        self.epoch = state.get("epoch", 0) + 1  # +1 for epoch since we resume at next epoch
         self.best_metric = state.get("best_metric", self.best_metric)
 
         if verbose:
             print(f"Loaded checkpoint from: {checkpoint_path}")
-            print(f"Resuming from epoch {self.epoch}")
+            print(f"Resuming from epoch {self.epoch}, global_step {self.global_step}")
         
         return state
     
@@ -528,8 +524,46 @@ def move_to_device(images: list=None, targets: list=None, device="cpu", has_scor
         
 
 
-        
+from torchvision.models.detection import (fasterrcnn_mobilenet_v3_large_320_fpn,
+                                          FasterRCNN_MobileNet_V3_Large_320_FPN_Weights,
+                                          FasterRCNN)
+from torchvision.models import ResNet18_Weights
+from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
+from torchvision.models.detection.backbone_utils import resnet_fpn_backbone
 
+def get_model(model_name,num_classes, trainable_backbone_layers=1):
+    """
+    Args:
+        model_name (str): Name of the model to load. Options: 
+            - "fasterrcnn_mobilenet_v3_large_320_fpn"
+            - "fasterrcnn_resnet18_fpn"
+            - "fasterrcnn_resnet34_fpn"
+    """
+    if model_name == "fasterrcnn_mobilenet_v3_large_320_fpn":
+        model = fasterrcnn_mobilenet_v3_large_320_fpn(weights=FasterRCNN_MobileNet_V3_Large_320_FPN_Weights.DEFAULT,
+                                                      trainable_backbone_layers=trainable_backbone_layers)
+        in_features = model.roi_heads.box_predictor.cls_score.in_features
+        model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes)
 
+    elif model_name == "fasterrcnn_resnet18_fpn":
+        backbone = resnet_fpn_backbone(
+            backbone_name='resnet18', 
+            weights=ResNet18_Weights.DEFAULT, 
+            trainable_layers=trainable_backbone_layers
+        )
+        model = FasterRCNN(backbone, num_classes=num_classes)
+    elif model_name == "fasterrcnn_resnet34_fpn":
+        backbone = resnet_fpn_backbone(
+            backbone_name='resnet34', 
+            weights=None, 
+            trainable_layers=trainable_backbone_layers
+        )
+        model = FasterRCNN(backbone, num_classes=num_classes)    
+    else:
+        raise ValueError(f"Model {model_name} not supported")
+    
+
+    return model
+    
 
 

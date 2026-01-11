@@ -33,6 +33,7 @@ PROJECT_ID = 1
 DEBUG = True
 DEFAULT_SCORE_THRESHOLD = 0.8
 DEFAULT_IOU_THRESHOLD = 0.5
+
 ls = LabelStudio(base_url=LABEL_STUDIO_URL, api_key=LABEL_STUDIO_API_KEY)
 
 max_retries = 10
@@ -256,6 +257,7 @@ image_annotation_card = dbc.Card(
                 ),
                 dcc.Store(id="uploaded-image-store", data=None),
                 dcc.Store(id="graph-update-source", data=None),  # guards bounce
+                dcc.Store(id="inf-container", data=None),  # store image info for LS submission
             ]
         ),
         dbc.CardFooter(
@@ -382,6 +384,7 @@ annotation_table_card = dbc.Card(
     Output("upload-div", "style", allow_duplicate=True),
     Output("uploaded-image-store", "data", allow_duplicate=True),
     Output("graph-update-source", "data", allow_duplicate=True),
+    Output("inf-container", "data", allow_duplicate=True),
     Input("upload-image", "contents"),
     prevent_initial_call=True,
 )
@@ -400,8 +403,14 @@ def display_uploaded_image(contents):
         image_name = f"{uuid4().hex[:8]}.png"
         os.makedirs(source_storage_dir, exist_ok=True)
         pil_image.save(os.path.join(source_storage_dir, image_name))
-
+        task = ls.tasks.create(
+            project=PROJECT_ID,
+            data={
+                "image": f"/data/local-files/?d=source_storage/{PROJECT_ID}/{image_name}"
+            }
+        )
         img_array = np.array(pil_image)
+        inf = {"id": task.id, "height": img_array.shape[0], "width": img_array.shape[1]}
         fig = go.Figure()
         fig.add_trace(go.Image(z=img_array))
         fig.update_xaxes(showticklabels=False).update_yaxes(showticklabels=False)
@@ -411,12 +420,12 @@ def display_uploaded_image(contents):
             newshape=dict(line=dict(color=color_dict[CLASSES[0]], width=2), fillcolor=color_dict[CLASSES[0]].replace("rgb", "rgba").replace(")", ",0.2)")),
         )
         debug_print("Image processed successfully")
-        return fig, {"display": "block"}, {"display": "none"}, content_string, "upload"
+        return fig, {"display": "block"}, {"display": "none"}, content_string, "upload", inf
     except Exception as e:
         import traceback
         traceback.print_exc()
         debug_print(f"Error processing image: {e}")
-        return empty_fig(), {"display": "none"}, {"display": "block"}, None, None
+        return empty_fig(), {"display": "none"}, {"display": "block"}, None, None, None
 
 
 @app.callback(
@@ -587,6 +596,37 @@ def graph_to_table(relayout_data, table_data):
 
     return table, "draw"
 
+
+@app.callback(
+    Input("submit-to-ls", "n_clicks"),
+    State("inf-container", "data"),
+    State("annotations-table","data"),
+    prevent_initial_call=True
+)
+def submit_to_ls(n_clicks, inf, annotations):
+    if  (inf is not None) and (annotations is not None):
+        task_id, img_height, img_width = inf.values()
+        result = []
+        for row in annotations:
+            x0, y0, x1, y1 = float(row["X0"]), float(row["Y0"]), float(row["X1"]), float(row["Y1"])
+            result.append({
+                "from_name": "label",
+                "to_name": "image",
+                "source": "$image",
+                "type": "rectanglelabels",
+                "value": {
+                    "height":(y1 - y0)*100 / img_height,
+                    "width": (x1 - x0)*100 / img_width,
+                    "x": x0 * 100 / img_width,
+                    "y": y0 * 100 / img_height,
+                    "rectanglelabels": [row["Class"]]
+                }
+            })
+        ls.predictions.create(
+            model_version="user_correction",
+            result=result,
+            task=task_id
+        )
 
 app.clientside_callback(
     """

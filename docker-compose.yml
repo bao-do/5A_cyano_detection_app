@@ -1,4 +1,24 @@
 services:
+  label-studio:
+    container_name: label-studio
+    image: heartexlabs/label-studio:latest
+    ports:
+      - 8080:8080
+    environment:
+      - LABEL_STUDIO_LOCAL_FILES_SERVING_ENABLED=true
+      - LABEL_STUDIO_LOCAL_FILES_DOCUMENT_ROOT=/label-studio/data
+
+      - LABEL_STUDIO_HOST=https://label.cyanobacidentification.studio
+      - CSRF_TRUSTED_ORIGINS=https://label.cyanobacidentification.studio
+      - CSRF_ALLOWED_ORIGINS=https://label.cyanobacidentification.studio
+      - LABEL_STUDIO_DISABLE_SIGNUP_WITHOUT_LINK=true
+    volumes:
+      - ./data/ls_data:/label-studio/data
+      - ./data/ls_data/source_storage:/label-studio/data/source_storage
+      - ./data/ls_data/target_storage:/label-studio/data/target_storage
+    stdin_open: true
+    tty: true
+ 
   model-api:
     container_name: model-api
     build:
@@ -11,7 +31,11 @@ services:
       - ./training/train_from_ls_data.py:/app/training/train_from_ls_data.py
       - ./data/ml-backend/fasterrcnn:/data/model/fasterrcnn:ro
       - ./data/ls_data:/data/ls_data:ro
+      - ./exp:/app/exp
+      - ./NNModels:/app/NNModels
     environment:
+      - LABEL_STUDIO_URL=${LABEL_STUDIO_URL}
+      - LABEL_STUDIO_API_KEY=${LABEL_STUDIO_API_KEY}
       - SAVE_DIR=${SAVE_DIR}
       - EXP_NAME=${EXP_NAME}
       - NUM_STEPS=${NUM_STEPS}
@@ -25,31 +49,15 @@ services:
       - MONITOR_MODE=${MONITOR_MODE}
       - NVIDIA_VISIBLE_DEVICES=all
     gpus: all
+    depends_on:
+      - label-studio
 
-  label-studio:
-    container_name: label-studio
-    image: heartexlabs/label-studio:latest
-    ports:
-      - 8080:8080
-    environment:
-      - LABEL_STUDIO_LOCAL_FILES_SERVING_ENABLED=true
-      - LABEL_STUDIO_LOCAL_FILES_DOCUMENT_ROOT=/label-studio/data
-
-      # - CSRF_TRUSTED_ORIGINS=https://college-clock-travel-administered.trycloudflare.com
-      # - LABEL_STUDIO_HOST=https://college-clock-travel-administered.trycloudflare.com
-    volumes:
-      - ./data/ls_data:/label-studio/data
-      - ./data/ls_data/source_storage:/label-studio/data/source_storage
-      - ./data/ls_data/target_storage:/label-studio/data/target_storage
-    stdin_open: true
-    tty: true
- 
 
   ml-backend:
     container_name: ml-backend-fasterrcnn
     build: 
       context: .
-      dockerfile: ls_ml_backend/fasterrcnn_mobilenet_fpn/Dockerfile
+      dockerfile: ls_ml_backend/fasterrcnn/Dockerfile
       args:
         TEST_ENV: ${TEST_ENV}
     environment:
@@ -69,7 +77,7 @@ services:
       - ./data/server:/data/server
       - ./data/ml-backend/fasterrcnn:/data/model/fasterrcnn
       - ./data/ls_data:/data/ls_data:ro
-      - ./ls_ml_backend/fasterrcnn_mobilenet_fpn/model.py:/app/model.py
+      - ./ls_ml_backend/fasterrcnn/model.py:/app/model.py
     depends_on:
       - label-studio
     
@@ -81,9 +89,10 @@ services:
     ports:
       - "5000:5000"
     volumes:
-      - ./app/app.py:/app/app.py
+      - ./app/app_tmp.py:/app/app.py
       - ./data/ls_data/source_storage/1:/app/data/ls_data/source_storage/1
     environment:
+      - TZ=Europe/Paris
       - LABEL_STUDIO_URL=${LABEL_STUDIO_URL}
       - LABEL_STUDIO_API_KEY=${LABEL_STUDIO_API_KEY}
       - API_URL=${API_URL}
@@ -91,6 +100,39 @@ services:
     gpus: all
     depends_on:
       - label-studio
+  ui-app-restarter:
+    image: docker:cli
+    container_name: ui-app-restarter
+    environment:
+      - TZ=Europe/Paris
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        echo "UI-App Restarter: Started at $$(date '+%Y-%m-%d %H:%M:%S %Z')"
+        echo "Will restart ui-app daily at 00:00 Paris time"
+        echo "Current timezone: $$(date +%Z)"
+        while true; do
+          CURRENT_TIME=$$(date +'%H:%M')
+          # Log every 10 minutes to show we're alive
+          MINUTE=$$(date +'%M')
+          if [ "$$(expr $$MINUTE % 10)" = "0" ]; then
+            echo "[$$(date '+%Y-%m-%d %H:%M:%S')] Alive - waiting for 00:00 (current: $$CURRENT_TIME)"
+          fi
+          # Restart at midnight
+          if [ "$$CURRENT_TIME" = '00:00' ]; then
+            echo "[$$(date '+%Y-%m-%d %H:%M:%S')] Restarting ui-app to reload classes from Label Studio..."
+            docker restart ui-app
+            echo "[$$(date '+%Y-%m-%d %H:%M:%S')] ui-app restarted successfully"
+            # Sleep for 61 seconds to avoid multiple restarts in the same minute
+            sleep 61
+          fi
+          sleep 60
+        done
 
   reverse-proxy:
     image: nginx:latest
@@ -104,3 +146,4 @@ services:
       - ui-app
       - ml-backend
       - label-studio
+

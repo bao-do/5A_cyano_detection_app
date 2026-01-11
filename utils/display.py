@@ -46,4 +46,3 @@ def images_with_bboxes(images: list[torch.Tensor],
     plt.show()
     
 
-        

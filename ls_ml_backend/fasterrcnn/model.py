@@ -6,54 +6,15 @@ import logging
 from typing import List, Dict, Optional
 from label_studio_ml.model import LabelStudioMLBase
 from label_studio_ml.response import ModelResponse
-from label_studio_sdk import LabelStudio
 from PIL import Image
 import requests
 import io
-import json
-
 
 #%%
 
 
 logger = logging.getLogger(__name__)
 
-def parse_ls_detection_tasks(tasks: list[dict], value: str="image" ):
-    dataset = []
-    for task in tasks:
-        if len(task.annotations) == 0:
-            continue
-        image_url = task.data[value]
-        image_path = get_local_path(image_url)
-
-        result = task.annotations[0]["result"]
-        image_width = result[0]["original_width"]
-        image_height = result[0]["original_height"]
-        boxes = []
-        labels = []
-        for ann in result:
-            x1, y1 = ann["value"]["x"], ann["value"]["y"]
-            width, height = ann["value"]["width"], ann["value"]["height"]
-            x2, y2 = min(100, x1 + width), min(100,y1 + height)
-
-            x1, y1 = x1*image_width/100, y1*image_height/100
-            x2, y2 = x2*image_width/100, y2*image_height/100
-
-
-            boxes.append([int(x1), int(y1), int(x2), int(y2)])
-
-            label_id = ann["value"]["rectanglelabels"][0]
-            labels.append(label_id)
-        dataset.append({
-            "original_width": image_width,
-            "original_height": image_height,
-            "image_path": image_path,
-            "annotation": {
-                "boxes": boxes,
-                "labels": labels
-            }
-        })
-    return dataset
 
 def get_local_path(url):
     if url.startswith("upload") or url.startswith("/upload"):
@@ -86,7 +47,6 @@ def get_local_path(url):
 
 # ----------- MODEL PREDICTION AND TRAINING SETUP  ----------------------
 MAIN_PROJECT_ID = int(os.getenv("MAIN_PROJECT_ID", 1))
-VAL_PROJECT_ID = int(os.getenv("VAL_PROJECT_ID", 2))
 API_URL = os.getenv("API_URL", "http://model-api:5075/predict")
 TRAIN_API_URL = os.getenv("TRAIN_API_URL", API_URL.replace("/predict", "/train"))
 
@@ -147,6 +107,8 @@ class FasterRCNN(LabelStudioMLBase):
                 'to_name': to_name,
                 'source': '$image',
                 'type': 'rectanglelabels',
+                'original_width': original_w,
+                'original_height': original_h,
                 'value': {
                     'rotation':0,
                     'width': (x2 - x1) * 100.0 / original_w,
@@ -193,27 +155,12 @@ class FasterRCNN(LabelStudioMLBase):
         )
 
         project_id = project['id']
-        if (project_id != MAIN_PROJECT_ID) and (project_id != VAL_PROJECT_ID):
-            logger.info("Skip training: fit method is only supported for this project")
+        if (project_id != MAIN_PROJECT_ID):
+            logger.info("Skip training: fit method is not supported for this project")
             return
         
-        # Load data
-        ls = LabelStudio(base_url= self.LABEL_STUDIO_HOST, api_key=self.LABEL_STUDIO_API_KEY)
-        print(f"Worker: Fetching tasks for Project {MAIN_PROJECT_ID}...")
-        
-        tasks_train = list(ls.tasks.list(project=MAIN_PROJECT_ID))
-        tasks_test = list(ls.tasks.list(project=VAL_PROJECT_ID))
-
-        raw_dataset_train = parse_ls_detection_tasks(tasks_train)
-        raw_dataset_test = parse_ls_detection_tasks(tasks_test)
-
-        print(f"Worker: Found {len(raw_dataset_train)} train samples, {len(raw_dataset_test)} test samples")
-        payload = {
-            "raw_train_data": raw_dataset_train,
-            "raw_test_data": raw_dataset_test
-        }
         try:
-            resp = requests.post(TRAIN_API_URL, json=payload, timeout=5)
+            resp = requests.post(TRAIN_API_URL, timeout=5)
             print(f"[fit] Triggered training at {TRAIN_API_URL}, status={resp.status_code}, response={resp.json()}")
         except Exception as e:
             print(f"[fit] Failed to trigger training: {e}")

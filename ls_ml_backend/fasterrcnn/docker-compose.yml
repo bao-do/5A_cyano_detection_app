@@ -6,7 +6,7 @@ services:
     image: humansignal/ml-backend:v0
     build:
       context: .
-      dockerfile: ls_ml_backend/fasterrcnn_mobilenet_fpn/Dockerfile
+      dockerfile: ls_ml_backend/fasterrcnn/Dockerfile
       args:
         TEST_ENV: ${TEST_ENV}
     environment:

@@ -6,12 +6,11 @@ RUN pip install -r requirements.txt
 
 
 COPY api /app
-COPY exp /app/exp
 COPY utils /app/utils
 COPY NNModels /app/NNModels
 COPY training /app/training
 COPY dataset /app/dataset
 
-EXPOSE 5000
+EXPOSE 5075
 
-CMD ["python", "api.py"]
+CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:5075", "api:app"]

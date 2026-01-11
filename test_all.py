@@ -169,3 +169,132 @@ with torch.no_grad():
 print(output)
 
 # %%
+from dataset import VOCDataset
+from torchvision.transforms import v2
+import torch
+
+transform_train = v2.Compose([
+    v2.ToDtype(dtype=torch.float32, scale=True),
+    v2.RandomHorizontalFlip(),
+    v2.RandomGrayscale(p=0.1),
+    v2.GaussianNoise(),
+    v2.ColorJitter(),
+    v2.RandomCrop((224,224), pad_if_needed=True),
+])
+
+ds = VOCDataset(images_dir='data/VOC/VOCtrainval_06-Nov-2007/VOCdevkit/VOC2007/JPEGImages',
+                annotation_dir='data/VOC/VOCtrainval_06-Nov-2007/VOCdevkit/VOC2007/Annotations',
+                transform=transform_train
+                )
+
+img, target = ds[0]
+# %%
+import torchvision
+img = torchvision.io.decode_image('data/VOC/VOCtrainval_06-Nov-2007/VOCdevkit/VOC2007/JPEGImages/000012.jpg')
+img = torchvision.tv_tensors.Image(img)
+img_transformed = transform_train(img)
+# %%
+from matplotlib import pyplot as plt
+plt.imshow(img.permute(1,2,0).numpy())
+# %% check learning rate when resuming from checkpoint
+import torch.optim as optim
+import torch
+from torchvision.models.detection import fasterrcnn_resnet50_fpn_v2
+from utils import OptimizationConfig
+
+model = fasterrcnn_resnet50_fpn_v2(weights=None, num_classes=21)
+
+cktp_path = 'exp/object_detection/VOC_fasterrcnn_resnet50_fpn_v2_3000/checkpoints/epoch_058_val_avg_map_1.8622.pth'
+state = torch.load(cktp_path, map_location='cpu')
+
+print(f"last lr: {state['scheduler_state_dict']['_last_lr']}")
+
+optimizer_config = OptimizationConfig()
+optimizer = optimizer_config.get_optimizer(model)
+lr_scheduler = optimizer_config.get_scheduler(optimizer)
+
+optimizer.load_state_dict(state['optimizer_state_dict'])
+lr_scheduler.load_state_dict(state['scheduler_state_dict'])
+
+print(f"Current LR: {optimizer.param_groups[0]['lr']}")
+# %% get classes from label studio
+
+import json
+from label_studio_sdk import LabelStudio
+
+ls_url = "http://localhost:8080"
+ls_api_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6ODA3MjEyOTQyNiwiaWF0IjoxNzY0OTI5NDI2LCJqdGkiOiIxZmJlNDczNDljNzM0MzkzOTc5OTNkZWMxMmUwNmQzNSIsInVzZXJfaWQiOjF9.AsGLtLl9VehwHK1VeFPHfCOoYuUZ6oEG2DmRRG9uP6E"
+project_id = 1
+
+ls = LabelStudio(base_url=ls_url, api_key=ls_api_key)
+project = ls.projects.get(project_id)
+
+# %%
+labels = project.parsed_label_config['label']['labels']
+
+# %%
+import torch
+import torchvision
+from torchvision.models.detection import FasterRCNN
+from torchvision.models.detection.backbone_utils import resnet_fpn_backbone
+
+def get_lightweight_model(num_classes):
+    # 1. Create the backbone: ResNet-18 with FPN
+    # 'trainable_layers=3' means we train the top 3 blocks, freezing the bottom 2 (common for small datasets)
+    backbone = resnet_fpn_backbone(
+        backbone_name='resnet18', 
+        weights='DEFAULT', 
+        trainable_layers=1
+    )
+
+    # 2. Create the Faster R-CNN model using this backbone
+    # num_classes includes background (e.g., 1 class + background = 2)
+    model = FasterRCNN(backbone, num_classes=num_classes)
+    
+    return model
+
+# Usage
+model = get_lightweight_model(num_classes=100) # 1 for Cyanobacteria + 1 Background
+print(f"Total trainable parameters in lightweight model: {sum(p.numel() for p in model.parameters() if p.requires_grad) / 1e6:.2f}M ")
+# %%
+img_path = 'data/VOC/VOCtrainval_06-Nov-2007/VOCdevkit/VOC2007/JPEGImages/000005.jpg'
+img = torchvision.io.decode_image(img_path)
+img = img.float() / 255.0  # Normalize to [0, 1]
+img = img.unsqueeze(0)  # Add batch dimension
+model.eval()
+with torch.no_grad():
+    output = model(img)
+print(output)
+# %%
+from utils import get_model
+
+model_name = 'fasterrcnn_resnet18_fpn'
+model = get_model(model_name, num_classes=21)
+print(f"Total trainable parameters in {model_name}: {sum(p.numel() for p in model.parameters() if p.requires_grad) / 1e6:.2f}M ")
+# %% trainble params in mobilenet backbone
+for name, param in model.named_parameters():
+    if param.requires_grad:
+        print(name)
+
+# %%
+from PIL import Image
+import numpy as np
+
+img = Image.open("512_hai.tiff")
+ #convert to RGB
+img = img.convert("RGB")
+# save as png
+img.save("512_hai.png")
+# %%
+from label_studio_sdk import LabelStudio
+
+base_url = "https://label.cyanobacidentification.studio"
+api_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6ODA3MjEyOTQyNiwiaWF0IjoxNzY0OTI5NDI2LCJqdGkiOiIxZmJlNDczNDljNzM0MzkzOTc5OTNkZWMxMmUwNmQzNSIsInVzZXJfaWQiOjF9.AsGLtLl9VehwHK1VeFPHfCOoYuUZ6oEG2DmRRG9uP6E"
+
+ls = LabelStudio(base_url=base_url, api_key=api_key)
+project = ls.projects.get(1)
+
+classes = project.parsed_label_config['label']['labels']
+print(classes[-1])
+
+# %%
