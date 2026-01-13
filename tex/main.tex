@@ -16,31 +16,36 @@ Researcher, Integrative Biology Center, Toulouse, France}
 
 \newpage
 
-\section{Introduction}
+\section*{Introduction}
 In this report, I present my two current projects that I had have contributed/worked on during my internship and my 5th year at INSA Toulouse. These two projects are under the supervision of my mentor and in collaboration with researchers from the Integrative Biology Center (CBI) in Toulouse, France. The first project consists of analytically analyzing the convolutional neural networks (CNNs) under the len of Minimum Mean Square Error (MMSE) estimator. We aim to gain insights into their performance, generalization capabilities, and their sensibility to various factors. This theoretical foundation will help inform the design and optimization of CNN architectures for various applications. The second project aims to develop a web-based application that utilizes deep learning techniques to detect and classify cyanobacterias from microscope images. While these two projects may seem distinct, they are done under the neccesity of advanced technologies that can solve real-world problems that the biologists and researchers from CBI are facing. In other hands, these two works form my set of skills both in theoretical and applied aspects, which are equivalently essential for my future career as a researcher in applied mathematics.
 
-This report is structured as follows: Section 2 presents the summary of the first project, including the mathematical formation, result and experimental validation. Section 3 introduces the web-based application for cyanobacteria detection, detailing the data acquisition process, deep learning approach, application deployment, and preliminary results. Finally, Section 4 concludes the report with a summary of key results and future directions for both projects.
+This report is structured as follows: Section~\ref{MMSE_analytical} presents the summary of the first project, including the mathematical formation, result, experimental validation and conclusion. Section~\ref{cyanoBacIdentification} introduces the web-based application for cyanobacteria detection, detailing the data acquisition process, deep learning approach, application deployment, preliminary results and conclusion. Finally, Section 4 concludes the report with a summary of key results and future directions for both projects.
 
-\newpage
 
-\section{An analytical theory of convolutional neural network inverse problem solvers}
+\section{An analytical theory of convolutional neural network inverse problem solvers}\label{MMSE_analytical}
 \noindent
 \begin{minipage}[t]{0.48\linewidth}
 \small
 \vspace{0.4cm}
-This work aims to provide a better understanding of the behavior of CNNs trained in a supervised manner for inverse problems. This is essential for defining the true domain of validity of such methods, assessing their stability, and enabling comparisons that go beyond empirical scoreboards. 
-
-Our approach is based on the derivation of a closed-form MMSE estimator by incorporating functional constraints that capture two fundamental inductive biases of CNNs: translation equivariance and locality.
-
-\paragraph{Related works} 
 Convolutional Neural Networks (CNN) and other architectures~\citep{jin2017deep,mccann2017convolutional, zhu2018image} now achieve unprecedented performance in domains ranging from medical imaging to astrophysics and computer vision.
 Yet, serious concerns have arisen regarding their reliability and robustness~\citep{antun2020instabilities}, with conflicting reports on whether small perturbations in the measurements or the forward operator lead to stable or unstable reconstructions~\citep{genzel2022solving}.
-While it is clear that the information loss due to the forward operator~\cite{gottschling2025troublesome} makes some parts of the recovery problem fundamentally ambiguous.
+This work aims to provide a better understanding of the behavior of CNNs trained in a supervised manner for inverse problems. This is essential for defining the true domain of validity of such methods, assessing their stability, and enabling comparisons that go beyond empirical scoreboards. 
+Our approach is based on the derivation of a closed-form MMSE estimator by incorporating functional constraints that capture two fundamental inductive biases of CNNs: translation equivariance and locality.
 In the context of generative diffusion models, \citep{kamb2025an,scarvelisclosed} derive closed-form expressions for the MMSE under additive Gaussian noise (denoising) with architectural constraints such as equivariance and locality, and use them to study memorization and generalization. 
 Locality has also been examined in~\citep{kadkhodaie2023learning} for modeling patch distributions.
 For imaging inverse problems, equivariance has been widely explored in self-supervised learning~\citep{chen2023imaging,terris2024equivariant}.
 In the supervised setting for linear inverse problems, it is standard to assume that a trained neural network approximates the MMSE~\citep{adler2018deep}. 
 To the best of our knowledge, for general inverse problems, our work is the first to introduce additional functional constraints to more accurately characterize the action of neural networks and to derive closed-form expressions for the resulting constrained MMSE estimators. \todo{to reformulate}
+\vspace{1cm}
+
+My contribution to this works includes:
+\begin{enumerate}
+    \item Participating to derive theorical results
+    \item implementing analytical expressions and optimizing numerical computations
+    \item Training CNNs to validate to theorical results
+    \item Participating to the writing of the scientific paper presenting this work.
+\end{enumerate}
+
 \end{minipage}
 \hfill
 \begin{minipage}[t]{0.48\linewidth}
@@ -58,38 +63,27 @@ Our analytic theory accurately predicts neural network outputs across settings. 
 \end{figure}
 \end{minipage}
 
-My contribution to this works includes:
-\begin{enumerate}
-    \item Participating to derive theorical results
-    \item implementing analytical expressions and optimizing numerical computations
-    \item Training CNNs to validate to theorical results
-    \item Participating to the writing of the scientific paper presenting this work.
-\end{enumerate}
+
 
 \subsection{Problem formulation}
-Let $A: \mathbb{R}^{N}\to \mathbb{R}^M$ be a linear or nonlinear
-% \footnote{We focus on linear operators in the numerics for didactic reasons.} 
-mapping, $\vx$ a random vector in $\X$. We consider the forward model with additive white Gaussian noise
+ Let $\vx \in \mathbb{R}^{N}$ is a random vector following an distribution $\pdata$, $A: \mathbb{R}^{N}\to \mathbb{R}^M$ a linear or non linear operator, and $\ve \sim \Normal{0, \sigma^2 \Id_M}$ a Gaussian noise independent of $\vx$. The measurement $\vy \in \mathbb{R}^M$ is given by the following forward model:
 \begin{equation}
     \label{eq:forward}
-    \vy = A \vx + \ve \qquad \text{ where } \qquad \ve \sim \Normal{0, \sigma^2 \Id_M}
+    \vy = A \vx 
 \end{equation}
-and aim to construct an estimator $\hat{x}(\vy)$ of $\vx$ given $\vy$. 
-A variety of neural network architectures have been proposed for this task. 
-Some are \emph{physics-agnostic}, \textit{i.e.} do not depend on $A$ explicitly and often rely on fully connected layers. 
-Others are \emph{physics-aware}, and rely on an approximate inverse of $A$. 
-In this work, we focus on linear operators $A$ in the numerical experiments for didactic reasons, but our theory applies to nonlinear operators as well. 
-We consider estimators of the following form
-\begin{equation} %\label{eq:estimator_shape}
+We aim to construct an estimator $\hat{x}(\vy)$ estimating $\vx$ given $\vy$.
+A modern approach is to use neural networks to solve this inverse problem, some are physics-aware, \ie incorporate the approximate inverse of $A$ in the architecture, while others are physics-agnostic, \ie do not require  any prior knowledge of $A$.
+In this work, we focus on linear operators $A$ in the numerical experiments for didactic purposes, but our theoretical results hold for nonlinear operators $A$ as well.
+We consider estimators of the form:
+\begin{equation} \label{eq:estimator_shape}
     \hat{x}(\vy) = \neural(B \vy),
 \end{equation}
-where $\neural$ is a neural network with weights $w \in \Theta$ and $B \in \mathbb{R}^{N\times M}$ is an operator such as the identity when $M=N$ (physics-agnostic), or an approximate inverse of $A$ (physics-aware) such as the transpose $A^\top$, the pseudo-inverse $A^+$, or a Tikhonov-regularized inverse.  
-Such designs were popularized in~\citep{kim2016accurate, jin2017deep, schlemper2017deep, wurfl2016deep} and are still widely used in practice~\citep{mccann2017convolutional, zhou2022dudodr, wang2020deep}. 
-% \todo{Hai: more recent works? the latest one were 2022} 
+where $\neural: \R^N \to \R^N$ is a neural network with weights $w \in \Theta$ with $\Theta$ a set of admissible weights, and $B \in \R^{N \times M}$ is a pre-inverse operator that can be chosen freely, in particular, the neural network can be physics-agnostic, \ie $B = \Id$ if $M=N$,  or physics-aware if $B$ is an approximate inverse of $A$ such as the transpose $A^\top$, the Moore-Penrose pseudoinverse $A^+$, or a regularized inverse.
 They can be considered as a robust baseline, and be interpreted as a single-step variant of unrolled neural networks~\citep{adler2018learned,Celledoni_2021_equivariant_neural_networks}, which often achieve top performance in empirical benchmarks~\citep{muckley2021results}.
 
+
 \paragraph{Empirical MMSE estimators}
-In this paper, we study neural networks $\phi^\star_\M$ trained as follows.
+We study neural networks $\phi^\star_\M$ trained as follows.
 \begin{graybox}
 \begin{definition}[Constrained empirical MMSE estimators\label{def:constrained_mmse}]
     Let $\D$ be a dataset of clean images. 
@@ -101,8 +95,8 @@ Here, $\vx$ follows the empirical distribution of the dataset $p_{\D} \!=\! \fra
 The set $\M$ encodes the range of functions reachable by the neural network,  $\M \!=\! \{\neural : w \in \Theta\}$, with $\Theta$ a set of admissible weights.    
 \end{definition}    
 \end{graybox}
-A precise characterization of the set $\M$ is not available for a given neural network architecture $\neural$. 
-However, we can relate the trained neural network with statistical estimators constrained to abstract function classes encoding architectural constraints of the neural networks as follows.
+Explicitly characterizing the set $\M$ given the neural network architecture $\neural$ is mathematically intractable.
+Instead, we approximate $\M$ by considering larger functional classes that capture the architectural constraints of $\neural$ as follows.
 \begin{definition}[MMSE, E-MMSE, LE-MMSE]
 	\label{def:mmse}
     Our estimators of interest are of the form $\hat x = \phi^\star_\M\circ B$, where $\phi^\star_\M$ is the solution of~(\ref{eq:constrained_MMSE}).
@@ -133,16 +127,12 @@ However, we can relate the trained neural network with statistical estimators co
         \vskip -0.4in
     \end{center}
 \end{definition}%
-These function classes capture different architectural constraints of the neural network $\neural$.  
-It is well known that sufficiently deep and wide multi-layer perceptrons (MLPs) can approximate any measurable function~\citep{hornik1989multilayer}, hence the MMSE $\xmmse$ is a proxy for unconstrained MLPs.
+These function classes capture differents architectural constraints of the neural networks $\neural$.
+According to the universal approximation theorem~\citep{hornik1989multilayer}, a sufficiently deep and large Multi-Layer Perception (MLP) can approximate any measurable function, hence the MMSE  $\xmmse$ serves as the theoretical limit for large-scale MLPs. 
 The E-MMSE $\xtrans$ approximates CNNs without constraints on the receptive field, while the LE-MMSE $\xtransloc$ approximates the set of functions reachable by CNNs with finite receptive fields. 
 
-\subsection{Unconstreained MMSE estimator}
-It is well known that the MMSE estimator coincides with the \emph{conditional mean} almost surely~\citep{kay1993fundamentals}:
-\[
-    \xmmse(y) = \Mean{\vx \vert B \vy = By} = \int x \cdot p(x \vert By) \, dx.
-\]
-When the data distribution $\pdata$ is replaced by the empirical measure $\ptrain = \frac{1}{|\D|}\sum_{x\in\D}\delta_x$, with a finite dataset $\D$, the empirical MMSE estimator becomes a kernel regressor~\citep{nadaraya1964estimating,watson1964smooth}:
+\subsection{Unconstrainted MMSE estimator}
+We etablish the closed-form expression of the unconstrained MMSE estimator $\xmmse$.
 \begin{graybox}
     \begin{proposition}[Closed-form of the MMSE \label{prop:expression_MMSE}]
 	The MMSE estimator in \Cref{def:mmse} writes, for any $y \in \Y$,
@@ -153,8 +143,7 @@ When the data distribution $\pdata$ is replaced by the empirical measure $\ptrai
     \end{proposition}
 \end{graybox}
 
-The weights $w(x \vert y)$ can be interpreted as the posterior probability of observing $x$ given the measurement $y$. The denominator ensures that they sum up to $1$.
-
+The estimator $\xmmse$ is a weighted average of the training examples, where the weights $w(x \vert y)$ are proportional to the likelihood of observing $x$ given $y$.
 \begin{remark}
     When $B \!=\! \Id$, $\xmmse$ is exactly the \emph{posterior mean}: $\xmmse(\vy) = \Mean{\vx \vert \vy}$.
 \end{remark}
@@ -163,23 +152,18 @@ To elucidate the role of $B$, we remark that the weights have the following expl
 \begin{equation*}%\label{eq:empirical_mmse_with_B} 
     w(x \vert y) \propto \exp \left( -\frac{1}{2\sigma^2}\norm{\Pi_{\Im{B^\top}}(A(\bar{x} - x) + e)}^2 \right)
 \end{equation*}
-Taking $B=A^+$ or $A^\top$, $\Im{B^T} = \Im{A}$ and the inner term is $A(\bar{x} - x) + \Pi_{\Im{A}}e$. 
-The noise $e$ is projected onto the image of $A$, reducing its magnitude.
-Therefore, for the MMSE, physics-aware estimators is preferable to physics-agnostic ones, which is consistent with a popular belief and the usual practice. 
-However, beyond the projection effect, the choice of $B$ only plays a little role, for example, the estimator is the same for any $B$ such that $\Im{B^T} = \Im{A}$. We discuss this further in~\cref{subsec:agnostic_vs_aware}.
+By selecting $B=A^+$ or $A^\top$, we ensure that $\Im{B^T} = \Im{A}$, then inner term is $A(\bar{x} - x) + \Pi_{\Im{A}}e$. 
+The noise $e$ is projected onto the image space of $A$, reducing its magnitude. This projection enhances the signal-to-noise ratio, justifying the fact that physics-aware estimators often outperform physics-agnostic ones.
+However, beyond the projection effect, the choice of $B$ manifests no other roles: the resulting MMSE estimator remains identical as long as B satisfies the condition $\Im{B^T} = \Im{A}$. We discuss this further in~\cref{subsec:agnostic_vs_aware}.
 
 \paragraph{Memorization of the empirical MMSE} 
-The weights in~(\ref{eq:empirical_mmse}) satisfy $w(x \vert y) \geq 0$ and $\sum_{x \in \D} w(x \vert y) = 1$, hence $\xmmse(y)\in \mathrm{conv}(\D)$ --- the convex envelop of the dataset $\D$, for every $y$. 
-In particular, as $\sigma \! \to \! 0$, $\xmmse(y)$ converges to $x \in \D$ such that $BAx$ is the closest to $By$ ($1$-nearest neighbor); ties being averaged. 
-Therefore, the empirical MMSE ``memorizes'': it reconstructs by re-weighting training examples and never extrapolates outside $\mathrm{conv}(\D)$, see~\cref{fig:memorization_illustration}. 
-This aligns with recent findings related to memorization in generative models~\citep{kamb2025an,bertrand2025closed,scarvelisclosed}.
-\input{tex_figure/memorization.tex}
-
-
+The weighrs $w(x \vert y)$ is non-negative and sums to $1$ over $x \in \D$, hence $\xmmse(y)$ is a convex combination of the training images, \i.e $\xmmse(y) \in \mathrm{conv}(\D)$ -- the convex envelope of the dataset $\D$.
+In particular, as $\sigma \to 0$, $\xmmse(y)$ converges to its nearest neighbor  $x in \D$, in the sense that $BAx$ is closest to $By$, tie being averaged.
+The MMSE $\xmmse$ therefore \emph{memorizes} the dataset $\D$: it reconstructs by re-weighting the training examples and never extrapolates outside $\mathrm{conv}(\D)$.
 \subsection{Constrained MMSE estimators}\label{sec:analytical_formula}
 We first provide details on the constraint classes and then describe our main theoretical results: analytical formulas and properties of constrained MMSE estimators.
 \subsubsection{Functional constraints: equivariance and locality}\label{subsec:constraint_classes}
-Motivated by the success of CNNs in inverse problems, we study function classes $\M$ that encode two core inductive biases -- \emph{equivariance} to geometric transformations~\citep{cohen2016group,veeling2018rotation} and \emph{locality} via bounded receptive field~\citep{kadkhodaie2023learning}. 
+We focus on CNN inverse problem solvers by considering function classes $\M$ that encode two core inductive biases -- \emph{equivariance} to geometric transformations~\citep{cohen2016group,veeling2018rotation} and \emph{locality} via finite receptive field~\citep{kadkhodaie2023learning}. 
 
 We start with formal definition of these concepts. 
 Let $x \in \R^N$ represent an image defined on a discrete 2D grid of size $H \times W = N$.  
@@ -191,22 +175,6 @@ A measurable map $\phi: \X \to \X$ is said to be \emph{translation equivariant} 
 We denote by $\Mtrans$ the set of all such maps.
 \end{definition}
 \end{graybox}
-\paragraph{Architecture equivariance and data augmentation}
-A standard approach to obtain equivariant estimators is by using data augmentation: the set $\D$ is replaced by $\T(\D) = \{T_g x : x \in \D,\, g \in \T\}$ at training time. 
-This promotes \emph{reconstruction equivariance}~\citep{chen2021equivariant} of $\hat{x}_{\M}$:
-\begin{equation}
-    \label{eq:reconstruction_equivariance}
-    \hat{x}_{\M}(A T_g \bar{x} + e) = T_g \hat{x}_{\M}(A \bar{x} + T_g^{-1} e).
-\end{equation} 
-The \emph{data-augmented} MMSE estimators, are defined below. 
-\begin{graybox}
-    \begin{definition}[Data-augmented MMSE estimator]\label{def:data_augmented_mmse}
-        The data-augmented MMSE estimator $\hat{x}_{\M}^{\text{\tiny aug}}$ is defined as the MMSE estimator $\hat{x}_\M$ with respect to the empirical measure on $\T(\D)$. 
-    \end{definition}
-    Reconstruction equivariance is often a desired property, but it differs from the \emph{structural equivariance} of $\phi$~\citep{chen2020group,nordenforsdata}, as illustrated in~\cref{fig:illustration_translation}.
-    
-\end{graybox}
-
 We now add locality constraint.
 For each pixel $n$,
 consider the patch extractor $\Pi_n : x \in \R^N \mapsto \Pi_n x = x[\omega_n] \in \R^P$ that extracts a square patch $x[\omega_n]$ of size $\sqrt{P} \times \sqrt{P}$ centered at pixel $n$, and $\omega_n$ is the set of pixel indices in the patch with circular boundary conditions.
@@ -220,13 +188,29 @@ consider the patch extractor $\Pi_n : x \in \R^N \mapsto \Pi_n x = x[\omega_n] \
 
 The class $\Mtransloc$ captures standard CNNs with small kernels and weight sharing or patch-based models, \eg MLPs acting on patches~\citep{glimpse_local}.
 
+\subsubsection{Preliminary remarks}
 \paragraph{Constraints and projection} The constrained MMSE has a simple geometric interpretation.
 \begin{proposition}\label{prop:projection_mmse}
     For a closed set $\M$, the $\M$-constrained MMSE estimator in~\cref{def:constrained_mmse} is the \textbf{orthogonal projection} in $L^2$ of the posterior mean $\Mean{\vx \vert \vy}$ onto the subspace of random vectors of the form $\mathcal{X} = \{ \phi(B\vy) : \phi \in \M \}$, that is $\hat{x}_{\M}(\vy) = \Pi_{\mathcal{X}} \left( \Mean{\vx \vert \vy} \right)$.
 \end{proposition}
+\paragraph{Architecture equivariance and data augmentation}
+A standard approach to obtain equivariant estimators is by using data augmentation: the set $\D$ is replaced by $\T(\D) = \{T_g x : x \in \D,\, g \in \T\}$ at training time. 
+This promotes \emph{reconstruction equivariance}~\citep{chen2021equivariant} of $\hat{x}_{\M}$:
+\begin{equation}
+    \label{eq:reconstruction_equivariance}
+    \hat{x}_{\M}(A T_g \bar{x} + e) = T_g \hat{x}_{\M}(A \bar{x} + T_g^{-1} e).
+\end{equation} 
+The \emph{data-augmented} MMSE estimators, are defined below. 
+\begin{graybox}
+    \begin{definition}[Data-augmented MMSE estimator]\label{def:data_augmented_mmse}
+        The data-augmented MMSE estimator $\hat{x}_{\M}^{\text{\tiny aug}}$ is defined as the MMSE estimator $\hat{x}_\M$ with respect to the empirical measure on $\T(\D)$. 
+    \end{definition}
+\end{graybox}
+    Reconstruction equivariance is often a desired property, but it differs from the \emph{structural equivariance} of $\phi$~\citep{chen2020group,nordenforsdata}, as illustrated in~\cref{fig:illustration_translation}.
+
 
 \subsubsection{Translation Equivariant MMSE estimator} 
-We start by the closed-form of the E-MMSE estimator $\xtrans$ and its properties. 
+We begin with the closed-form of the E-MMSE estimator $\xtrans$ and its properties. 
 \begin{graybox}
     \begin{theorem}[Closed-form of E-MMSE]\label{thm:equivariant_mmse}
         The E-MMSE estimator writes, for any $y\in \R^M$
@@ -243,7 +227,7 @@ We start by the closed-form of the E-MMSE estimator $\xtrans$ and its properties
     This result holds true for any group $\G$ of orthogonal transformations, not just translations.
 \end{remark}
 The normalization constant of the weights $w_g(x \vert y)$ ensures that they sum to $1$ over all $x \in \D$ and $g \in \T$, we ignore it here for brevity. 
-The E-MMSE estimator $\xtrans$ is a weighted average of the augmented dataset $\T(\D)$, which is similar to $\xmmseaug$ in~\cref{def:data_augmented_mmse}. 
+The E-MMSE estimator $\xtrans$ is a weighted average of the augmented dataset $\T(\D)$. 
 In particular, for denoising ($A=B=\Id$), they coincide. %, and it was already observed in~\citep{kamb2025an}.
 However, depending on the forward operator $A$ and the pre-inverse $B$, it can differ significantly from $\xmmseaug$.
 Some properties of the E-MMSE $\xtrans$ are presented in~\cref{cor:equivariant_mmse_properties} and illustrated in~\cref{fig:illustration_translation}.
@@ -488,49 +472,17 @@ In~\cref{fig:smoothed_vs_original}, we compare the smoothed estimator $\xtranslo
 We observe that the smoothed LE-MMSE better matches the neural network output ($1\sim3$ dB) and improves reconstruction quality ($\sim 1$dB).
 This suggests that we can better capture neural network behavior by incorporating carefully designed smoothness constraints.
 
-\begin{figure*}[ht!]
-    \centering
-    \includegraphics[trim=16mm 0 0 0,clip,width=\linewidth]{./tex_figure/fig_qualitative_neural_vs_analytical_patch_11_64x64_standalone.pdf}
-    \caption{Our theory is validated at higher resolution:
-    comparison of UNet2D output and the analytical formula on FFHQ-64.}
-    \vskip -0.1in
-    \label{fig:qualitative_64x64}
-\end{figure*}
-
-\section{Cyanobacteria recognition using deep learning techniques}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-% Harmful Algal Blooms (HABs) produce toxins that affect humans and animals health, damage ecosystems, make certain aquatic environments unlivable by releasing toxic chemicals, preventing light penetration, and depleting oxygen and nutrition in water. HABs are mainly caused by rapid and uncontrolled growth of cyanobacterias in bodies of water. HABs also cause subtantial economic losses due to additional water treatment and healthcare expenses.
-% Monitering the presence of cyanobacteria is therefore crucial to prevent their harmful effects. Traditional and human-based methods for detecting cyanobacterias in water samples are time-consuming, labor-intensive, and prone to errors.   Various deep learning aproaches have been developed to automate this process. This work aims to introduce CyDect (Cyanobacteria Detection), a web-based application that is capable of identifying more than 1000 types of cyanobacterias from microscope images using the deep learning techniques. \todo{Add more details about the project}. Our application deploys interfaces addressed to both expert users (researchers and biologists) and also incooporate the citizen science aspect, allowing the public to upload microscope images, view detection results given by a well-adapted and well-trained faster region-based convolution neural network (RCNN) model, and download the results for further analysis.
-
-% \paragraph{Related works} \todo {put an introduction sentence, put authors at beginning} A open-source python package named CyFi (Cyanobacteria Finder) has been developed to estimate cyanobacteria concentration in small, inland water bodies using satellite images and machine learning techniques \citep{dorne2024cyanobacteria}. SAS (Spectral Mixture Analysis for Surveillance of Harmful Algal Blooms) is a sofware application that identifies cyanobacteria genera from remotely sensed data \citep{legleiter2022spectral}. As best to our knowledge, our work is the first to propose a deep learning-based method to detect and classify cyanobacterias from microscope images. 
-
-
-
-
+\newpage
+\section{Cyanobacteria recognition using deep learning techniques}\label{cyanoBacIdentification}
+Cyanobacteria are essential components of aquatic ecosystems~\citep{singh2016cyanobacteria,diez2014ecological,saleem2025cyanobacteria}, driving global biogeochemical cycles through processes such as nitrogen fixation and oxygen production and carbon circulation. 
+Their monitoring is critical for monitoring water quality, detecting harmful algal blooms, and assessing ecosystem dynamics.
+However, the primary bottleneck in this process remains the rapid and accurate taxonomic identification of these organisms.
+Traditional identification methods rely heavily on manual microscopic examination by experts, which is time-consuming, labor-intensive, subjective, and often impractical for large-scale monitoring efforts.
+Various deep learning techniques have been proposed to automate the identification process, some focus with microscope image with a limited number of cyanobacteria species or genera \citep{blanco2025multimodal,baek2020identification}. Others focus on satellite images~\citep{kutser2004quantitative}, synthetic images~\citep{barrientos2023semantic} to detect cyanobacteria blooms.
+To the best of our knowledge, there is no existing web-based application capable of identifying a wide taxonomic range of cyanobacteria from microscope images using deep learning.
+To address this gap, we introduce CyDect (Cyanobacteria Detection), a web-based platform capable of detecting and classifying over \todo{number of classes} distinct cyanobacteria genera from microscope images. 
+CyDect utilizes a Faster Region-based Convolutional Neural Network (Faster R-CNN) to handle the significant morphological variability of these organisms. 
+The platform features a dual-interface architecture designed to bridge the gap between expert research and citizen science: it provides advanced analysis tools for biologists while simultaneously offering an accessible portal for the general public to upload images and visualize detection results.
 \subsection{Data acquisition}
 The dataset consists of microscope images of water samples containing cyanobacterias, these images are captured using high-resolution microscopes by our collaborators, biologists specialized in cyanobacteria study. To enhance the model robustness and generalization ability, the dataset includes images taken under various conditions, such as different lighting, magnification levels, and sample preparations. Each image is annotated with bounding boxes around individual cyanobacteria along with their corresponding species labels by our biologist experts. Initially, the dataset contains over \todo{number of images} images covering more than \todo{number of classes} different cyanobacteria species, but the dataset is continously enriched with new images and annotations as more samples are collected and processed.
 
@@ -546,7 +498,7 @@ Faster-RCNN is a variant of the RCNN, which are a family of machine learning mod
     \label{fig:rcnn_demo}
 \end{figure}
 
-Fast-RCNN response to this inefficiency by (1) performing feature extraction over the image before proposing regions, and (2) replaceing the SVM with a softmax layer \citep{girshick2015fast}. The first improvement is made by passing the entire image through an large CNN to generate feature maps, then region proposals are projected onto these feature maps as shown in Figure \ref{fig:fastrcnn_demo}. With these two improvements, fast-RCNN avoid the bottleneck as feature extraction is shared across region proposals, and a fast-RCNN is a unified model as the classifier is now part of the neural network, leading to a significant reduction in training and inference time.
+Fast-RCNN response to this inefficiency by (1) performing feature extraction over the image before proposing regions, and (2) replaceing the SVM with a softmax layer \citep{girshick2015fastrcnn}. The first improvement is made by passing the entire image through an large CNN to generate feature maps, then region proposals are projected onto these feature maps as shown in Figure \ref{fig:fastrcnn_demo}. With these two improvements, fast-RCNN avoid the bottleneck as feature extraction is shared across region proposals, and a fast-RCNN is a unified model as the classifier is now part of the neural network, leading to a significant reduction in training and inference time.
 
 \begin{figure}[H]
     \centering
@@ -584,29 +536,31 @@ At the day this paper is written, the faster-RCNN model is no longer the state-o
     \label{fig:both_images}
 \end{figure}
 
-% \paragraph{ResNet architecture}
-% ResNet (Residual Network) is a deep convolutional neural network architecture that introduces the concept of residual learning by stacking residual blocks. The residual blocks learn residual functions with reference to the layer inputs, instead of learning unreferenced functions by connecting the input of a layer directly to its output via shortcut connections. Formally, let $\mathbf{x}$ be the input to a certain layer, and let $\mathcal{F}(\mathbf{x})$ be the desired underlying mapping to be learned by the layer. Instead of directly approximating $\mathcal{F}(\mathbf{x})$, residual blocks reformulate the mapping as $\mathcal{F}(\mathbf{x}) = \mathcal{H}(\mathbf{x}) - \mathbf{x}$, where $\mathcal{H}(\mathbf{x})$ is the original mapping. The layer then learns the residual function $\mathcal{F}(\mathbf{x})$, and the output of the layer becomes $\mathcal{H}(\mathbf{x}) = \mathcal{F}(\mathbf{x}) + \mathbf{x}$, as illustrated in Figure \ref{fig:residual_block}. This reformulation allows the network to learn identity mappings more easily, which helps to mitigate the vanishing gradient problem and enables the training of much deeper networks \citep{he2015deepresiduallearningimage}, often leading to improved performance on various computer vision tasks. 
+\paragraph{ResNet architecture}
+ResNet (Residual Network) is a deep convolutional neural network architecture that introduces the concept of residual learning by stacking residual blocks. The residual blocks learn residual functions with reference to the layer inputs, instead of learning unreferenced functions by connecting the input of a layer directly to its output via shortcut connections. Formally, let $\mathbf{x}$ be the input to a certain layer, and let $\mathcal{F}(\mathbf{x})$ be the desired underlying mapping to be learned by the layer. Instead of directly approximating $\mathcal{F}(\mathbf{x})$, residual blocks reformulate the mapping as $\mathcal{F}(\mathbf{x}) = \mathcal{H}(\mathbf{x}) - \mathbf{x}$, where $\mathcal{H}(\mathbf{x})$ is the original mapping. The layer then learns the residual function $\mathcal{F}(\mathbf{x})$, and the output of the layer becomes $\mathcal{H}(\mathbf{x}) = \mathcal{F}(\mathbf{x}) + \mathbf{x}$, as illustrated in Figure \ref{fig:residual_block}. This reformulation allows the network to learn identity mappings more easily, which helps to mitigate the vanishing gradient problem and enables the training of much deeper networks \citep{he2015deepresiduallearningimage}, often leading to improved performance on various computer vision tasks. 
 
-% \begin{figure}
-%     \centering
-%     \includegraphics[width=0.5\textwidth]{figures/residual_block.png}
-%     \caption{An example of residual block in ResNet architecture \citep{he2015deepresiduallearningimage}.}
-%     \label{fig:residual_block}
-% \end{figure}
+\begin{figure}
+    \centering
+    \includegraphics[width=0.5\textwidth]{figures/residual_block.png}
+    \caption{An example of residual block in ResNet architecture \citep{he2015deepresiduallearningimage}.}
+    \label{fig:residual_block}
+\end{figure}
 
-% \paragraph{Feature Pyramid Network (FPN)}
-% Feature Pyramid Network (FPN) is a multi-scale feature extraction technique that enhances the ability of convolutional neural networks to detect objects at different scales. FPN constructs a feature pyramid by combining low-resolution, semantically strong features with high-resolution, semantically weak features through a top-down pathway and lateral connections \citep{lin2017feature}, as illustrated in Figure \ref{fig:fpn_architecture}. This approach allows the network to leverage both high-level semantic information and fine-grained spatial details, which is particularly beneficial for detecting objects with different scales like cyanobacterias in microscope images with varying magnifications.
+\paragraph{Feature Pyramid Network (FPN)}
+Feature Pyramid Network (FPN) is a multi-scale feature extraction technique that enhances the ability of convolutional neural networks to detect objects at different scales. FPN constructs a feature pyramid by combining low-resolution, semantically strong features with high-resolution, semantically weak features through a top-down pathway and lateral connections \citep{lin2017featurepyramidnetworksobject}, as illustrated in Figure \ref{fig:fpn_architecture}. This approach allows the network to leverage both high-level semantic information and fine-grained spatial details, which is particularly beneficial for detecting objects with different scales like cyanobacterias in microscope images with varying magnifications.
 
-% \begin{figure}
-%     \centering
-%     \includegraphics[width=0.8\textwidth]{figures/fpn_architecture.png}
-%     \caption{Feature Pyramid Network \citep{lin2017feature}: blue outlines denote feature maps, with thicker lines indicating stronger semantic features. A top-down pathway upsamples high-level features and combines them with corresponding lower-level maps through lateral connections, generating rich multi-scale representations.}
-%     \label{fig:fpn_architecture}
-% \end{figure}
+\begin{figure}
+    \centering
+    \includegraphics[width=0.8\textwidth]{figures/fpn_architecture.png}
+    \caption{Feature Pyramid Network \citep{lin2017featurepyramidnetworksobject}: blue outlines denote feature maps, with thicker lines indicating stronger semantic features. A top-down pathway upsamples high-level features and combines them with corresponding lower-level maps through lateral connections, generating rich multi-scale representations.}
+    \label{fig:fpn_architecture}
+\end{figure}
 
 \paragraph{Combining ResNet and FPN to form the backbone of Faster-RCNN}
-We integrate the ResNet architecture with FPN to form the backbone of our faster-RCNN model. The ResNet layers extract hierarchical features from the input images, while the FPN enhances these features by creating a multi-scale feature pyramid. This combination allows the faster-RCNN model to effectively detect cyanobacterias of various sizes and scales in microscope images, improving overall detection accuracy and robustness.
-
+We integrate the ResNet architecture with FPN to form the backbone of our faster-RCNN model.
+The ResNet layers extract hierarchical features from the input images, while the FPN enhances these features by creating a multi-scale feature pyramid. 
+This combination allows the faster-RCNN model to effectively detect cyanobacterias of various sizes and scales in microscope images, improving overall detection accuracy and robustness.
+The logical Resnet-FPN backbone architecture is described as following: the input image is first feeded into the Resnet to extract feature maps at different levels, then these feature maps are passed through the FPN to generate a set of multi-scale feature maps, as shown in Figure~\ref{fig:fpn_architecture}. The anchor boxes in the RPN are then applied to these multi-scale feature maps in such a way that each level of the feature pyramid is responsible for detecting objects of specific scales, in particular, smaller objects are detected using higher-resolution feature maps, while larger objects are detected using lower-resolution feature maps, as shown in Figure~\ref{fig:resnet_fpn_combining}. 
 \subsection{Application deployment}
 Our application has two interfaces: one for the expert users (researchers and biologists) and one for general public users. Both of these interfaces are user-friendly and intuitive, they do not require users to have any technical knowledge or informatic background. These interfaces allow users to upload microscope images, view the detection results from backend deep learning model, and download the results for further analysis. These two interfaces share common features such as enable users to zoom in and out of the images, annotate the detected cyanobacterias.The expert interface has additional features such as authentication, dataset management, model retraining triggering. The regular user interface is publicly accessible without authentication, this interface also allows users to give feedback on detection results, under user-corrected labels, which will be send to experts for review and will be added to the dataset for future model retraining if approved by experts.
 
