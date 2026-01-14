@@ -1,0 +1,1342 @@
+\section{Mathematical formalism}
+\subsection{Preliminaries}\label{sec:supp_preliminaries}
+\paragraph{Notation conventions}
+In what follows, we use the following notation:
+\begin{itemize}
+    \item Sets are indicated by calligraphic letters, \eg $\D, \M, \T, \G$.
+    \item Random vectors are denoted by bold lowercase letters, \eg $\vx, \vy, \vz$.
+    \item $A \in \R^{M \times N}$ denotes a linear operator from $\R^N$ to $\R^M$ (\eg convolution, inpainting).
+    \item $\Normal{x; \mu, \Sigma}$ denotes the probability density function (PDF) of a Gaussian distribution with mean $\mu$ and covariance $\Sigma$ evaluated at $x$. The covariance matrix $\Sigma$ can be non-singular or singular (see \cref{def:supp_degenerate_gaussian}). 
+    \item The $n$-th coordinate of a vector $x\in \R^N$ is denoted either $x_n$ or $x[n]$. Similarly, the coordinates of a multivalued function $\phi:\R^N\to \R^N$  can be denoted either $\phi_n(x)$ or $\phi(x)[n]$.
+    \item The empirical data distribution $\ptrain$ is defined by 
+    \begin{equation}
+        \ptrain = \frac{1}{|\D|} \sum_{x\in \D} \delta_{x},   
+    \end{equation} 
+    where $\D$ is the training dataset of finite size $|\D|$.
+    %\item The true underlying distribution of $\vx$ is denoted by $\pdata$. 
+\end{itemize}
+
+\paragraph{Degenerate Gaussian distribution}
+We can define the multivariate Gaussian distribution for positive semi-definite covariance
+matrices~\citep{rao1973linear}. Below, we recall a simple definition of the positive semi-definite covariance 
+multivariate Gaussian, sometimes called the degenerate or singular multivariate Gaussian.
+\begin{definition}[Degenerate Gaussian distribution]\label{def:supp_degenerate_gaussian}
+    A random vector $\vz \in \R^N$ has a Gaussian distribution with mean $\mu \in \R^N$ and covariance matrix $\Sigma \in \R^{N \times N}, \Sigma \succeq 0$ if its probability density function (PDF) is given by:
+    \begin{equation}
+        \Normal{z; \mu, \Sigma} = \frac{1}{(2\pi)^{r/2} \sqrt{|\Sigma|_{+}}} \exp\left(-\frac{1}{2} (z - \mu)^\top \Sigma^{+} (z - \mu)\right) \mathbbm{1}_{\supp{\vz}}(z),
+    \end{equation}
+    on the support $z \in \supp{\vz} = \mu + \Im{\Sigma}$ and zero elsewhere.  
+    In this equation, $r = \mathrm{rank}(\Sigma)$, $\Sigma^{+}$ denotes the Moore-Penrose pseudo-inverse of $\Sigma$ and $|\Sigma|_{+}$ is the pseudo-determinant of $\Sigma$ (product of non-zero eigenvalues). 
+\end{definition}
+The support $\supp{\vz}$ of the distribution is the $r-$ dimensional affine subspace of $\R^N$, $r$ is the rank of $\Sigma$. The density is with respect to the Lebesgue measure restricted to $\supp{\vz}$, constructed via the pushforward measure of the standard Lebesgue measure on $\R^r$ by the affine map $v \mapsto \mu + \Sigma_r v$, where $\Sigma = \Sigma_r \Sigma_r^\top$.  
+This measure also coincides (up to a normalization constant, equal to the pseudo-determinant of $\Sigma$) with the $r-$dimensional Hausdorff measure. For completeness, we provide a simple derivation of the density of $\vz$ as follows. 
+
+Suppose $\Sigma_r \in \mathbb{R}^{n \times r}$ satisfies $ \Sigma = \Sigma_r \Sigma_r^\top $.
+Define the random vector
+$$\vz = \mu + \Sigma_r \vw, \quad \text{where } \vw \sim \mathcal{N}(0, I_r).$$
+Then $ \vz \sim \mathcal{N}(\mu, \Sigma) $, a degenerate Gaussian vector supported on the affine subspace
+$$ \supp{\vz} = \mu + \Im{\Sigma} = \mu + \Im{\Sigma_r} \subset \R^N. $$
+
+Let $ \Phi: \mathbb{R}^r \to \mathbb{R}^N $ be defined by:
+$$ \Phi(w) = \mu + \Sigma_r w. $$
+Then $ \Phi $ is a smooth, injective map from $ \R^r $ onto $ \supp{\vz} \subset \R^N $, and we consider the pushforward of Lebesgue measure $ \lambda^r $ under $ \Phi $, denoted $ \Phi_* \lambda^r $.
+The probability distribution of $ \vz $ is the pushforward of the standard Gaussian measure $ \gamma^r $ on $ \R^r $ via $ \Phi $:
+$$ \mathbb{P}_{\vz} = \Phi_* \gamma^r. $$
+This pushforward measure $ \mathbb{P}_{\vz} $ is given by, for any measurable set $A \subset \supp{\vz}$:
+$$
+\mathbb{P}_{\vz}(A) = \gamma^r(\Phi^{-1}(A)) = \int_{\Phi^{-1}(A)} g(z) \, d\lambda^r(z) 
+$$
+since $ \gamma^r $ has density $g(z) = \frac{1}{(2\pi)^{r/2}} e^{-\frac{1}{2} \|z\|^2} $
+with respect to $ \lambda^r $. Using the \href{https://en.wikipedia.org/wiki/Disintegration_theorem#Statement_of_the_theorem}{disintegration theorem}, we can write:
+\begin{equation*}
+    \mathbb{P}_{\vz}(A) = \int_{A} \int_{\Phi^{-1}(z)} g(y) d \mu_{z}(y) d(\Phi_{*} \lambda^r)(z) = \int_{A} g(\Phi^{-1}(z))  d(\Phi_{*} \lambda^r)(z),
+\end{equation*}
+since $\Phi^{-1}(z)$ is a singleton for $z \in A \subset \supp{\vz} \subset \R^N$, as $\Phi: \R^r \to \R^N$ is injective. We deduce that the density of $\mathbb{P}_{\vz}$ with respect to the Lebesgue measure restricted on $\supp{\vz}$, i.e. $\Phi_{*} \lambda^r$ is given by:
+\begin{equation*}
+    p(z) = g(\Phi^{-1}(z)) = \frac{1}{(2\pi)^{r/2}} \exp \left( -\frac{\norm{\Sigma_r^{+}(z - \mu)}^2}{2}\right) = \frac{1}{(2\pi)^{r/2}} \exp \left( -\frac{1}{2} (z - \mu)^\top \Sigma^+ (z - \mu) \right)
+\end{equation*}
+This density then should be normalized by the pseudo-determinant of $\Sigma$, come from the measure. 
+When the covariance matrix is non-singular, we recover the standard PDF of a Gaussian distribution. 
+
+\paragraph{Degenerate Multivariate Gaussian and Mahalanobis Distance}
+The Mahalanobis distance quantifies the distance from $z$ to $\mu$ relative to the covariance structure and is defined as:
+
+\begin{equation}
+D_\Sigma(z, \mu) = \sqrt{(z - \mu)^\top \Sigma^+ (z - \mu)}.
+\end{equation}
+
+When $z \not\in \supp{\vz}$, the density is zero, corresponding to an infinite effective distance outside the support.
+
+\begin{itemize}
+    \item Eigenvalue Decomposition. Consider the spectral decomposition of the covariance matrix:
+    \begin{equation*}
+        \Sigma = U \Lambda U^\top,
+    \end{equation*}
+    where:
+    \begin{itemize}
+        \item $U$ is an orthogonal matrix whose columns are the eigenvectors of $\Sigma$.
+        \item $\Lambda = \diag(\lambda_1, \lambda_2, \dots, \lambda_d)$ is a diagonal matrix with eigenvalues $\lambda_1 \geq \lambda_2 \geq \dots \geq \lambda_r > 0 = \lambda_{r+1} = \dots = \lambda_d$, sorted in descending order, with zeros corresponding to the degenerate directions.
+    \end{itemize}
+    The pseudo-inverse is:
+    \begin{equation}
+        \Sigma^+ = U \Lambda^+ U^\top,
+    \end{equation}
+    where $\Lambda^+ = \diag(1/\lambda_1, \dots, 1/\lambda_r, 0, \dots, 0)$.
+
+    Transform the coordinates to the eigen-basis by defining $y = U^\top (x - \mu)$. The Mahalanobis distance simplifies to:
+
+    \begin{equation}
+        D_\Sigma(x, \mu) = \sqrt{y^\top \Lambda^+ y} = \sqrt{\sum_{i=1}^r \frac{y_i^2}{\lambda_i}},
+    \end{equation}
+    since $y_i = 0$ for $i > r$ on the support $\supp{\vz}$. The exponent in the density becomes:   
+    \begin{equation}
+        -\frac{1}{2} \sum_{i=1}^r \frac{y_i^2}{\lambda_i}.
+    \end{equation}
+
+    \item Distance in Different Directions
+
+    The effect of deviations from the mean $\mu $ along the directions of the eigenvectors (principal axes) depends on the corresponding eigenvalues:
+
+    \begin{itemize}
+        \item \textbf{Directions with large eigenvalues ($\lambda_i \gg 0 $)}: The term $\frac{y_i^2}{\lambda_i} $ grows slowly as $|y_i| $ increases. Deviations along these high-variance directions contribute less to reducing the density, effectively scaling the distance by $\sqrt{\lambda_i} $. This allows larger Euclidean deviations in these directions.
+        \item \textbf{Directions with small positive eigenvalues ($0 < \lambda_i \ll 1 $)}: The term $\frac{y_i^2}{\lambda_i} $ grows rapidly even for small $|y_i| $. Deviations are heavily penalized, scaling the distance by $1 / \sqrt{\lambda_i} $, making small deviations appear ``far'' in the Mahalanobis sense.
+        \item \textbf{Directions with zero eigenvalues ($\lambda_i = 0 $)}: These correspond to the null space of $\Sigma$. Here, $y_i $ must be exactly zero for the density to be non-zero, enforced by the Dirac delta measure. Any non-zero deviation results in zero density, equivalent to an infinite Mahalanobis distance, indicating no variability in these directions.
+    \end{itemize}
+\end{itemize}
+
+\paragraph{Integration on linear subspaces}
+The following lemma is useful for change of variable with linear mapping \citep{federer1996geometric}.   
+\begin{lemma}[Integration on linear subspaces]\label{lemma:supp_integration_linear_subspace}
+    Let $\Normal{y; \mu, \Sigma}$ be the PDF of a Gaussian distribution in $\R^N$, with mean $\mu \in \R^N$ and covariance matrix $\Sigma \in \R^{N \times N}$ of rank $r_0 \leq N$. 
+    For any linear application $B: \R^N \to \R^P$, we have:
+        \begin{equation}
+            \int_{\R^N} f(B y) \Normal{y; \mu, \Sigma} d \Haus^{r_0}(y) = \int_{\R^P} f(v) \Normal{ v; B \mu, B \Sigma B^\top} d \Haus^{r}(v),   
+        \end{equation}
+        where $\Normal{ v; B \mu, B \Sigma B^\top}$ is the PDF of a (possibly degenerate) Gaussian distribution with respect to the $r-$dimensional Hausdorff measure $\Haus^{r}$, with $r$ being the rank of $B \Sigma B^\top$.
+        This PDF is supported on the $r-$dimensional subspace $B \mu + \Im{B \Sigma B^\top} \subset \Im{B} \subset \R^P$. 
+\end{lemma}
+\begin{proof}
+    The proof of this result is relatively straightforward by using the density of a degenerate Gaussian distribution \cref{def:supp_degenerate_gaussian}. 
+    Let $\vy \sim \Normal{\mu, \Sigma}$ and $\vz = B \vy$, then $\vz \sim \Normal{B \mu, B \Sigma B^\top}$. We have
+    \begin{align}
+        \int_{\R^N} f(B y) \Normal{y; \mu, \Sigma} d \Haus^{r_0}(y) &= \Mean{f(B \vy)} \\&= \Mean{f(\vz)} \\&= \int_{\R^P} f(v) \Normal{ v; B \mu, B \Sigma B^\top} d \Haus^{r}(v).
+    \end{align}
+\end{proof}
+\begin{remark}
+    When $\Sigma$ is full rank, the Hausdorff measure $\Haus^{r_0}$ coincides with the Lebesgue measure on $\R^N$. 
+\end{remark}
+
+\subsection{Minimum Mean Square Error (MMSE) estimator}
+The MMSE estimator is the optimal estimator in the following sense
+\begin{definition}[MMSE estimator]\label{def:supp_mmse}
+    Given two random vectors $\vx \in \X, \vy \in \Y$ and a linear operator $B: \Y \to \X$.
+    The MMSE estimator of $\vx$ given $B \vy$ is the best approximation \textbf{random variable} $\phi^\star(B \vy)$ to $\vx$, in the least-square sense: 
+    \begin{equation}
+        \xmmse = \phi^\star \circ B \quad \text{where} \quad \phi^{\star} = \argmin_{\phi : \X \to \X} \Mean{ \norm{\phi(B\vy) - \vx}^2}
+    \end{equation}
+\end{definition}
+It is well-known that the MMSE estimator coincides with the \textbf{conditional expectation}. That is, for any $y$ such that $p(y) > 0$, we have: 
+\begin{equation}
+    \xmmse(y) = \Mean{\vx \vert B \vy = B y} = \int x \cdot p(x \vert B y) dx 
+\end{equation}
+Composing $\xmmse$ with the random variable $\vy$, we get
+$$\xmmse(\vy) = \Mean{\vx \vert B \vy}.$$
+In particular, if $B\!=\!\Id$ (in this case $M = N$), the MMSE estimator reduces to the classical posterior mean: $\xmmse(y) = \Mean{\vx \vert \vy = y}$. 
+Note that both $\Mean{\vx \vert \vy = y}$ and $\Mean{\vx \vert \vy}$ are often called condition expectation, but these are different objects. 
+In particular, $\Mean{\vx \vert \vy = \cdot}$ is a function $\Y \to \X$ while $\Mean{\vx \vert \vy}$ is a random variable assuming values in $\X$. 
+However, finding the MMSE estimator amounts to finding the optimal function $\phi^\star$.
+
+\subsection{Constrained Minimum Mean Square Error (MMSE) estimator}
+The classical MMSE estimator is defined as the best approximation function over the space of measurable function $\Y \to \X$. 
+When adding constraints to the estimator, we would like to find the best approximation function over a sub vector space $\M$. 
+\begin{equation}
+    \min_{\phi \in \M} \Mean{ \norm{\phi(B \vy) - \vx}^2}
+\end{equation}
+For example, the subspace $\M$ could be the set of measurable functions from $\X \to \X$ and translation equivariant. 
+\subsection{Optimality condition}
+We first state a simple first-order sufficient and necessary optimality condition for solving the Constrained MMSE. 
+\begin{proposition}[Optimality condition]\label{prop:supp_optimality_condition}
+    Let $\vx \in \X, \vy \in \Y$ be two random variables and $\M$ is a vector space of functions from $\X$ to $\X$, $B$ be a linear operator from $\Y$ to $\X$. 
+    Then $\phi^\star$ is a minimizer of 
+    \begin{equation*}
+        \min_{\phi \in \M} \Mean{ \norm{\phi(B \vy) - \vx}^2}
+    \end{equation*} 
+    if and only if
+    \begin{equation}
+        \Mean{\inner{\varphi(B \vy), \phi^\star(B \vy) - \vx}} = 0 \qquad \text{ for all } \varphi \in \M.
+    \end{equation}
+    
+\end{proposition}
+\begin{proof}
+    Let $J(\phi) = \Mean{ \norm{\phi(B \vy) - \vx}^2}$. For all $t \in \R$ and for all $\varphi \in \M$, we have
+    \begin{align*}
+        J(\phi^\star + t \varphi) &= \Mean{\norm{(\phi^\star + t \varphi) (B \vy) - \vx}^2} \\
+        &= J(\phi^\star) + 2t \underbrace{\Mean{\inner{\varphi(B \vy), \phi^\star(B \vy) - \vx}} }_{a}  + t^2  \underbrace{ \Mean{\norm{\varphi(B \vy)}^2}}_{b}\\
+        &= J(\phi^\star) + 2a t + b t^2 
+    \end{align*}
+    Therefore, $\phi^\star$ is a minimizer of $J$ on $\M$ if and only if $J(\phi^\star + t \varphi) \geq J(\phi^\star)$ for all $t \in \R$ and all $\varphi \in \M$.
+    This is equivalent to the condition that $2a t + b t^2  \geq 0$, for all $t \in \R$ and all $\varphi \in \M$. 
+    Since this difference term is a quadratic function in $t$ and $b \geq 0$, it is non-negative for all $t \in \R$ if and only if $a = 0$.
+    Therefore, we have the sufficient and necessary condition that $\Mean{\inner{\varphi(B \vy), \phi^\star(B \vy) - \vx}} = 0$ for all $\varphi \in \M$.
+\end{proof}
+
+The optimality condition \cref{prop:supp_optimality_condition} states that the residual $\phi^\star(B \vy) - \vx$ is orthogonal, in the $L^2$ sense, to every perturbation in the feasible set $\M$. Equivalently, $\phi^\star(B \vy)$ is the orthogonal projection of $\vx$ onto $\M$ in the $L^2$ sense. When $\M$ is the space of all square-integrable functions of $\vy$ (\ie no constraints) abd $B=\Id$, this projection yields the classical MMSE estimator, $\Mean{\vx \vert \vy}$. In the constrained case, $\phi^\star(B \vy)$ can also be viewed as the orthogonal projection of the conditional expectation $\Mean{\vx \vert \vy}$ onto the subspace $\{\phi(B \y) : \phi \in \M \}$.
+\begin{proposition}\label{prop:supp_projection_mmse}[\cref{prop:projection_mmse} in the main paper]
+    Given a closed set $\M$. 
+    The $\M$-constrained MMSE estimator in~\cref{def:constrained_mmse} is the orthogonal projection (in $L^2$ sense) of the posterior mean $\Mean{\vx \vert \vy}$ onto the subspace of $\vy$-measurable random vectors of form $\mathcal{X} = \{ \phi(B\vy) : \phi \in \M \}$.
+    That is,
+    $$
+        \hat{x}_{\M}(\vy) = \Pi_{\mathcal{X}} \, \Mean{\vx \vert \vy}.
+    $$
+\end{proposition}
+\begin{proof}%[Proof of~\cref{prop:projection_mmse}]
+The classes $\Mtrans$ and $\Mtransloc$ are linear subspaces of the space of measurable functions from $\R^N$ to $\R^N$: they are closed under addition and scalar multiplication, hence the projection is well defined.
+The MMSE estimator in~\cref{prop:expression_MMSE} is the posterior mean $\Mean{\x \vert \y}$, which is the orthogonal projection of $\x$ onto the space of $\y$-measurable random vectors. 
+Similarly, the $\M-$constrained MMSE estimator is the projection of $\x$ on to the subspace $\{\phi(B \y) : \phi \in \M \}$. 
+Using the Pythagorean decomposition, for any $\phi \in \M$, we have
+\begin{equation}\label{eq:supp_pythagorean_decomposition}
+    \Mean{\norm{\phi(B \y) - \x}^2} = \Mean{\norm{\phi(B \y) - \Mean{\x \vert \y}}^2} + \Mean{\norm{\Mean{\x \vert \y} - \x}^2}
+\end{equation}  
+Therefore
+\begin{equation}
+    \argmin_{\phi \in \M} \, \Mean{\norm{\phi(B \y) - \x}^2} = \argmin_{\phi \in \M} \, \Mean{\norm{\phi(B \y) - \Mean{\x \vert \y}}^2}
+\end{equation}
+and the $\M-$constrained MMSE in~\cref{def:constrained_mmse} is the projection of the posterior mean $\Mean{\x \vert \y}$ onto the subspace $\{\phi(B \y) : \phi \in \M \}$.    
+
+Moreover, the decomposition in~\cref{eq:supp_pythagorean_decomposition} has interesting interpretation: it isolates the sources of error in the estimation. 
+The first term $\Mean{\norm{\phi(B \y) - \Mean{\x \vert \y}}^2}$ is the approximation error due to the restriction to the subspace $\M$, while the second term $\Mean{\norm{\Mean{\x \vert \y} - \x}^2}$ is the irreducible Bayes error.
+\end{proof}
+
+\subsection{Structural constraint: equivariant functions}
+\label{sub:definition_equiv}
+The below definitions are taken from \citep{Celledoni_2021_equivariant_neural_networks}. 
+\begin{definition}[Group] A \emph{group}, to be denoted $\G$, is a set equipped with an associative operator $\cdot : \G \times \G \to \G$, which satisfies the following conditions:
+    \begin{enumerate}
+        \item If $g_1, g_2 \in \G$ then $g_2 \cdot g_1 \in \G$
+        \item If $g_1, g_2, g_3 \in \G$ then $(g_1 \cdot g_2) \cdot g_3 = g_1 \cdot (g_2 \cdot g_3)$
+        \item There exists $\id \in \G$ such that $e \cdot g = g \cdot \id = g$ for all $g \in \G$.
+        \item If $g \in \G$ there exists $g^{-1} \in \G$ such that $g^{-1} \cdot g = g \cdot g^{-1} = \id$.
+    \end{enumerate}    
+\end{definition}
+\begin{definition}[Group action]
+    Given a group $\G$ and a set $\X \subset \R^N$, we say that $\G$ acts on $\X$ if there exists a function $T: \G \times \X \to \X$ (we denote by $T_g(x)$ for $g \in \G$ and $x \in \X$) that satisfies:
+    \begin{equation*}
+        T_{g_1} \circ T_{g_2} = T_{g_1 \cdot g_2} \qquad \text{and} \qquad T_{\id} = \mathrm{id}
+    \end{equation*} 
+\end{definition}
+Given a general group $\G$. A function $\phi: \X \to \X$ and group action $T$ of $\G$ on $\X$. A function $\phi$ is called $\G$-\emph{equivariant} if it satisfies
+\begin{equation*}
+    \phi(T_g(y)) = T_g \phi(y) \qquad \text{for all } x \in \X \text{ and for all } g \in \G.
+\end{equation*}
+\begin{proposition}\label{prop:supp_reynolds_averaging}
+    If the group $\G$ is finite, the following properties hold true:
+    \begin{enumerate}
+        \item \textbf{Invariance}: for any function $\phi: \X \to \R$, the function $\bar{\phi} = \sum_{g} \phi \circ T_g$ is invariant. (And similarly for function defined in $\Y$).  
+        \item \textbf{Equivariance}: for any function $\phi: \X \to \X$, the function $\bar{\phi} = \sum_{g} T_g^{-1} \circ \phi \circ T_g$ is equivariant. This is called \textbf{Reynolds averaging}.
+    \end{enumerate} 
+\end{proposition}
+
+For image data $x \in \R^N$, let $H, W \in \mathbb{N}$ be the dimensions of a discrete grid $\Omega = \Z_H \times \Z_W$ with $H \times W = N$. 
+\begin{definition}[Translation equivariant functions]
+    Let $\T = \Z_H \times \Z_W$ be the group of 2D cyclic translations. 
+    For every group element $g = (g_h, g_v) \in \T$, we define the \emph{translation operator} $T_g: \R^N \to \R^N$ as the permutation matrix that acts on an image $x \in \R^N$ by shifting its indices:
+    \[
+        (T_g x)[i, j] = x[(i - g_h) \bmod H, \, (j - g_v) \bmod W]
+    \]
+    for all $(i, j) \in \Omega$.
+    A measurable map $\phi: \R^N \to \R^N$ is said to be \emph{translation equivariant} if it commutes with the translation operator for all $g \in \T$:
+    \[
+        \phi(T_g x) = T_g \phi(x) \qquad \text{for all } x \in \R^N.
+    \]
+\end{definition}
+
+
+\subsection{Structural constraints: local and translation equivariant functions}
+\label{sub:definition_local_equiv}
+We first define precisely the patch extractor. 
+Let $n \in \Omega$ be a pixel coordinate on the grid. We define the \emph{patch extractor} $\Pi_n: x \in \X \to \Pi_n x = x[\omega_n] \in \R^P$ which extracts a square patch $x[\omega_n]$ of size $\sqrt{P} \times \sqrt{P}$ centered at $n$.
+The extraction uses circular boundary conditions, such that the patch is given by the grid values at indices:
+\[
+    \omega_n = \{ n + \delta \pmod{(H, W)} \mid \delta \in \Delta \}
+\]
+where $\Delta$ is the set of offsets defining the square neighborhood centered at zero.
+
+\begin{definition}[Local and translation-equivariant functions]
+\label{def:supp_transloc_equiv_fn}
+    A measurable map $\phi: \X \to \X$ is said to be \emph{local} if it can be represented as a sliding window operation. 
+    Specifically, if there exist a measurable function $f: \R^P \to \R$ such that for all $x \in \X$ and all $n \in \Omega$:
+    \[
+        \phi(x)[n] = f(\Pi_n x).
+    \]
+    By construction, any such function $\phi$ is also translation equivariant due to the circular boundary conditions of the patch extractor $\Pi_n$.
+    We denote by $\Mtransloc$ the set of all such maps.
+\end{definition}
+
+This class captures standard CNNs with finite kernels and weight sharing or patch-based methods, \eg MLPs acting on patches~\citep{glimpse_local}: the output of $\phi$ at pixel $n$, denoted $\phi(x)[n]$ or $\phi_n(x)$, depends only on the local patch (receptive field) $x[\omega_n]$. 
+Note that by construction, functions in \cref{def:supp_transloc_equiv_fn} are translation equivariant.
+
+
+% ############################################################
+% ################          THEORY         ###################
+% ############################################################
+
+\section{Analytical solution for inverse problems}
+In the following, we will derive the analytical solution for the MMSE estimator under these constraints.
+
+Consider a random variable $\vx \sim \pdata, \vx \in \X$ and the forward (measurement) model
+\begin{equation}
+    \vy = A \vx + \ve \qquad \text{ where } \qquad \ve \sim \Normal{0, \sigma^2 \Id}.
+\end{equation}
+We would like to find the MMSE estimator of $\vx$ given $\vy$, with or without constraints. 
+In this section, we will derive the analytical solution for the MMSE estimator under various constraints, when the true underlying distribution of $\vx$ is replaced by the empirical distribution $\ptrain$. 
+Under Gaussian noise, the likelihood of the measurement $\vy$ given $\vx$ is given by
+\begin{equation}
+    p(y \vert x) = \Normal{y; A x, \sigma^2 \Id} \propto \exp\left( -\frac{\norm{y - A x}^2}{2 \sigma^2} \right).
+\end{equation}
+Therefore, for any function $\phi^{\star}$ and $\varphi$, we have
+\begin{align}
+    \Mean{\inner{\varphi(B \vy), \phi^\star(B \vy) - \vx}} &= \E_{\x \sim \ptrain} \E_{\vy \vert \vx} \left[ \inner{\varphi(B \vy), \phi^\star(B \vy) - \vx} \right] \notag \\
+    &= \frac{1}{|\D|} \sum_{x \in \D} \int_{\Y} \inner{\varphi(B y), \phi^\star(B y) - x} p(y \vert x) dy \notag \\
+    &= \frac{1}{|\D|} \sum_{x \in \D} \int_{\Y} \inner{\varphi(B y), \phi^\star(B y) - x} \Normal{y; A x, \sigma^2 \Id} dy \label{eq:supp_linear_term}
+\end{align}
+This simplified expression (\ref{eq:supp_linear_term}) is useful for deriving the analytical solution of the MMSE estimator under various constraints.
+
+\subsection{Unconstrained MMSE estimator}
+We start with the unconstrained MMSE estimator, which is the optimal estimator in the least-square sense. Then, we will derive the equivariant MMSE estimator, which is the optimal estimator under the constraint of equivariance to translation. Then, we will derive the local MMSE estimator, which is the optimal estimator under the constraint of locality. Finally, we will also show that combining both constraints leads to a local and equivariant MMSE estimator.
+\begin{proposition}[Unconstrained MMSE estimator]\label{prop:supp_unconstrained_mmse}
+    When the data distribution is replaced by the empirical distribution $\ptrain$, the unconstrained MMSE estimator of $\vx$ given $\vy$ is given by
+    \begin{equation}
+        \xmmse(y) = \phi^\star(B y) \quad \text{where} \quad \phi^\star(v) = \frac{\sum_{x \in \D} x \Normal{v; B A x, \sigma^2 BB^\top}}{\sum_{x \in \D} \Normal{v; B A x, \sigma^2 BB^\top}} \quad \text{for any } v \in \Im{B}. 
+    \end{equation}
+    The estimator is well-defined for all $y \in \Y$.     
+\end{proposition}
+\begin{proof}
+    We will verify that $\phi^*$ satisfies the optimality condition from \cref{prop:supp_optimality_condition}.
+    Using \cref{eq:supp_linear_term}, for any $\varphi$, we have:
+    \begin{align}
+        \Mean{\inner{\varphi(B \y), \phi^*(B \y) - \x}} &=\frac{1}{|\D|}\sum_{x\in\D}\int_{\R^M} \langle \varphi(B y), \phi^*(B y) - x\rangle \Normal{y,Ax,\sigma^2 \Id_M} dy \notag\\
+        &=\frac{1}{|\D|}\sum_{x\in\D}\int_{\R^N} \langle \varphi(v), \phi^*(v) - x \rangle \Normal{v,BAx,\sigma^2 BB^\top} d \Haus^r(v)\label{eq:proof_unconstrained_mmse_change_of_variable}\\
+        &= \frac{1}{|\D|}\int_{\R^N} \left\langle \varphi(v), \phi^*(v) \sum_{x\in\D}\Normal{v,BAx,\sigma^2 BB^\top}-x \sum_{x\in\D}\Normal{v,BAx,\sigma^2 BB^\top}\right\rangle d \Haus^r(v) \notag\\
+        &=0 \notag
+    \end{align} 
+    where \cref{eq:proof_unconstrained_mmse_change_of_variable} comes from the change of variable $v = B y$ and \cref{lemma:supp_integration_linear_subspace}.
+    The last equality holds by definition of $\phi^*$. 
+\end{proof}
+
+\subsection{Equivariant MMSE estimator}\label{sec:supp_equivariant_mmse}
+
+\begin{proposition}[Equivariant MMSE estimator]\label{prop:supp_equivariant_mmse}
+    The equivariant MMSE estimator is given by, for any $y \in \Y$:
+        \begin{equation}
+            \xtrans(y) = \phi^\star(B y) \qquad \text{where} \qquad \phi^\star(v) 
+            =   \frac{\sum_{x \in \D, g \in \G} T_g x \cdot \Normal{T_g^{-1} v; B A x, \sigma^2 B B^\top}}{\sum_{x \in \D, g \in \G}  \Normal{T_g^{-1} v; B A x, \sigma^2 B B^\top}}
+        \end{equation}
+        for any $v \in \bigcup_{g} T_g \Im{B} \subset \X$.
+\end{proposition}
+\begin{proof}
+    We will verify that $\phi^\star$ is admissible and satisfies the optimality condition \cref{prop:supp_optimality_condition}.
+
+    \textbf{Admissibility.} 
+    Let $q(v, x) = \Normal{v; B A x, \sigma^2 B B^\top}$ denote the PDF of a Gaussian distribution with mean $B A x$ and covariance $\sigma^2 B B^\top$. 
+    The optimal estimator can be written as:
+    \begin{equation}
+        \phi^\star(v) = \frac{\sum_{x \in \D, g \in \G} T_g x q(T_g^{-1} v, x)}{\sum_{x \in \D, g \in \G}  q(T_g^{-1} v, x)}
+    \end{equation}
+    The denominator $\sum_{x \in \D, g \in \G}  q(T_g^{-1} v, x) = \sum_{g \in \G} \bar{q}_1(T_g^{-1} v)$ is $\G-$invariant by \cref{prop:supp_reynolds_averaging}, 
+    where $\bar{q}_1(v) = \sum_{x \in \D} q(v, x)$.
+    
+    The nominator $\sum_{x \in \D, g \in \G} T_g x \cdot q(T_g^{-1} v, x) = \sum_{g \in \G} T_g \bar{q}_2(T_g^{-1} v)$ is $\G-$equivariant, where $\bar{q}_2(v) = \sum_{x \in \D} x \cdot q(v, x)$.
+    Therefore, $\phi^\star$ is admissible, that is $\phi^\star \in \Mtrans$. 
+
+    \textbf{Optimality condition.}
+    By using \cref{eq:supp_linear_term}, for any $\varphi \in \Mtrans$, we have:
+    \allowdisplaybreaks
+    \begin{align}
+        &\Mean{\inner{\varphi(B \y), \phi^\star(B  \y) - \vx}}  \notag \\
+        &=  \frac{1}{|\D|}  \sum_{x \in \D} \int_{\Y} \inner{\varphi(B  y), \phi^\star(B  y) - x } \Normal{y; A x, \sigma^2 \Id_N} dy \notag \\
+        &= \frac{1}{|\D|}  \sum_{x \in \D} \int_{\X} \inner{\varphi(v), \phi^\star(v) - x } \Normal{v; B A x, \sigma^2 B B^\top} d \Haus^r(v) \label{supp_proof:equiv_est_change_variable_operator} \\
+        &= \frac{1}{|\D| |\G|} \sum_{g \in \G, x \in \D} \int_{\X} \inner{ T_g^{-1} \varphi(T_g v), T_g^{-1} \phi^\star( T_g v)
+         - x } \Normal{v; B A x, \sigma^2 B B^\top} d \Haus^r(v)  \label{supp_proof:equiv_est_translation} \\
+        &= \frac{1}{|\D| |\G|} \sum_{g \in \G, x\in \D} \int_{\X} \inner{\varphi(T_g v), \phi^\star(T_g v) - T_g x }  \Normal{v; B A x, \sigma^2 B B^\top} d\Haus^r(v) \notag \\
+        &= \frac{1}{|\D| |\G|} \sum_{g \in \G, x\in \D} \int_{\X} \inner{\varphi(v), \phi^\star(v) - T_g x } \Normal{T_g^{-1} v; B A x, \sigma^2 B B^\top} d\Haus^r(v) \label{supp_proof:equiv_change_variable} \\
+        &= \frac{1}{|\D| |\G|} \sum_{g \in \G, x\in \D} \int_{\X} \inner{\varphi(v), \phi^\star(v) - T_g x }  \Normal{T_g^{-1} v; B A x, \sigma^2 B B^\top} d\Haus^r(v) \label{supp_proof:equiv_change_variable_translation} \\
+        &= \frac{1}{|\D| |\G|} \int_{\X} \inner{\varphi(v), \phi^\star(v) \sum_{g \in \G, x\in \D} q(T_g^{-1} v, n, x) - \sum_{g \in \G, x\in \D} T_g x \cdot q(T_g^{-1} v, n, x)  } d\Haus^r(v) \notag \\
+        &= 0 \notag
+    \end{align}
+    where $q(T_g^{-1} v, n, x) \eqdef  \Normal{T_g^{-1} v; B A x, \sigma^2 B B^\top}$ and
+    \begin{itemize}
+        \item In~\cref{supp_proof:equiv_est_change_variable_operator}, we apply \cref{lemma:supp_integration_linear_subspace} for $B$. 
+        \item In~\cref{supp_proof:equiv_est_translation}, we use the fact that $\varphi = \varphi \circ T_g \circ T_g^{-1} = T_g \circ \varphi \circ T_g^{-1}$ for all $g \in \G$ and $\varphi \in \Meq$. Moreover, $T_{g}^{-1} = T_g^{T}$ for all $g \in \G$. 
+        \item In~\cref{supp_proof:equiv_change_variable}, we apply \cref{lemma:supp_integration_linear_subspace} for the change of variables.
+        \item In~\cref{supp_proof:equiv_change_variable_translation}, we use the change of variable $T_g v \to v$ and the fact that $T_g$ is an isometry.
+    \end{itemize} 
+\end{proof}
+
+\begin{proof}[Proof of~\cref{cor:equivariant_mmse_properties}]\label{proof:supp_equivariant_properties}
+    The first point is a direct consequence of~\cref{thm:equivariant_mmse}. 
+    We start by the second point. 
+    When $B = \Id$, the weights of the E-MMSE estimator become:
+    \begin{align*}
+        w_g(x \vert y) &\propto \Normal{T_g^{-1} y; A x, \sigma^2 \Id} 
+        \\&\propto \exp \left( -\frac{1}{2 \sigma^2} \norm{T_g^{-1} y - A x}^2 \right)
+        \\&\propto \exp \left( -\frac{1}{2 \sigma^2} \norm{T_g^{-1} (A \bar{x} + e) - A x}^2 \right)
+        \\&\propto \exp \left( -\frac{1}{2 \sigma^2} \norm{T_g^{-1} A \bar{x} - A x + T_g^{-1} e}^2 \right)
+    \end{align*}
+    and in the presence of $B$, the weights of the E-MMSE estimator become:
+    \begin{align*}
+        w_g(x \vert y) &\propto \Normal{T_g^{-1} B y; B A x, \sigma^2 B B^{\top}}
+        \\&\propto \exp \left( -\frac{1}{2 \sigma^2} \norm{B^+ (T_g^{-1} B y - B A x)}^2 \right)
+        \\&\propto \exp \left( -\frac{1}{2 \sigma^2} \norm{B^+ (T_g^{-1} B (A \bar{x} + e) - B A x)}^2 \right)
+        \\&\propto \exp \left( -\frac{1}{2 \sigma^2} \norm{B^+ (T_g^{-1} B A \bar{x} - B A x) + B^+ T_g^{-1} B e}^2 \right)
+        % &\propto \exp \left( -\frac{1}{2 \sigma^2} \norm{A T_g^{-1} A^+ y - A A^+ A x}^2 \right) \\ 
+        % &\propto \exp \left( -\frac{1}{2 \sigma^2} \norm{A T_g^{-1} A^+ (A \bar{x} + e) - A x}^2 \right) \\ 
+    \end{align*}
+    Therefore, in general, the two weights are different. In particular, they handle the noise differently: 
+        \begin{itemize}
+            \item The physics-agnostic weights depend on the distance between the shifted measurement $T_g^{-1} A \bar{x}$ and the training measurements $A x$. The noise is only shifted by the transformation $T_g^{-1}$. 
+            \item The physics-aware weights depend on the distance between the project-then-shift measurement $T_g^{-1} B A \bar{x}$ and the linear reconstruction of training measurements $B A x$, through the Mahalanobis metric with $B$. The distance is scaled by the eigenvalues of $B$ in each direction, see~\cref{sec:supp_preliminaries}.  
+            The noise is seen through the operator $B^+ T_g^{-1} B$, which combines projection, transformation and back-projection. 
+            In particular, the operator norm $\norm{B^+ T_g^{-1} B}_{\mathrm{op}}$ captures the amplification of noise due to these operations. 
+        \end{itemize}
+    
+    We now prove the third point.
+    Under the additional assumption that $A$ and $B$ commute with the translation operators $T_g$ and $B$ is invertible, we have:
+    \begin{align*}
+        w_g(x \vert y) 
+        & \propto \exp \left( -\frac{1}{2\sigma^2} \norm{ B^+ (T_g^{-1} By - BAx)}^2 \right) \\
+        & \propto \exp \left( -\frac{1}{2\sigma^2} \norm{T_g^{-1}y - Ax}^2 \right) \\ 
+        & \propto \exp \left( -\frac{1}{2\sigma^2} \norm{y - A T_g x}^2 \right)
+    \end{align*}
+    Therefore, the E-MMSE estimator can be rewritten as:
+    \begin{equation*}
+        \xtrans(y) = \frac{\sum_{x \in \D, g \in \G} T_g x \cdot \Normal{y; A T_g x, \sigma^2 \Id}}{\sum_{x \in \D, g \in \G}  \Normal{y; A T_g x, \sigma^2 \Id}} = \frac{\sum_{x \in \T(\D)} x \cdot \Normal{y; A x, \sigma^2 \Id}}{\sum_{x' \in \T(\D)}  \Normal{y; A x', \sigma^2 \Id}} = \xmmseaug(y)
+    \end{equation*}
+    Hence, the E-MMSE estimator with dataset $\D$ coincides with the unconstrained MMSE estimator with augmented dataset $\T(\D)$.
+    Moreover, we can see that the weights $w_g(x \vert y)$ are independent of $B$, which implies that the physics-agnostic and physics-aware E-MMSE estimators coincide. 
+\end{proof}
+
+% \subsection{Local MMSE estimator}
+% \begin{proposition}[Local estimator for inverse problem]\label{prop:supp_local_mmse}
+%         Let $Q_n \in \R^{P \times M}$ denote the matrix $\Pi_n B$.  
+%         The local-MMSE is defined in $\Im{B}$ by:
+%         \begin{equation*}
+%             \phi^\star_n = f_{\phi^\star, n} \circ \Pi_n \qquad \text{ where } f_{\phi^\star, n}(z) = \frac{\sum_{x \in \D} x_n \Normal{z; Q_n A x, \sigma^2 Q_n Q_n^\top}}{\sum_{x \in \D} \Normal{z; Q_n A x, \sigma^2 Q_n Q_n^\top}}.
+%         \end{equation*}
+% \end{proposition}
+% \begin{proof}
+%     By construction, the estimator $\phi^\star \in \Mloc$. We will verify that the optimality condition \cref{prop:supp_optimality_condition} holds.  
+%     By using \cref{eq:supp_linear_term}, for any $\varphi \in \Mloc$, we have:
+%     \begin{align}
+%         &\Mean{\inner{\varphi(B \y), \phi^\star(B  \y) - \x}}  \notag \\
+%         &=  \frac{1}{|\D|}  \sum_{x \in \D} \int_{\Y} \inner{\varphi(B  y), \phi^\star(B  y) - x } \Normal{y; A x, \sigma^2 \Id_N} dy \notag \\
+%         &=  \frac{1}{|\D|}  \sum_{x \in \D} \int_{\Y} \sum_{n = 1}^{N} f_{\varphi, n} (\Pi_n B  y) \left(  f_{\phi^\star, n}(\Pi_n B  y) - x_n \right)  \Normal{y; A x, \sigma^2 \Id} dy \notag \\
+%         &=  \frac{1}{|\D|}  \sum_{x \in \D} \sum_{n = 1}^{N}  \int_{\Y} f_{\varphi, n}(Q_n  y) \left(  f_{\phi^\star, n}(Q_n  y) - x_n \right)  \Normal{y; A x, \sigma^2 \Id} dy \notag \\
+%         &=  \frac{1}{|\D|}  \sum_{x \in \D} \sum_{n = 1}^{N}  \int_{\R^P} f_{\varphi, n}(z) \left(  f_{\phi^\star, n}(z) - x_n \right) \underbrace{\Normal{z; Q_n A x, \sigma^2  Q_n Q_n^\top}}_{q(z, n, x)} d \Haus^{r_n}(z) \label{supp_proof:local_change_of_variable} \\
+%         &=  \frac{1}{|\D|}  \sum_{n = 1}^{N}  \int_{\R^P}  f_{\varphi, n}(z) \left( f_{\phi^\star, n}(z) \sum_{x \in \D} q(z, n, x) - \sum_{x \in \D} x_n q(z, n, x) \right) d \Haus^{r_n}(z) \notag \\
+%         &= 0 \notag
+%     \end{align}
+%     where in \cref{supp_proof:local_change_of_variable}, we use \cref{lemma:supp_integration_linear_subspace} for change of variable and $r_n = \rank{Q_n}$.
+% \end{proof}
+\subsection{Local and Translation Equivariant MMSE estimator}\label{sec:supp_local_trans_mmse}
+\begin{proposition}[Local and translation equivariant MMSE estimator]
+    \label{prop:supp_local_trans_estimator}
+        Suppose that the $N$ matrices $Q_{n} = \Pi_n B \in \R^{P \times M}$ have \textbf{constant rank} $r>0$.
+        The local and equivariant MMSE is defined for any $y \in \Y$ by:  
+        \begin{equation}
+            \xtransloc(y) = \phi^\star(B y),
+        \end{equation}
+        where
+        \begin{equation}
+            \phi^\star_n = f_{\phi^\star} \circ \Pi_n \qquad \text{with} \qquad
+            f_{\phi^\star}(v) = \frac{\sum_{x \in \D} \sum_{n = 1}^{N} x_n \Normal{z; Q_n A x, \sigma^2 Q_n Q_n^\top}}{\sum_{x \in \D} \sum_{n = 1}^{N} \Normal{z; Q_n A x, \sigma^2 Q_n Q_n^\top}}
+        \end{equation}
+\end{proposition}
+\begin{proof}
+    We will verify that $\phi^\star$ is admissible and satisfies the optimality condition \cref{prop:supp_optimality_condition}.
+
+    \textbf{Admissibility.}
+    Firstly, we show that $\phi^\star \in \Mtransloc$. By construction, we have $\phi^\star = (\phi^\star_1, \cdots \phi^\star_N) = (f_{\phi^\star} \circ \Pi_1, \cdots f_{\phi^\star} \circ \Pi_N)$, therefore $\phi^{\star}$ is local. 
+    For any $g \in \left\{ 1, \cdots N \right\}$, the group transformation (translation) $T_g$ is defined as 
+    $T_g : (x_1, \cdots, x_N) \in \X \mapsto (x_{1 - g}, \cdots, x_{N - g}) \in \X$, where $x_{n - g} = x_{n - g \equiv N}$ (circular boundary). For any $g$, we have 
+    \begin{align*}
+        \phi^\star \circ T_g &=  (\phi^\star_1 \circ T_g , \cdots \phi^\star_N \circ T_g) \\
+        &= (f_{\phi^\star} \circ \Pi_1 \circ T_g, \cdots f_{\phi^\star} \circ \Pi_N \circ T_g)\\
+        &= (f_{\phi^\star} \circ \Pi_{1 - g}, \cdots f_{\phi^\star} \circ \Pi_{1 - g})  \qquad \text{ where } \Pi_{n - g} = \Pi_{n - g \equiv N} \text{ (circular boundary)}\\
+        &= T_g \circ \phi^\star 
+    \end{align*}
+    Therefore, $\phi^{\star}$ is translation equivariant. We deduce that $\phi^\star \in \Mtransloc$. 
+
+    \textbf{Optimality condition.} We will verify that this estimator satisfies the optimality condition \cref{prop:supp_optimality_condition}.
+    By using \cref{eq:supp_linear_term}, for any $\varphi \in \Mtransloc$, we have:
+    \allowdisplaybreaks
+    \begin{align*}
+        &\Mean{\inner{\varphi(B \y), \phi^\star(B  \y) - \x}}  \\
+        &= \frac{1}{|\D|}  \sum_{x \in \D} \int_{\Y} \inner{\varphi(B  y), \phi^\star(B  y) - x } \Normal{y; A x, \sigma^2 \Id_N} dy \notag \\
+        &= \frac{1}{|\D|}  \sum_{x \in \D} \sum_{n = 1}^{N} \int_{\Y} f_{\varphi} (\Pi_n B  y) \left( f_{\phi^\star} (\Pi_n B y) - x_n  \right) \Normal{y; A x, \sigma^2 \Id_N} dy \notag \\
+        &= \frac{1}{|\D|}  \sum_{x \in \D} \sum_{n = 1}^{N} \int_{\R^P} f_{\varphi} (z) \left( f_{\phi^\star} (z) - x_n  \right) \underbrace{\Normal{z; Q_{n} A x, \sigma^2 Q_{n} Q_{n}^\top}}_{q(v, n, x)} d \Haus^r(z) \notag \\
+        &= \frac{1}{|\D|} \int_{\R^P} f_{\varphi} (v) \left( f_{\phi^\star} (v) \sum_{x \in \D} \sum_{n = 1}^{N}  q(v, n, x) - \sum_{x \in \D} \sum_{n = 1}^{N} x_n q(v, n, x) \right) d \Haus^r(v) \notag \\
+        &= 0
+    \end{align*}
+\end{proof}
+
+The constant rank assumption in~\cref{prop:supp_local_trans_estimator} can be relaxed by stratifying the image space according to the rank of the matrices $Q_n$ as follows.
+\begin{proposition}[Local and translation equivariant MMSE estimator -- rank stratification]
+    \label{prop:supp_local_trans_estimator_general}
+    Let $Q_n = \Pi_n B \in \R^{P \times M}$, and for each $r \in \{0,1,\dots,P\}$ define 
+    $$
+        I_r = \{ n \in [1\!:\!N] : \rank{Q_n} = r\}, \quad 
+        E_r = \bigcup_{n \in I_r} \Im{Q_n} \subset \R^P, \quad
+        \bar{E}_r = E_r \setminus \bigcup_{r' < r} E_{r'}.
+    $$
+    Then $\bigcup_{r=0}^{P} \bar{E}_r = \bigcup_{n=1}^{N} \Im{Q_n}$ is a disjoint union and, for $r' < r$, $\Haus^r(\bar{E}_{r'}) = 0$.
+    Define, for $v \in \R^P$,
+    \begin{align*}
+        a_r(v) &= \sum_{x \in \D} \sum_{n \in I_r} x_n \Normal{v; Q_n A x, \sigma^2 Q_n Q_n^\top} \\
+        b_r(v) &= \sum_{x \in \D} \sum_{n \in I_r} \Normal{v; Q_n A x, \sigma^2 Q_n Q_n^\top}.
+    \end{align*}
+    The local and translation equivariant MMSE is given component-wise by
+    \begin{equation}
+        \phi^\star_n \,=\, f_{\phi^\star} \circ \Pi_n,
+        \qquad 
+        f_{\phi^\star}(v) \,=\, \sum_{r=0}^{P} \frac{a_r(v)}{b_r(v)} \, \mathbbm{1}_{\bar{E}_r}(v) \qquad \text{for } v \in \Im{B}.
+    \end{equation}
+\end{proposition}
+
+\begin{proof}
+    \textbf{Admissibility (locality and translation equivariance).}
+    \begin{itemize}
+        \item Locality. By definition, the estimator is defined component-wise by $\phi^\star_n = f_{\phi^\star} \circ \Pi_n$, so it is local.
+
+        \item Translation equivariance on $\Im B$. Let $T_g$ denote the circular translation on $\X$, the selection operators commute with $T_g$ by a simple index check 
+        $$ \Pi_n \circ T_g = \Pi_{n-g}, \qquad \forall\,n,g\in \llbracket 1, N \rrbracket.$$
+        Then, for any $v\in \Im B$ and any $n$,
+        \begin{equation}
+            \big[\phi^\star(T_g v)\big]_n
+            = f_{\phi^\star}\big(\Pi_n T_g v\big) 
+            = f_{\phi^\star}\big(\Pi_{n-g} v\big)
+            = \big[\phi^\star(v)\big]_{n-g}
+            = \big[T_g \phi^\star(v)\big]_n.
+        \end{equation}
+        Hence $\phi^\star \circ T_g = T_g \circ \phi^\star$ on $\Im B$, i.e., it is translation equivariant. Combining with locality gives $\phi^\star \in \Mtransloc$.
+        
+        \item Well-definedness. On each $\bar{E}_r$, $f_{\phi^\star}$ is defined by the ratio $a_r/b_r$. 
+        If $b_r(v)=0$ on a negligible set (w.r.t. $\Haus^r$), assign any fixed value (\eg $0$); this does not affect admissibility nor optimality.
+    \end{itemize}
+
+    \textbf{Optimality.} For any $\varphi \in \Mtransloc$,
+    \begin{align*}
+        &\Mean{\inner{\varphi(B \vy), \phi^\star(B \vy) - \vx}} \\
+        &= \frac{1}{|\D|}  \sum_{x \in \D} \int_{\Y} \inner{\varphi(B  y), \phi^\star(B  y) - x } \Normal{y; A x, \sigma^2 \Id_N} dy \notag \\
+        &= \frac{1}{|\D|} \sum_{x \in \D} \sum_{n=1}^{N} \int_{\Y} f_{\varphi}(\Pi_n B y) \big( f_{\phi^\star}(\Pi_n B y) - x_n \big) \Normal{y; A x, \sigma^2 I} \, dy \\
+        &\overset{(\star)}{=} \frac{1}{|\D|} \sum_{x \in \D} \sum_{n=1}^{N} \int_{\R^P} f_{\varphi}(v) \big( f_{\phi^\star}(v) - x_n \big) \Normal{v; Q_n A x, \sigma^2 Q_n Q_n^\top} \, d\Haus^{r_n}(v),
+    \end{align*}
+    where $(\star)$ uses \cref{lemma:supp_integration_linear_subspace} and $r_n = \rank{Q_n}$.
+    Decompose by rank using $\bar{E}_r$: on $\bar{E}_r$ only $n\in I_r$ contribute (others lie on sets of $\Haus^r$-measure zero), yielding
+    \begin{align}
+        \sum_{r=0}^{P} &\int_{\bar{E}_r}
+            f_{\varphi}(v) \Big( f_{\phi^\star}(v) \underbrace{\sum_{x \in \D} \sum_{n \in I_r} \Normal{v; Q_n A x, \sigma^2 Q_n Q_n^\top}}_{b_r(v)}
+            \\& \hspace{4cm}
+            - \underbrace{\sum_{x \in \D} \sum_{n \in I_r} x_n \Normal{v; Q_n A x, \sigma^2 Q_n Q_n^\top}}_{a_r(v)} \Big) d\Haus^{r}(v).
+    \end{align}
+    Choosing $f_{\phi^\star}(v)=a_r(v)/b_r(v)$ on $\bar{E}_r$ cancels each integrand, hence the optimality condition \cref{prop:supp_optimality_condition} holds.
+\end{proof}
+
+
+\begin{remark}
+    If all $Q_n$ have the same rank $r$, then $\bar{E}_r = \bigcup_{n=1}^{N} \Im{Q_n}$ and the formula reduces to the constant-rank case in \cref{prop:supp_local_trans_estimator}, with a single ratio over $n=1,\dots,N$.
+\end{remark}
+
+\begin{remark}[Singular limit and rank stratification]
+    Consider a regularization of $B$ as $B^{(\epsilon)} = U \Sigma_\epsilon V^\top$ and $Q_n^{(\epsilon)} = \Pi_n B^{(\epsilon)}$, where $B = U \Sigma V^\top$ is the SVD of $B$ 
+    and the diagonal matrix $\Sigma_\epsilon$ is constructed by adding a small positive number $\epsilon$ to the singular values in $\Sigma$.  
+    For $\epsilon>0$ (and $M\ge P$), each $Q_n^{(\epsilon)}$ has full row rank $P$. For each $(n,x)$, define the probability measure $\mu_{n,x}^{(\epsilon)}$ on $\R^P$ with density (Radon--Nikodým derivative) with respect to Lebesgue measure $\lambda^P$ given by
+    $$
+        \frac{d\mu_{n,x}^{(\epsilon)}}{d\lambda^P}(v)
+        \;=\; \Normal{v; Q_n^{(\epsilon)} A x, 
+        \sigma^2 Q_n^{(\epsilon)} Q_n^{(\epsilon)T}}.
+    $$
+    As $\epsilon \to 0$, $Q_n^{(\epsilon)} \to Q_n$ and some ranks $r_n = \rank Q_n$ may drop. Then $\mu_{n,x}^{(\epsilon)}$ converges weakly to a probability measure $\mu_{n,x}$ supported on the linear subspace $\Im Q_n$, which is absolutely continuous with respect to the Hausdorff measure $\Haus^{r_n}$ on $\Im Q_n$, with density
+    $$
+        \frac{d\mu_{n,x}}{d\Haus^{r_n}}(v)
+        \;=\; \Normal{v; Q_n A x, \sigma^2 Q_n Q_n^\top},
+        \qquad v \in \Im{Q_n},
+    $$
+    where, $\Normal{\cdot;\mu,\Sigma}$ denotes the degenerate Gaussian density~\cref{def:supp_degenerate_gaussian} with respect to the appropriate Hausdorff measure on its support (and vanishes off that support).
+
+    For $\epsilon>0$, the estimator reads (constant-rank case, similar to \cref{prop:supp_local_trans_estimator})
+    $$
+        f_{\phi^\star}^{(\epsilon)}(v)
+        \;=\; \frac{\sum_{x \in \D} \sum_{n=1}^{N} x_n \, \Normal{v; Q_n A x, \sigma^2 Q_n Q_n^\top}}{\sum_{x \in \D} \sum_{n=1}^{N} \Normal{v; Q_n A x, \sigma^2 Q_n Q_n^\top}}.
+    $$
+    In the singular limit, for each $r$ and $\Haus^r$-a.e. $v \in \bar{E}_r$ with $b_r(v)>0$,
+    $$
+        \lim_{\epsilon\to 0} f_{\phi^\star}^{(\epsilon)}(v)
+        \;=\; \frac{a_r(v)}{b_r(v)},
+    $$
+    \ie the $\epsilon$-regularized estimator converges (stratum-wise, $\Haus^r$-a.e.) to the rank-stratified formula
+    $$
+        f_{\phi^\star}(v) 
+        \;=\; \sum_{r=0}^{P} \frac{a_r(v)}{b_r(v)}\, \mathbbm{1}_{\bar{E}_r}(v),
+    $$
+    interpreted up to $\Haus^r$-null sets on each $\bar{E}_r$. If all $Q_n$ have the same rank $r$, only the stratum $\bar{E}_r$ is nonempty, and the above reduces to the constant-rank expression in ~\cref{prop:supp_local_trans_estimator}.
+\end{remark}
+
+\begin{proof}[Proof of i) of~\cref{cor:local_trans_estimator_properties} --- Physics-agnostic LE-MMSE estimator]
+    When $B = \Id$, the weights of the LE-MMSE estimator in~\cref{theorem:local_trans_estimator} simplifies to 
+    \begin{equation*}
+        w_{n', n}(x \vert y) \propto \Normal{\Pi_{n'} y; \Pi_{n'} A x, \sigma^2 \Pi_{n} \Pi_{n}^\top} \propto \exp \left( - \frac{1}{2\sigma^2} \norm{y[\omega_{n'}] - (A x)[\omega_{n}]}^2 \right)
+    \end{equation*}
+    Therefore, the LE-MMSE estimator at pixel $n'$ reads:
+    \begin{equation*}
+        \xtransloc(y)[n'] = \frac{\sum_{x \in \D} \sum_{n = 1}^{N} x_n \exp \left( - \frac{1}{2\sigma^2} \norm{y[\omega_{n'}] - (A x)[\omega_{n}]}^2 \right)}{\sum_{x \in \D} \sum_{n = 1}^{N} \exp \left( - \frac{1}{2\sigma^2} \norm{y[\omega_{n'}] - (A x)[\omega_{n}]}^2 \right)}.
+    \end{equation*}
+    For small noise level $\sigma \to 0$, it returns the central pixel value of the patches in the dataset $\D$ whose degraded version $(A x)[\omega_n]$ is closest to the observed patch $y[\omega_{n'}]$. Hence, the LE-MMSE estimator is a patch-work of training patches.
+\end{proof}
+\begin{proof}[Proof of ii) of~\cref{cor:local_trans_estimator_properties} --- LE-MMSE is not a posterior mean]
+    We focus on the simplest case of denoising, that is $\vy = \vx + \ve$.
+    Recall that the posterior mean satisfies the so-called Tweedie formula:
+    \begin{equation*}
+        \Mean{\vx \vert y} = y + \sigma^2 \nabla \log p_{\vy}(y).
+    \end{equation*}
+    Taking the gradient of both sides w.r.t $y$ yields:
+    \begin{equation*}
+        \nabla_y \Mean{\vx \vert y} = \Id + \sigma^2 \nabla^2 \log p_{\vy}(y).
+    \end{equation*}
+    Therefore, the Jacobian of any pure MMSE estimator (posterior mean) must be symmetric since the Hessian of $\log p_{\vy}$ is symmetric. 
+    To simplify the notation, we use $f$ instead of $\xtransloc$ in what follows.
+    Using the fact that the scaling by $\sigma^{-2}$ does not affect the symmetry (note that $p_{\vy}$ is the convolution of $p_{\vx}$ and a Gaussian so it's $\mathcal{C}^{\infty}$), $\xtransloc$ is a posterior mean if and only if:
+    \begin{equation}\label{eq:supp_posterior_mean_condition}
+        \frac{\partial}{\partial y_m} f_{n}(y) = \frac{\partial}{\partial y_{n}} f_m(y), \quad \forall n,m.
+    \end{equation}    
+    For notation simplicity, we let $e_{n, l}(x, y) = \exp \left( - \frac{\|y[\omega_{n}] - x[\omega_l]\|^2}{2\sigma^2}\right)$.
+    We have the weights of the LE-MMSE estimator in~\cref{theorem:local_trans_estimator} becomes:
+    \begin{equation*}
+        w_{n, l} (x \vert y) = \exp \left( - \frac{\norm{y[\omega_{n}] - x[\omega_l]}}{2\sigma^2}\right) / Z_{n}(y) = \frac{e_{n, l}(x, y)}{Z_n(y)}.
+    \end{equation*}
+    where $Z_n(y) = \sum_{x' \in \D} \sum_{l'=1}^N e_{n, l'}(x', y)$ is the normalization constant.
+    Therefore, the LE-MMSE estimator at pixel $n$ reads:
+    \begin{equation*}
+        f_{n}(y) = \frac{1}{Z_{n}(y)} \sum_{x\in \D} \sum_{l=1}^N x_l \cdot e_{n, l}(x, y).
+    \end{equation*}
+    That is:
+    \begin{equation*}
+        f_{n}(y) = \frac{S_{n}(y)}{Z_{n}(y)} \qquad \text{where} \qquad S_{n}(y) = \sum_{x\in \D} \sum_{l=1}^N x_l \cdot e_{n, l}(x, y)
+    \end{equation*}
+    We consider 2 cases:
+    \begin{itemize}
+        \item \textbf{When the derivative is zero}: If $n \notin \omega_{m}$, then $f_{n}(y)$ does not depend on $y_m$ and $\frac{\partial f_{n}}{\partial y_m}(y) = 0$. Similarly, if $m \notin \omega_{n}$, then $\frac{\partial f_{m}}{\partial y_{n}}(y) = 0$. 
+
+        \item \textbf{When the derivative is non-zero}: Now consider the case where $n \in \omega_{m}$ and $m \in \omega_{n}$ (they are equivalent). 
+        Firstly, the chain rule gives 
+        \[
+            \frac{\partial e_{n, l}}{\partial y_m}(x, y) = -\sigma^{-2} (y_m - x_{l + n - m}) \cdot e_{n, l}(x, y) 
+        \]
+        The quotient rule gives: 
+        \begin{align*}
+            &\frac{\partial w_{n, l}}{\partial y_m}(x, y) = \frac{\partial e_{n, l}}{\partial y_m}(x, y) \cdot \frac{1}{Z_{n}(y)} - e_{n, l}(x, y) \cdot \frac{\partial Z_{n}}{\partial y_m}(y) \cdot \frac{1}{Z_{n}(y)^2} \\
+            &= -\sigma^{-2} (y_m - x_{l + n - m}) \cdot \frac{e_{n, l}(x, y)}{Z_{n}(y)} -  \frac{e_{n, l}(x, y)}{Z_{n}(y)^2} \cdot \frac{\partial Z_{n}(y)}{\partial y_m} \\
+            &= -\sigma^{-2} (y_m - x_{l + n - m}) \cdot w_{n, l}(x, y) -  w_{n, l}(x, y) \cdot \frac{1}{Z_{n}(y)} \cdot \left( \sum_{x' \in \D} \sum_{l'=1}^{N} \frac{\partial e_{n, l'}}{\partial y_m}(x',y) \right) \\ 
+            &= -\sigma^{-2} (y_m - x_{l + n - m}) \cdot w_{n, l}(x, y) + \sigma^{-2} \cdot w_{n, l}(x, y) \cdot \frac{1}{Z_{n}(y)} \cdot \left( \sum_{x' \in \D} \sum_{l'=1}^{N} (y_m - x_{l' + n - m}) \cdot e_{n, l'}(x',y) \right) \\
+            &= -\sigma^{-2} (y_m - x_{l + n - m}) \cdot w_{n, l}(x, y) + \sigma^{-2} \cdot w_{n, l}(x, y) \cdot \frac{1}{Z_{n}(y)} \cdot \left( y_m \cdot Z_{n}(y) - \sum_{x' \in \D} \sum_{l'=1}^{N} x_{l' + n - m} \cdot e_{n, l'}(x',y) \right) \\
+            &=  \sigma^{-2} \cdot x_{l + n - m} \cdot w_{n, l}(x, y) - \sigma^{-2} \cdot w_{n, l}(x, y) \cdot \frac{1}{Z_{n}(y)} \cdot \sum_{x' \in \D} \sum_{l'=1}^{N} x_{l' + n - m} \cdot e_{n, l'}(x',y) \\
+            &=  \sigma^{-2} \cdot x_{l + n - m} \cdot w_{n, l}(x, y) - \sigma^{-2} \cdot w_{n, l}(x, y) \cdot \sum_{x' \in \D} \sum_{l'=1}^{N} x_{l' + n - m} \cdot w_{n, l'}(x',y) 
+        \end{align*}
+        Therefore, we have
+        \begin{align*}
+            \frac{\partial f_{n}}{\partial y_m}(y) &= \sum_{x \in \D} \sum_{l=1}^N x_l \cdot \frac{\partial w_{n, l}}{\partial y_m}(x, y) \\
+            &= \sigma^{-2} \sum_{x \in \D} \sum_{l=1}^N x_l \cdot x_{l + n - m} \cdot w_{n, l}(x, y) - \sigma^{-2} \cdot \sum_{x \in \D} \sum_{l=1}^N x_l \cdot w_{n, l}(x, y) \left( \sum_{x' \in \D} \sum_{l'=1}^{N} x_{l' + n - m} \cdot w_{n, l'}(x',y)  \right)\\
+        \end{align*}
+        It is clear that the above expression is not symmetric in $n$ and $m$ in general, hence the condition in \cref{eq:supp_posterior_mean_condition} does not hold in general. Therefore, the LE-MMSE estimator is not a posterior mean in general.
+        A particular case where the symmetry holds is when the dataset $\D$ contains a single image $x$ repeated multiple times or the patch size is $1$ (so that the Jacobian is diagonal).
+    \end{itemize}
+\end{proof}
+
+\iffalse
+{
+    \color{blue}
+
+\begin{proposition}[Approximation of the pixel-wise variance of the LE-MMSE]\label{prop:supp_variance_approximation}
+    We are interested in approximating the pixel-wise variance with respect to noise of the ME-MMSE estimator. 
+    Let $\bar{x}$ be a fixed signal to be estimated and $\vy = A \bar{x} + \ve$ be the corresponding noisy observation with $\ve \sim \Normal{0, \sigma^2 \Id_N}$.
+    By the delta method, the variance can be approximated for any noise level $\sigma$ as:
+    \begin{align*}
+        \Var \, \xtransloc(\vy)[n'] &\approx \nabla \xtransloc(\Mean{\vy})[n']^\top \cdot \Var(\vy) \cdot \nabla \xtransloc(\Mean{\vy})[n'] 
+        \\&= \sigma^2 \norm{\nabla \xtransloc(\bar{y})[n']}_2^2,
+    \end{align*}
+    where $\bar{y} = A \bar{x}$ and $\nabla \xtransloc(\bar{y})[n']$ is the gradient of the LE-MMSE estimator at pixel $n'$ evaluated at $\bar{y}$.   
+
+    Now we compute the gradient of the LE-MMSE estimator at pixel $n'$. 
+    The weights of the LE-MMSE estimator write:
+    \begin{equation*}
+        w_{n', n} (x \vert \bar{y}) \propto \exp \left( -\frac{1}{2 \sigma^2} \norm{Q_n^+ (Q_{n'} \bar{y} -Q_n A x)}^2 \right)
+    \end{equation*}
+    Fixing a pixel $n'$,
+    let $g_{n, x}(\bar{y}) = - \frac{1}{2 \sigma^2} \norm{Q_n^+ (Q_{n'} \bar{y} -Q_n A x)}^2$ denote the exponent in the weight $w_{n', n}(x \vert \bar{y})$ in~\cref{theorem:local_trans_estimator}. 
+    It can be rewritten as:
+    \begin{equation*}
+        w_{n', n} (x \vert \bar{y}) =  \softmax_{n, x} \left( \left( g_{m, x'}(\bar{y}) \right)_{m, x'} \right) = \softmax_{n, x}  \left( g(\bar{y}) \right)  
+    \end{equation*}
+    where $g(\bar{y}) = \left( g_{m, x'}(\bar{y}) \right)_{m, x'} \in \R^{N \times |\D|}$.
+
+    The gradient of the weights w.r.t $y$ is given by:
+    \begin{align*}
+        \nabla w_{n', n} (x \vert \bar{y}) &= \softmax_{n, x}(g(\bar{y})) \cdot \left( \nabla g_{n,x}(\bar{y}) - \sum_{m, x'} \softmax_{m, x'}(g(\bar{y})) \cdot \nabla g_{m, x'}(\bar{y}) \right) \\
+        &= w_{n', n} (x \vert \bar{y}) \cdot \left( \nabla g_{n,x}(\bar{y}) - \sum_{m, x'} w_{n', m} (x' \vert \bar{y}) \cdot \nabla g_{m, x'}(\bar{y}) \right) \\
+        &= w_{n', n} (x \vert \bar{y}) \cdot \left( \nabla g_{n,x}(\bar{y}) - \overline{\nabla_{n'} g(\bar{y})} \right)
+    \end{align*}
+    where $\overline{\nabla_{n'} g(\bar{y})} = \sum_{m, x'} w_{n', m} (x' \vert \bar{y}) \cdot \nabla g_{m, x'}(\bar{y})$ is the weighted average of the gradients of the exponents.
+
+    Putting everything together, we have:
+    \begin{align*}
+        \nabla \xtransloc(\bar{y})[n'] &= \sum_{x \in \D} \sum_{n = 1}^{N} x_n \cdot \nabla w_{n', n}(x \vert \bar{y}) \\
+        &= \sum_{x \in \D} \sum_{n = 1}^{N} x_n \cdot w_{n', n} (x \vert \bar{y}) \cdot \left( \nabla g_{n,x}(\bar{y}) - \overline{\nabla_{n'} g(\bar{y})} \right) \\
+        &= \sum_{x \in \D} \sum_{n = 1}^{N} x_n \cdot w_{n', n} (x \vert \bar{y}) \cdot \nabla g_{n,x}(\bar{y}) - \overline{\nabla_{n'} g(\bar{y})} \cdot \left( \sum_{x \in \D} \sum_{n = 1}^{N} x_n \cdot w_{n', n} (x \vert \bar{y}) \right) \\
+        &= \sum_{x \in \D} \sum_{n = 1}^{N} x_n \cdot w_{n', n} (x \vert \bar{y}) \cdot \nabla g_{n,x}(\bar{y}) - \overline{\nabla_{n'} g(\bar{y})} \cdot \xtransloc(\bar{y})[n']
+    \end{align*}
+    Therefore, we can upper bound the norm of the gradient as:
+    \begin{align*}
+        \norm{\nabla \xtransloc(\bar{y})[n']}_2 &\leq \norm{\sum_{x \in \D} \sum_{n = 1}^{N} x_n \cdot w_{n', n} (x \vert \bar{y}) \cdot \nabla g_{n,x}(\bar{y})}_2 + \norm{\overline{\nabla_{n'} g(\bar{y})} \cdot \xtransloc(\bar{y})[n']}_2 \\
+        &\leq \sum_{x \in \D} \sum_{n = 1}^{N} |x_n| \cdot w_{n', n} (x \vert \bar{y}) \cdot \norm{\nabla g_{n,x}(\bar{y})}_2 + |\xtransloc(\bar{y})[n']| \cdot \norm{\overline{\nabla_{n'} g(\bar{y})}}_2
+    \end{align*}
+
+    Going further, we have 
+    \begin{align*}
+        \nabla g_{n,x}(\bar{y}) = - \frac{1}{ \sigma^2} Q_{n'}^\top (Q_n^+)^\top Q_n^+ (Q_{n'} \bar{y} - Q_n A x) 
+    \end{align*}
+    Therefore the weighted average gradient becomes:
+    \begin{align*}
+        \overline{\nabla_{n'} g(\bar{y})} &= \sum_{m, x'} w_{n', m} (x' \vert \bar{y}) \cdot \nabla g_{m, x'}(\bar{y})
+        \\&= \sum_{m, x'} w_{n', m} (x' \vert \bar{y}) \cdot \left( - \frac{1}{ \sigma^2} Q_{n'}^\top Q_m^{+\top} Q_m^+ (Q_{n'} \bar{y} - Q_m A x') \right) \\
+        &= - \frac{1}{ \sigma^2} Q_{n'}^\top \left( \sum_{m, x'} w_{n', m} (x' \vert \bar{y}) \cdot Q_m^{+\top} Q_m^+ (Q_{n'} \bar{y} - Q_m A x') \right) \\
+        &= - \frac{1}{ \sigma^2} Q_{n'}^\top \left( \sum_{m, x'} w_{n', m} (x' \vert \bar{y}) \cdot Q_m^{+\top} Q_m^+ \right)Q_{n'} \bar{y} 
+        + \frac{1}{ \sigma^2} Q_{n'}^\top \left(\sum_{m, x'} w_{n', m} (x' \vert \bar{y}) \cdot Q_m^{+\top} Q_m^+ Q_m A x' \right)
+    \end{align*}
+    
+\end{proposition}
+
+}
+\fi
+% ---------------------------------------
+\iffalse
+\paragraph{Inpainting, locality \& equivariance} 
+{
+    \color{blue} 
+    We consider the inpainting operator $A x = \mathbbm{1}_{\Omega^c} \odot x$ and $B = A^+ = A$. 
+    The  weights in~\cref{eq:loc_equiv_formula} become 
+    \begin{equation}
+        w_{n', n} (x \vert y) \; = \; \exp \left( -\frac{1}{2\sigma^2} \norm{Ay[\omega_{n'}] - Ax[\omega_n]}^2 \right) / Z_{n'}(y)
+    \end{equation}
+    Comparing to the physics-agnostic case, the difference is that we compare patches of the masked images $Ay$ and $Ax$ instead of the noisy patches $y[\omega_n]$ and $Ax[\omega_{n'}]$, with a note that the normalization constant $Z_{n'}(y)$ is also affected accordingly.
+    \begin{equation*}
+        Z_{n'}(y) = \sum_{x \in \D} \sum_{n = 1}^{N} \exp \left( -\frac{1}{2\sigma^2} \norm{Ay[\omega_{n'}] - Ax[\omega_n]}^2 \right).
+    \end{equation*}
+
+    To establish reconstruction formula, we first need to define a set of admissible reconstruction patches. 
+    \begin{definition}[Admissible patches]\label{def:consistent_patches}
+        The set of admissible patches $P_n$ is defined as the set of patches whose intersection with $\Omega$ has the same geometry as $\omega_n\cap \Omega$, that is:
+        \begin{equation}
+            \Pc_n \eqdef \left\{n'\in \llbracket 1, N\rrbracket \textrm{ such that } \Omega\cap \omega_{n'} = \Omega\cap \omega_{n} \textrm{ up to a translation}\right\}.    
+        \end{equation}
+        For example, we can distinguish:
+        \begin{itemize}
+            \item \emph{Inner-pixels}: The set of centers of patches entirely contained in the mask $\Omega$, \ie $\Omega\ominus \omega$, the set $\Omega$ eroded by the structuring element $\omega$.  
+            \item \emph{Outer-pixels}: The set of centers of patches entirely contained in the complementary mask: $\Omega^c \ominus \omega$.
+            \item \emph{Edges}: if $\omega_{n}$ intersects $\Omega$ at an edge, meaning that we can slide it vertically or horizontally while keeping the same intersection, then $\Pc_n$ is the set of such translates. 
+            \item \emph{Corners}: The set of patch centers \( n \) where \( \omega_n \) intersects \( \Omega \) uniquely, i.e., no non-trivial translation of \( \omega_n \) yields the same intersection pattern. In this case, \( \Pc_n = \{ n \} \).
+        \end{itemize}
+    \end{definition}
+}
+
+\begin{proposition}[\textcolor{red}{Inner pixels for inverse problem with inpainting operator}]
+    As $\varepsilon$ go to $0$, the estimated value of inner pixels is the average of all the inner pixels in the dataset, meaning that:
+    \begin{equation*}
+        \lim_{\varepsilon \to 0} \xeqloc(y)[n'] = \frac{1}{|\D|\cdot|\Omega \ominus \omega|}\sum_{x\in \D} \sum_{n\in \Omega \ominus \omega} x_n.
+    \end{equation*}
+\end{proposition}
+
+
+
+
+\begin{proof}
+    Inner pixel at location $n'$ meaning that $\omega_{n'} \subset \Omega,$ i.e. $n' \in \Omega \ominus \omega$. Let consider $p_{n',n}(x \vert y)$ the nominator  of the weight $\omega_{n',n}(x|y)$ for the two case: $\omega_n \subset \Omega$ and $\omega_n \not\subset \Omega$.
+    \begin{enumerate}
+        \item If $\omega_n \subset \Omega$:
+        \begin{equation*}
+            p_{n',n}(x \vert y) = \frac{1}{\left(2\pi\sigma^2\varepsilon^2\right)^{P/2}}\, \exp\left(\frac{-\norm{\varepsilon b[\omega_{n'}]}^2}{2\varepsilon^2\sigma^2}\right) = \frac{1}{\left(2\pi\sigma^2\varepsilon^2\right)^{P/2}}\, \exp\left(\frac{-\norm{b[\omega_{n'}]}^2}{2\sigma^2}\right).
+        \end{equation*}
+        \item If $\omega_n \not\subset \Omega$.
+        
+        Note $r_n$ the rank $\Pi_n A$, $r_n$ is the number of non-zero elements non-zero of $A[\omega_n]$.
+
+        Let $\omega_n^i = \omega_n \cap \Omega$ the part of $\omega_n$ inside of $\Omega$, and $\omega_n^o = \omega_n \cap \Omega^c$, the part of $\omega_n$ outside of $\Omega$.
+
+        Let $\omega_{n'}^{i,n}$ the part of $\omega_{n'}$ superposing $\omega_n^i$ when superposing $\omega_n$ and $\omega_{n'}$. Similarly, $\omega_{n'}^{o,n}$ is the part of $\omega_{n'}$ superposing $\omega_n^o$ when superposing $\omega_n$ and $\omega_{n'}$. The gaussian density $p_{n',n}(x \vert y)$ reads:
+        \begin{align*}
+            p_{n',n}(x \vert y) &= \frac{1}{\left(2\pi\sigma^2\right)^{P/2}(\varepsilon^2)^{(P-r_n)/2}}\, \exp\left(-\frac{\norm{\varepsilon b[\omega_{n'}^{i,n}]}^2}{2\varepsilon^2\sigma^2}- \frac{\norm{\varepsilon b[\omega_{n'}^{o,n}]-x[\omega_n^o]}^2}{2\sigma^2} \right) \\
+            &= \frac{1}{\left(2\pi\sigma^2\right)^{P/2}(\varepsilon^2)^{(P-r_n)/2}}\, \exp\left(-\frac{\norm{b[\omega_{n'}^{i,n}]}^2}{2\sigma^2}- \frac{\norm{\varepsilon b[\omega_{n'}^{o,n}]-x[\omega_n^o]}^2}{2\sigma^2} \right). \\
+        \end{align*}
+    \end{enumerate}
+    Let compare the gaussian density $p_{n',n}(x \vert y)$ in two above case: as $\varepsilon \to 0$,  the exponential terms approach finite, strictly positive constants that do not depend on $\varepsilon$, while the denominator goes to zero at polynomial speed of order 
+	$P-r_n$. Thus, as $\varepsilon$ goes to $0$, the gaussian density $p_{n',n}(x \vert y)$ where $\omega_n \not\subset \Omega$ is negligible to $p_{n',n}(x \vert y)$ where $\omega_n \subset \Omega$, since $r_n > 0$ if $\omega_n \not\subset \Omega$. Then, \cref{eq:loc_equiv_formula} yields the following result:
+    \begin{align*}
+        \lim_{\varepsilon \to 0} \xeqloc(y)[n'] &= \frac{\sum_{x\in \D} \sum_{n\in \Omega \ominus \omega} x_n \exp\left(\frac{-\norm{b[\omega_{n'}]}^2}{2\sigma^2}\right)}{\sum_{x\in \D} \sum_{n\in \Omega \ominus \omega}\exp\left(\frac{-\norm{b[\omega_{n'}]}^2}{2\sigma^2}\right)}\\
+        &= \frac{1}{|\D|\cdot|\Omega \ominus \omega|}\sum_{x\in \D} \sum_{n\in \Omega \ominus \omega} x_n.
+    \end{align*}
+
+\end{proof}
+
+
+
+
+We set $A x =\mathbbm{1}_{\Omega^c} \odot x$ and consider the physics-agnostic case $B=\Id$ and physics-aware case $B=A^+$.
+
+\begin{proposition}[\textcolor{red}{Non-inner pixels for inverse problem with inpainting operator}]
+    As $\varepsilon \to 0$ and $\sigma \to 0$, the estimated value $\hat{x}_{\mathrm{loc}}(y)[n']$ for non-inner pixels is the central pixel value of a dataset patch whose masked version is in $P_{n'}(\mathcal{D})$  and is closest to the observed patch $y|_{\omega_{n'}}$., where $P_{n'}(\mathcal{D})$ is in~\cref{def:consistent_patches}.
+\end{proposition}
+
+\begin{proof}
+    Non-inner pixel at location $n'$ implies that $\omega_{n'} \not\subset \Omega,$ i.e. $n' \notin \Omega \ominus \omega$. Let consider the Gaussian density $p_{n',n}(x \vert y)$ for the two case $\omega_n \subset \Omega$ and $\omega_n \not\subset \Omega$.
+    \begin{enumerate}
+        \item If $\omega_n \subset \Omega$:
+        \begin{align*}
+            p_{n',n}(x \vert y) &= \frac{1}{\left(2\pi\sigma^2\varepsilon^2\right)^{P/2}}\, \exp\left(-\frac{\norm{\varepsilon b[\omega_{n'}^i]}^2}{2\varepsilon^2\sigma^2}- \frac{\norm{y[\omega_{n'}^o]}^2}{2\varepsilon^2\sigma^2}\right)\\ 
+            &= \frac{1}{\left(2\pi\sigma^2\varepsilon^2\right)^{P/2}}\, \exp\left(-\frac{\norm{b[\omega_{n'}^i]}^2}{2\sigma^2}- \frac{\norm{y[\omega_{n'}^o]}^2}{2\varepsilon^2\sigma^2}\right).
+        \end{align*}
+        Thus,
+        \begin{equation*}
+            \lim_{\varepsilon \to 0} p_{n',n}(x \vert y) = 0
+        \end{equation*}
+        This above result states that, $as \varepsilon \to 0$, the probability that that estimated value of a non-inner pixel $n'$  originated from an inner pixel $x[n]$ is zero.
+        \item If $\omega_n \not\subset \Omega$.
+        
+        The gaussian density $p_{n',n}(x \vert y)$ reads:
+        \begin{align*}
+            p_{n',n}(x \vert y) &= \frac{1}{\left(2\pi\sigma^2\right)^{P/2}(\varepsilon^2)^{(P-r_n)/2}}\, \exp\Biggl(-\frac{\norm{y[\omega_{n'}^o \cap \omega_{n'}^{i,n}]}^2}{2\varepsilon^2\sigma^2} -\frac{\norm{\varepsilon b[\omega_{n'}^i \cap \omega_{n'}^{i,n}]}^2}{2\varepsilon^2\sigma^2}\\
+            & \hspace{5cm} -\frac{\norm{y[\omega_{n'}^o \cap \omega_{n'}^{o,n}]-x[\omega_n^o \cap \omega_n^{o,n'}]}^2}{2\sigma^2} \\
+            & \hspace{5cm} -\frac{\norm{\varepsilon b[\omega_{n'}^i \cap \omega_{n'}^{o,n}]-x[\omega_n^o \cap \omega_n^{i,n'}]}^2}{2\sigma^2} \Biggr)\\
+            &= \frac{1}{\left(2\pi\sigma^2\right)^{P/2}(\varepsilon^2)^{(P-r_n)/2}}\, \exp\Biggl(-\frac{\norm{y[\omega_{n'}^o \cap \omega_{n'}^{i,n}]}^2}{2\varepsilon^2\sigma^2} -\frac{\norm{b[\omega_{n'}^i \cap \omega_{n'}^{i,n}]}^2}{2\sigma^2} \\
+            & \hspace{5cm} -\frac{\norm{y[\omega_{n'}^o \cap \omega_{n'}^{o,n}]-x[\omega_n^o \cap \omega_n^{o,n'}]}^2}{2\sigma^2} \\
+            & \hspace{5cm} -\frac{\norm{\varepsilon b[\omega_{n'}^i \cap \omega_{n'}^{o,n}]-x[\omega_n^o \cap \omega_n^{i,n'}]}^2}{2\sigma^2} \Biggr)\\
+        \end{align*}
+        We remark that, for a fixed $\sigma > 0$, then:
+        \begin{enumerate}
+            \item $\lim_{\varepsilon \to 0} p_{n',n}(x \vert y) = 0$ if $\omega_{n'}^o \cap \omega_{n'}^{i,n} \neq \emptyset$, meaning that the posterior probability of the pixels $x_n$ give the pre-inverse $y[\omega_{n'}]$ is null if the non-masked part of $y[\omega_{n'}]$ confound with the masked part of $x[\omega_{n}]$.
+            \item If $\omega_{n'}^o \cap \omega_{n'}^{i,n} = \emptyset$, as $\varepsilon \to 0$,  the exponential terms approach finite, strictly positive constants that do not depend on $\varepsilon$, while the denominator goes to zero at polynomial speed of order $P-r_n$. Thus, as $\varepsilon$ goes to $0$, the gaussian density $p_{n',n_1}(x|y)$  is negligible to $p_{n',n_2}(x|y)$ for any $n_1$ and $n_2$ such that $P-r_{n_1} < P - r_{n_2}$.
+        \end{enumerate}
+        These two above remarks conclude that only the patches in $P_{n'}(\D)$ appear in \cref{eq:loc_equiv_formula} as $\varepsilon \to 0$.
+    \end{enumerate}
+    Thus, \cref{eq:loc_equiv_formula} yeilds the following result:
+    \begin{align*}
+    \lim_{\varepsilon \to 0} \xeqloc(y)[n'] &=  \frac{\sum_{p \in P_{n'}(\D)} ^{N} x_n \cdot \Normal{Q_{n'} y; p, \sigma^2 Q_n Q_n^\top}}{\sum_{p \in P_{n'}(\D)} ^{N} \cdot \Normal{Q_{n'} y; p, \sigma^2 Q_n Q_n^\top}} \quad \text.
+    \end{align*}
+    As, $\sigma \to 0$, the gaussian density termes converge to dirac function,  $\xeqloc(y)[n']$ converge to the the central pixel value of a dataset patch whose masked version is in $P_{n'}(\mathcal{D})$  and is closest to the observed patch $y|_{\omega_{n'}}$.
+\end{proof}
+
+\fi
+% ###########################################################
+%           NUMERICAL
+% ########################################################### 
+\section{Numerical experiments}\label{sec:supp_numerical}
+\subsection{Datasets}
+We use the following datasets in our experiments: FFHQ~\citep{karras2019style} downscaled to $32 \times 32$ or $64 \times 64$, CIFAR-10~\citep{krizhevsky2009learning} and Fashion-MNIST~\citep{xiao2017fashion}.
+For each dataset, we randomly select $10,000$ images for training, which is denoted by $\D$ in the main paper. 
+\subsection{Network architectures}\label{sec:supp_network_architectures}
+For the local and translation equivariant estimator, we examine 3 different architectures with noise level $\sigma$ conditioning:
+\begin{itemize}
+    \item UNet2D: we use a state-of-the-art UNet2D~\citep{ronneberger2015u} from the \texttt{diffusers}\footnote{\href{https://huggingface.co/docs/diffusers/en/api/models/unet2d}{https://huggingface.co/docs/diffusers/en/api/models/unet2d}} library. 
+    The model has several downsampling and upsampling layers and skip connections, with varying channel dimensions (defined by \texttt{block\_out\_channels}) and kernel size (defined by \texttt{kernel\_size}, for down-blocks and mid-blocks). 
+    The architecture is modified slightly (circular boundary conditions and kernel sizes of convolutional layers) to have a desired receptive field and to ensure translation equivariance. 
+    The noise level $\sigma$ is conditioned using a time embedding module with linear layers.
+
+    \item ResNet: we use a minimal ResNet with residual block~\citep{he2016deep}, with a $1 \times 1$ convolutional layer at the beginning and at the end, similar to~\citep{kamb2025an}. Each residual block contains a convolutional layer with $3 \times 3$ kernels at a channel dimension defined by \texttt{num\_channels}, followed by a batch normalization and a ReLU nonlinearity. The noise level $\sigma$ is conditioned using sine-cosine positional embedding.    
+
+    \item PatchMLP: a fully local MLP acting on patches. The MLP has 5 residual blocks, each containing two linear layers with hidden dimension of \texttt{hidden\_dim}, followed by a layer normalization and GELU activation. 
+    The noise level $\sigma$ is conditioned using sine-cosine positional embedding. 
+\end{itemize}
+All convolutional layers use circular padding to ensure translation equivariance and they have approximately $4$ million parameters. 
+Details of the architectures with various receptive fields are provided in~\cref{table:supp_architecture_details}.
+    \begin{table}[t]
+        \caption{Details of neural network architectures with various receptive fields used in our experiments for images at $32 \times 32$ resolution.}
+        \label{table:supp_architecture_details}
+        \vspace*{-0.25cm}
+        \begin{center}
+        \begin{small}
+        \begin{sc}
+            \begin{tabular}{lccccc}
+            \toprule
+            & \multirow{2}{*}{\shortstack{Receptive field \\ (patch size)}} & \multicolumn{2}{c}{\multirow{2}{*}{Archi. hyper-parameters}} & \multirow{2}{*}{Num. parameters} \\
+            & & & & \\
+            \midrule
+            % ---------------------------------------
+            %         UNet2D
+            % \multicolumn{4}{c}{UNet2D} \\
+            UNet2D & & {\normalfont  \texttt{block\_out\_channels}} & {\normalfont  \texttt{kernel\_size}} & \\ 
+            \midrule
+            & $5$ & $(96, 224, 480)$     & $(3, 1, 1, 1)$--$1$ & 4.6M  \\
+            & $7$ & $(64, 192, 448)$     & $(3, 1, 1, 1)$--$3$ & 5.1M \\
+            & $9$ & $(96, 192, 288)$     & $(3, 1, 1, 1)$--$5$ & 4.3M \\
+            & $11$ & $(64, 96, 160, 288)$     & $(3, 1, 1, 1, 3)$--$1$ & 4.3M \\
+            % ---------------------------------------
+            %         ResNet
+            \midrule
+            % \multicolumn{4}{c}{ResNet} \\
+            ResNet & & {\normalfont  \texttt{num\_res\_blocks}} & {\normalfont  \texttt{num\_channels}} & \\ 
+            \midrule
+            & $5$ & $1$     & $640$ & 4.5M  \\
+            & $7$ & $2$     & $448$ & 4.2M \\
+            & $9$ & $3$     & $384$ & 4.5M \\
+            & $11$ & $4$     & $328$ & 4.4M \\
+            % ---------------------------------------
+            %         MLP
+            \midrule
+            % \multicolumn{4}{c}{PatchMLP} \\
+            PatchMLP & & {\normalfont  \texttt{hidden\_dim}} & {\normalfont  \texttt{num\_blocks}} & \\ 
+            \midrule
+            & $5$ & $7168$     & $5$ & 3.5M  \\
+            & $7$ & $6144$     & $5$ & 3.7M \\
+            & $9$ & $5120$     & $5$ & 4.3M \\
+            & $11$ & $3072$     & $5$ & 4.0M \\
+            \bottomrule
+            \end{tabular}
+        \end{sc}
+        \end{small}
+        \end{center}
+        \vskip -0.1in
+    \end{table} 
+
+\subsection{Training procedure}\label{sec:supp_training_procedure}
+All models are trained on a single NVIDIA A100 GPU with the following settings:
+\begin{itemize}
+    \item Optimizer: Adam optimizer~\citep{kingma2015adam}
+    \item Learning rate: starting at $10^{-4}$ with cosine decay schedule and minimum learning rate at $10^{-6}$. 
+    \item Number of epochs: $600$ for images at $32 \times 32$ resolution and $900$ for images at $64 \times 64$ resolution.
+    \item Batch size: $256$
+    \item Exponential moving average (EMA) with decay rate $0.99$ from the 1000-th training step and updates every $5$ steps. The EMA weights are used for evaluation.  
+\end{itemize}
+\subsection{Forward operators}
+We consider the $3$ representative inverse problems as forward operators $A$:
+\begin{itemize}
+    \item Denoising: the forward operator is simply the identity $A = \Id$ and only the physics-agnostic estimator is applicable in this case.
+    \item Inpainting: we consider the inpainting operator with a center square mask of size $15 \times 15$. The forward operator $A$ is therefore a diagonal matrix with $0$ on the masked pixels and $1$ elsewhere. 
+    In this case, we define the physics-aware estimator with $B \!=\! A^+  \!=\! A$: it simply removes noise inside the masked region and keeps the observed pixels unchanged.
+    \item Deconvolution: we consider an isotropic Gaussian blur kernel with standard deviation $1.0$ with circular boundary conditions. The same kernel is used for all color channels. 
+    In this case, we build the full matrix $A$ as a block-circulant matrix representing the convolution operation and $B$ is its pseudo-inverse, which is computed once, in double precision.  
+\end{itemize}
+\vfill
+\subsection{Analytical formula implementation}
+Implementing the analytical formulas of the E-MMSE~\cref{thm:equivariant_mmse} and the LE-MMSE~\cref{theorem:local_trans_estimator} estimators requires computing many distance terms between images or patches in the dataset $\D$ and the observed measurement $y$. We process by batch to avoid memory overflow.
+For numerical stability and avoidance of overflow/underflow, the exponential terms are accumulated using an online log-sum-exp trick.
+All theoretical estimators are computed in an \emph{exact} manner without any approximation, modular finite precision arithmetic. 
+We use PyTorch~\citep{paszke2019pytorch} for implementation and all computations are performed in single precision (FP32) on a single A-100 GPU, unless otherwise specified. 
+
+
+
+% % Custom colors for code
+\iffalse
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=t,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=10pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2,
+    xleftmargin=2em,
+    framexleftmargin=2em,
+    morekeywords={self,Tensor,Module},
+}
+\lstset{style=mystyle}
+\begin{minipage}{\linewidth}
+    \begin{lstlisting}[language=Python, caption=Minimal python code for the physics-agnostic analytical LE-MMSE estimator., label=code:supp_python_code_locequiv_mmse]
+import torch
+import torch.nn.functional as F
+
+class LocalEquivariantMMSE2(torch.nn.Module):
+    def __init__(self, patch_size, dtype=torch.float32, device="cuda"):
+        super().__init__()
+        self.pad = patch_size // 2
+        self.is_impair = (patch_size - 1) % 2
+        self.patch_size = patch_size
+        self.dtype = dtype
+        self.device = device
+
+    def _to_patch(self, img):
+        pad, is_impair = self.pad, self.is_impair
+        output = F.pad(
+            img,
+            pad=(pad - is_impair, pad, pad - is_impair, pad),
+            mode="circular",
+        )
+        output = output.unfold(
+                    dimension=-2, size=self.patch_size, step=1
+                ).unfold(
+                    dimension=-2, size=self.patch_size, step=1
+                )
+        return output.permute(0, 2, 3, 1, 4, 5).flatten(1, 2)  # (B, H * W, C, p, p)
+    
+    @torch.no_grad()
+    def forward(self, y, A, dataloader, sigma):
+        y = y.to(device=self.device, dtype=self.dtype)
+        
+        # Generate the measurement patch v
+        v = self._to_patch(y)
+        
+        # Accumulators
+        num = 0.0
+        denom = 0.0
+        shift = None
+
+        for batch in dataloader:
+            batch = batch.to(device=self.device, dtype=self.dtype)
+            meas = A(batch)
+            meas_patch = self._to_patch(meas)   # (B, num_patch, M)
+            center_pixel = self._to_patch(batch)[..., self.pad, self.pad]
+            dist = torch.cdist(meas_patch.flatten(-3, -1), v.flatten(-3, -1))
+            dist = -0.5 * dist.pow(2) / (sigma**2)  # (B, H * W, H * W)
+
+            # Update the sum-exp accumulators
+            num, denom, shift = update_sum_exp(
+                center_pixel.unsqueeze(-1),
+                num,
+                denom,
+                dist.unsqueeze(-2),
+                shift,
+                dim=(0, 1),
+            )
+        
+        estimate = (num / denom).view(1, *batch.shape[1:])
+        return estimate
+    \end{lstlisting}
+\end{minipage}
+
+\begin{minipage}{\linewidth}
+    \begin{lstlisting}[language=Python, caption=Online accumulation of the sum-exp terms for the LE-MMSE estimator., label=code:supp_online_sum_exp]
+def update_sum_exp(batch, num, denom, dist, shift, dim):
+    if shift is None:
+        shift = torch.amax(dist, dim=dim, keepdim=True)  
+    else:
+        new_distance_shift = torch.amax(dist, dim=dim, keepdim=True)
+        delta_distance_shift = torch.where(
+            new_distance_shift < shift, shift, new_distance_shift
+        )
+        diff = delta_distance_shift - shift
+        num /= torch.exp(diff)
+        denom /= torch.exp(diff)
+        shift = delta_distance_shift
+
+    exp_distance = torch.exp(dist - shift)
+    num += torch.sum(exp_distance * batch, dim=dim, keepdim=True)
+    denom += torch.sum(exp_distance, dim=dim, keepdim=True)
+
+    return num, denom, shift
+    \end{lstlisting}
+\end{minipage}
+\fi
+
+\section{Additional numerical results}
+\subsection{Comparison between trained neural networks and the analytical LE-MMSE estimator}\label{sec:supp_neural_vs_analytical}
+We show in~\cref{fig:neural_vs_analytical_unet2d_patch_11,fig:neural_vs_analytical_resnet_patch_11,fig:neural_vs_analytical_patchmlp_patch_11} additional PSNR results between trained neural networks and the analytical LE-MMSE estimator for different architectures (UNet2D, ResNet, PatchMLP) on both training and test sets of various datasets. 
+We recover a consistent conclusion across different settings: the trained neural networks closely approximate the analytical LE-MMSE estimator, with PSNR values exceeding $20$ in most cases and often reaching above $30$ dB.
+\begin{figure*}[ht!]
+    \centering
+    \def\base{./images/neural_vs_analytical/localequivunet2dcondmodel_patch_11/plots}
+    \begin{minipage}{\linewidth}
+        \includegraphics[width=\linewidth]{\base/FFHQ_images32x32_subset_10000_combined_psnr_grid.pdf}
+        \subcaption{FFHQ-32}
+    \end{minipage}
+    \begin{minipage}{\linewidth}
+        \includegraphics[width=\linewidth]{\base/CIFAR10_subset_10000_combined_psnr_grid.pdf}
+        \subcaption{CIFAR-10}
+    \end{minipage}
+    \begin{minipage}{\linewidth}
+        \includegraphics[width=\linewidth]{\base/FashionMNIST_subset_10000_combined_psnr_grid.pdf}
+        \subcaption{Fashion-MNIST}
+    \end{minipage}
+    \caption{Additional PSNR between trained UNet2D and the analytical formula of the LE-MMSE for different inverse problems on both training and test sets of various datasets. 
+    The patch size is $P = 11 \times 11$.
+    Left: physics-agnostic estimator with $B\!=\!\Id$. Right: physics-aware estimator with $B\!=\!A^+$.
+    We recover the same conclusions as in~\cref{fig:neural_vs_analytical_unet2d_patch_5}.
+    }
+    \label{fig:neural_vs_analytical_unet2d_patch_11} 
+\end{figure*}
+
+% label:fig:neural_vs_analytical_resnet
+\begin{figure*}[ht!]
+    \centering
+    \def\base{./images/neural_vs_analytical/minimalresnet_patch_11/plots}
+    \begin{minipage}{\linewidth}
+        \includegraphics[width=\linewidth]{\base/FFHQ_images32x32_subset_10000_combined_psnr_grid.pdf}
+        \subcaption{FFHQ-32}
+    \end{minipage}
+    \begin{minipage}{\linewidth}
+        \includegraphics[width=\linewidth]{\base/CIFAR10_subset_10000_combined_psnr_grid.pdf}
+        \subcaption{CIFAR-10}
+    \end{minipage}
+    \begin{minipage}{\linewidth}
+        \includegraphics[width=\linewidth]{\base/FashionMNIST_subset_10000_combined_psnr_grid.pdf}
+        \subcaption{Fashion-MNIST}
+    \end{minipage}
+    \caption{PSNR between trained ResNet and the analytical formula of the LE-MMSE for different inverse problems on both training and test sets of various datasets. 
+    The patch size is $P = 11 \times 11$.
+    Left: physics-agnostic estimator with $B\!=\!\Id$. Right: physics-aware estimator with $B\!=\!A^+$.
+    We recover the same conclusions accross architectures and settings.
+    }
+    \label{fig:neural_vs_analytical_resnet_patch_11} 
+\end{figure*}
+
+\begin{figure*}[ht!]
+    \centering
+    \def\base{./images/neural_vs_analytical/patchmlp_patch_11/plots}
+    \begin{minipage}{\linewidth}
+        \includegraphics[width=\linewidth]{\base/FFHQ_images32x32_subset_10000_combined_psnr_grid.pdf}
+        \subcaption{FFHQ-32}
+    \end{minipage}
+    \begin{minipage}{\linewidth}
+        \includegraphics[width=\linewidth]{\base/CIFAR10_subset_10000_combined_psnr_grid.pdf}
+        \subcaption{CIFAR-10}
+    \end{minipage}
+    \begin{minipage}{\linewidth}
+        \includegraphics[width=\linewidth]{\base/FashionMNIST_subset_10000_combined_psnr_grid.pdf}
+        \subcaption{Fashion-MNIST}
+    \end{minipage}
+    \caption{PSNR between trained PatchMLP neural network and the analytical formula of the LE-MMSE for different inverse problems on both training and test sets of various datasets.      
+    The patch size is $P = 11 \times 11$.
+    We recover the same conclusions as in~\cref{fig:neural_vs_analytical_unet2d_patch_5,fig:neural_vs_analytical_unet2d_patch_11,fig:neural_vs_analytical_resnet_patch_11}. An exception is observed for the deconvolution task with physics-aware models (rightmost column). Here, the noise is amplified by the inversion of the blurring operator and the local PatchMLP architecture struggles to accurately reconstruct fine details, leading to a lower PSNR comparing to CNNs. We hypothesize that CNNs have other inductive biases that are more suited to handle such challenging tasks.    
+    }
+    \label{fig:neural_vs_analytical_patchmlp_patch_11} 
+\end{figure*}
+
+\begin{figure*}[ht!]
+        \centering
+        \vskip -0.1in
+        \includegraphics[trim=35mm 0 0 0, clip,width=\textwidth]{./tex_figure/fig_qualitative_neural_vs_analytical_patch_5_standalone.pdf}
+        \vskip -0.1in
+        \caption{Qualitative comparison. 
+        The patch size is $P = 5 \times 5$ and $B\!=\!\Id$.
+        The noise level is $\sigma = 0.05,0.2,0.8$ from left to right for each column.
+        The neural networks (UNet2D, ResNet, and PatchMLP) closely match the analytical LE-MMSE on both training and test sets across all datasets (FFHQ, CIFAR10, and FashionMNIST) and inverse problems, confirming our theoretical findings. 
+        }
+        \label{fig:qualitative_neural_vs_analytical_patch_5} 
+        \vskip -0.15in
+    \end{figure*}
+
+    \begin{figure*}[ht!]
+        \centering
+        \vskip -0.1in
+        \includegraphics[trim=35mm 0 0 0, clip,width=\textwidth]{./tex_figure/fig_qualitative_neural_vs_analytical_patch_7_standalone.pdf}
+        \vskip -0.15in
+        \caption{Qualitative comparison between the analytical formula LE-MMSE, UNet2D, ResNet, and PatchMLP, with $B\!=\!\Id$ on FFHQ, CIFAR10 and FashionMNIST. 
+        The patch size is $P=7$.
+        The noise level is $\sigma = 0.05,0.2,0.8$ from left to right for each column.
+        The neural networks closely match the analytical solution on both training and test sets across all datasets and inverse problems, confirming our theoretical findings. 
+        Yet, some discrepancies can be observed, especially at low noise levels on the test set, which we attribute to generalization issues discussed in~\cref{sec:neural_generalization}.
+        }
+        \label{fig:qualitative_neural_vs_analytical_patch_7} 
+        \vskip -0.15in
+    \end{figure*}
+
+    \begin{figure*}[ht!]
+        \centering
+        \vskip -0.1in
+        \includegraphics[trim=35mm 0 0 0, clip,width=\textwidth]{./tex_figure/fig_qualitative_neural_vs_analytical_patch_9_standalone.pdf}
+        \vskip -0.15in
+    \caption{Qualitative comparison between the analytical formula LE-MMSE, UNet2D, ResNet, and PatchMLP, with $B\!=\!\Id$ on FFHQ, CIFAR10 and FashionMNIST. 
+    The patch size is $P=9$.
+    The noise level is $\sigma = 0.05,0.2,0.8$ from left to right for each column.
+    The neural networks closely match the analytical solution on both training and test sets across all datasets and inverse problems, confirming our theoretical findings. 
+    Yet, some discrepancies can be observed, especially at low noise levels on the test set, which we attribute to generalization issues discussed in~\cref{sec:neural_generalization}.
+    }
+	\label{fig:qualitative_neural_vs_analytical_patch_9} 
+    \vskip -0.15in
+    \end{figure*}
+
+    \begin{figure*}[ht!]
+        \centering
+        \vskip -0.1in
+        \includegraphics[trim=35mm 0 0 0, clip,width=\textwidth]{./tex_figure/fig_qualitative_neural_vs_analytical_patch_11_standalone.pdf}
+        \vskip -0.15in
+    \caption{Qualitative comparison between the analytical formula LE-MMSE, UNet2D, ResNet, and PatchMLP, with $B\!=\!\Id$ on FFHQ, CIFAR10 and FashionMNIST. 
+    The patch size is $P=11$.
+    The noise level is $\sigma = 0.05,0.2,0.8$ from left to right for each column.
+    The neural networks closely match the analytical solution on both training and test sets across all datasets and inverse problems, confirming our theoretical findings. 
+    Yet, some discrepancies can be observed, especially at low noise levels on the test set, which we attribute to generalization issues discussed in~\cref{sec:neural_generalization}.
+    }
+	\label{fig:qualitative_neural_vs_analytical_patch_11} 
+    \vskip -0.15in
+    \end{figure*}
+
+\subsection{Influence of the patch size (receptive field) on the alignment between trained neural networks and the analytical LE-MMSE estimator}\label{sec:supp_patch_size}
+\paragraph{Density of the patch distribution}
+We analyze here the influence of the patch size on the density of the patch distribution in FFHQ-32 dataset. 
+We compute the negative-log-density of patches as a function of the patch size, for points on either the training set or the test set.  
+The patch density is exactly the denominator term in the analytical LE-MMSE formula~\cref{eq:loc_equiv_formula}, which we 
+\begin{figure}[ht!]
+    \centering
+    \vskip -0.1in
+    \includegraphics[width=\linewidth]{./images/analytical_density_vs_patch/denoising_FFHQ_images32x32_subset_10000_patches_5-7-9-11-15-19_train.pdf}
+    \includegraphics[width=\linewidth]{./images/analytical_density_vs_patch/denoising_FFHQ_images32x32_subset_10000_patches_5-7-9-11-15-19_test.pdf}
+    \vskip -0.1in
+    \caption{The negative-log-density of patches in FFHQ-32 training set (top) and test set (bottom) as a function of the patch size.
+    As the patch size increases, the density of patches decreases significantly, indicating a sparser coverage of the patch space by the dataset. 
+    In the training set, the negative-log-density is relatively lower (around $10^2$) than in the test set (around $10^4 $ for small noise levels), indicating a better coverage of the patch space by the training set. 
+    This observation helps explain the drop in PSNR between trained neural networks and the analytical LE-MMSE estimator in the test set for low noise levels.
+    }
+    \label{fig:supp_patch_size_vs_density}
+\end{figure}
+\paragraph{Patch size influence on the alignment between trained neural networks and the analytical LE-MMSE estimator}
+In~\cref{fig:supp_neural_analytic_vs_patch_size}, we show the PSNR between trained UNet2D and the analytical LE-MMSE estimator for different patch sizes on both training and test sets of FFHQ-32 dataset. 
+For low noise levels and in the test set, the PSNR decreases as the patch size increases, which we attribute to the sparser coverage of the patch space by the dataset for larger patches, as shown in~\cref{fig:supp_patch_size_vs_density}. 
+
+\begin{figure}[ht!]
+    \centering
+    \vskip -0.1in
+    \includegraphics[width=.75\linewidth]{./images/neural_vs_analytical/localequivunet2dcondmodel_patch_5_7_9_11/plots/FFHQ_images32x32_subset_10000_patch_grid_nva_only.pdf}
+    \vskip -0.1in
+    \caption{PSNR between trained UNet2D and the analytical formula of the LE-MMSE versus the patch size, on the FFHQ-32 dataset.
+    Top: on the training set. Bottom: on the test set.
+    }
+    \label{fig:supp_neural_analytic_vs_patch_size}
+\end{figure}
+
+\subsection{Mass concentration}\label{sec:supp_mass_concentration}
+The LE-MMSE estimator~\cref{theorem:local_trans_estimator} is a weighted average of the central pixel values of patches in the dataset. 
+To understand the behavior of the estimator, we analyze how many patches contribute significantly to the estimate at each pixel location.
+In~\cref{fig:supp_mass_concentration}, we show the number of patches contributing to $99\%$ of the mass of the LE-MMSE estimator as a function of the noise level $\sigma$.
+We observe that for low noise levels, the estimator concentrates its mass on fewer patches (even nearest neighbors).
+As the noise level increases, the number of contributing patches increases significantly, with a critical value of $\sigma$ where the number of patches starts to increase rapidly.
+This behavior shows that although the MMSE estimator is typically associated with averaging, it can behave like a nearest-neighbor estimator when the noise is small, due to the strong concentration of mass on a very limited subset of patches.
+We also observe a clear difference between physics-agnostic and physics-informed settings for deconvolution, where the latter has a significantly higher number of contributing patches due to the amplification of noise by the pseudo-inverse of the blurring operator.
+\begin{figure}[ht!]
+    \centering
+    \vskip -0.1in
+    \includegraphics[width=0.6\columnwidth]{./images/patch_works/patch_works_effective_samples_FFHQ_images32x32_p5.pdf}
+    \vskip -0.1in
+    \caption{
+    For low noise levels, the LE-MMSE estimator concentrates its mass on fewer patches (even nearest neighbors).
+    Here we show the median and IQR (over all pixels of $50$ samples on the test set, for each $\sigma$) of the number of patches contributing to $99\%$ of the mass of the LE-MMSE estimator. 
+    There is a significant increase in number of contributed patches as the noise level $\sigma$ increases, 
+    and a critical value of $\sigma$ where the number of patches starting to increase rapidly.
+    The patch size is $P = 5 \times 5$, on FFHQ-32.
+    Note that due to computational constraints, we only keep the top $10^4$ nearest patches (over $32 \times 32 \times 10^4 \approx 10^7$ patches) when computing mass concentration. 
+    }
+    \label{fig:supp_mass_concentration}
+    \vskip -0.1in
+\end{figure}
+We also visualize in~\cref{fig:supp_mass_concentration_visual,fig:supp_mass_concentration_visual_inform} the number of patches contributing to $99\%$ of the mass of the LE-MMSE estimator at each pixel location for different inverse problems on FFHQ-32 dataset.
+\begin{figure}[ht!]
+    \centering
+    \vskip -0.1in
+    \def\root{./images/patch_works_visuals/visual_FFHQ_images32x32}
+    \def\size{0.95\linewidth}
+    \begin{minipage}{\size}
+        \includegraphics[width=\linewidth]{\root_denoising_agnostic_img0_p5.pdf}
+        \subcaption{Denoising}
+    \end{minipage}
+    \begin{minipage}{\size}
+        \includegraphics[width=\linewidth]{\root_inpainting_center_15_agnostic_img1_p5.pdf}
+        \subcaption{Inpainting (physic-agnostic)}
+    \end{minipage}
+    \begin{minipage}{\size}
+        \includegraphics[width=\linewidth]{\root_convolution_gaussian_1.0_agnostic_img2_p5.pdf}
+        \subcaption{Deconvolution (physic-agnostic)}
+    \end{minipage}
+    % \begin{minipage}{\size}
+    %     \includegraphics[width=\linewidth]{\root_convolution_gaussian_1.0_inform_img2_p5.pdf}
+    %     \subcaption{Deconvolution (physic-informed)}
+    % \end{minipage}
+    % \begin{minipage}{\size}
+    %     \includegraphics[width=\linewidth]{\root_inpainting_center_15_inform_img1_p5.pdf}
+    %     \subcaption{Inpainting (physic-informed)}
+    % \end{minipage}
+    \caption{Visualization of the number of patches contributing to $99\%$ of the mass of the physic-agnostic LE-MMSE estimator at each pixel location for different inverse problems on FFHQ-32 dataset.}\label{fig:supp_mass_concentration_visual}
+\end{figure}
+
+\begin{figure}[ht!]
+    \centering
+    \vskip -0.1in
+    \def\root{./images/patch_works_visuals/visual_FFHQ_images32x32}
+    \def\size{0.95\linewidth}
+    \begin{minipage}{\size}
+        \includegraphics[width=\linewidth]{\root_inpainting_center_15_inform_img1_p5.pdf}
+        \subcaption{Inpainting (physic-informed)}
+    \end{minipage}
+    \begin{minipage}{\size}
+        \includegraphics[width=\linewidth]{\root_convolution_gaussian_1.0_inform_img2_p5.pdf}
+        \subcaption{Deconvolution (physic-informed)}
+    \end{minipage}
+    \caption{Visualization of the number of patches contributing to $99\%$ of the mass of the physic-inform LE-MMSE estimator at each pixel location for different inverse problems on FFHQ-32 dataset.
+    For deconvolution, the number of contributing patches is significantly higher than for the physic-inform case, due to the amplification of noise by the pseudo-inverse of the blurring operator.
+    }
+    \label{fig:supp_mass_concentration_visual_inform}
+\end{figure}
+\subsection{Dataset size influence}\label{sec:supp_experiment_dataset_size}
+We analyze here the influence of the dataset size on the alignment between trained neural networks and the analytical LE-MMSE estimator.
+We train UNet2D models with receptive field of size $P = 5 \times 5$ and $B\!=\!\Id$ on various dataset sizes from $10^3$ to $5 \times 10^4$ images from FFHQ-32.
+The PSNR between trained UNet2D and the analytical LE-MMSE estimator is reported in~\cref{fig:dataset_size_influence}.
+We observe that the dataset size has limited influence on the alignment between trained neural networks and the analytical LE-MMSE formula, with a slight improvement when increasing the dataset size. 
+\begin{figure}[ht!]
+    \centering
+    \vskip -0.1in
+    \includegraphics[width=0.75\columnwidth]{./images/neural_vs_analytical/localequivunet2dcondmodel_patch_5/plots/FFHQ_images32x32full70k_sizes_1000_5000_10000_20000_30000_40000_50000_patch_5_psnr_vs_sigma_train_test.pdf}
+    \vskip -0.1in
+    \caption{
+        Dataset size has limited influence on the alignment between neural networks and the LE-MMSE formula.
+        Median and IQR using $50$ images per $\sigma$, $P = 5\times 5$ and $B\!=\!\Id$.
+    }
+    \label{fig:dataset_size_influence}
+    \vskip -0.1in
+\end{figure}
+
+\subsection{Results on $3 \times 64 \times 64$ images}\label{sec:supp_experiment_64x64}
+We provide additional results on images at $3 \times 64 \times 64$ resolution using UNet2D architecture with receptive field of size $11 \times 11$.
+The models are trained on $10^4$ images from FFHQ downscaled to $64 \times 64$, with the same training procedure as in~\cref{sec:supp_training_procedure}.
+    \begin{table}[ht!]
+        \caption{Details of neural network architectures with various receptive fields used in our experiments for images at $3 \times 64 \times 64$ resolution.}
+        \label{table:supp_architecture_unet2d_64}
+        \vspace*{-0.25cm}
+        \begin{center}
+        \begin{small}
+        \begin{sc}
+            \begin{tabular}{lccccc}
+            \toprule
+            & \multirow{2}{*}{\shortstack{Receptive field \\ (patch size)}} & \multicolumn{2}{c}{\multirow{2}{*}{Archi. hyper-parameters}} & \multirow{2}{*}{Num. parameters} \\
+            & & & & \\
+            \midrule
+            % ---------------------------------------
+            %         UNet2D
+            % \multicolumn{4}{c}{UNet2D} \\
+            UNet2D & & {\normalfont  \texttt{block\_out\_channels}} & {\normalfont  \texttt{kernel\_size}} & \\ 
+            \midrule
+            & $11$ & $(64, 128, 256, 512)$     & $(3, 1, 1, 1, 3)$--$1$ & 13.3M \\
+            \bottomrule
+            \end{tabular}
+        \end{sc}
+        \end{small}
+        \end{center}
+        \vskip -0.1in
+    \end{table}
+
+\begin{figure*}[ht!]
+    \centering
+    % \vskip -0.1in
+    \includegraphics[trim=16mm 0 0 0,clip,width=\linewidth]{./tex_figure/fig_qualitative_neural_vs_analytical_patch_11_64x64_more_standalone.pdf}
+    \caption{Additional qualitative comparison between UNet2D and the analytical LE-MMSE estimator on FFHQ-64 across tasks.}
+    \label{fig:supp_additional_qualitative_64x64}
+\end{figure*}
+% ########################################################################################################
+% ######################        THE END    ########################################################"######
+% ########################################################################################################"(64, 128, 256, 512)

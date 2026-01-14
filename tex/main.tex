@@ -160,6 +160,7 @@ However, beyond the projection effect, the choice of $B$ manifests no other role
 The weighrs $w(x \vert y)$ is non-negative and sums to $1$ over $x \in \D$, hence $\xmmse(y)$ is a convex combination of the training images, \i.e $\xmmse(y) \in \mathrm{conv}(\D)$ -- the convex envelope of the dataset $\D$.
 In particular, as $\sigma \to 0$, $\xmmse(y)$ converges to its nearest neighbor  $x in \D$, in the sense that $BAx$ is closest to $By$, tie being averaged.
 The MMSE $\xmmse$ therefore \emph{memorizes} the dataset $\D$: it reconstructs by re-weighting the training examples and never extrapolates outside $\mathrm{conv}(\D)$.
+\input{tex_figure/memorization.tex}
 \subsection{Constrained MMSE estimators}\label{sec:analytical_formula}
 We first provide details on the constraint classes and then describe our main theoretical results: analytical formulas and properties of constrained MMSE estimators.
 \subsubsection{Functional constraints: equivariance and locality}\label{subsec:constraint_classes}
@@ -453,9 +454,14 @@ We observe that the smoothed LE-MMSE better matches the neural network output ($
 This suggests that we can better capture neural network behavior by incorporating carefully designed smoothness constraints.
 
 \subsection{Conclusion}
-Through the len of MMSE estimator, our work provides a theoretical framework to analyze the CNNs in the context of imaging inverse problems. While being tractable and interpretable, our derived closed-form LE-MMSE offers valuable insights into the behavior of these networks under various settings.
-Our analysis also leverages the strength of neural networks by revealing their ability to compress large datasets into their considerably smaller number of parameters, then rearticulate efficiently the parameters in the inference phase, enabling fast and low-computational inference, explaining their practical success.
-Moreover the strongly quantitative and qualitative agreement between our theoretical formulas and trained neural networks across various settings validates our approach and land a step towards demystifying the CNNs.  
+Through the lens of MMSE estimator in the context of imaging inverse problems, our work provides a theoretical framework to analyze the CNNs.
+The strongly quantitative and qualitative agreement between our theoretical formulas and trained neural networks validates our LE-MMSE estimator. 
+While being tractable and interpretable, our derived closed-form LE-MMSE offers valuable insights into the behavior of these networks under various settings: (1)the role of the foward operator $A$ and the pre-inverse $B$ on the resconstruction, (2)memorization does not contrardict generalization, i.e how these networks can extrapolate to out-of-distribution data by memorizing the local patches from the training set.
+Our analysis also leverages the strength of neural networks in general by highlighting their ability to compress large datasets into their considerably smaller number of parameters, then rearticulate efficiently these parameters to approximate closely the heavily computational LE-MMSE estimator enabling fast and low-computational inference, explaining their practical success.
+These findings open new avenues for further research, such as incorporating additional constraints to model other neural network such as smothness constrainsts to capture spectral bias, or permutation equivariance to model transformers~\citep{xu2024permutation}. The Gaussian assumption can be relaxed (e.g., exponential-family) by using the appropriate likelihood $p_{\vy \vert \vx}(y \vert x)$. 
+Finally, beyond MSE, practical training often uses $\ell_1$ (yielding posterior median), perceptual, or mixed losses.
+Analyzing the MMSE analogs under these alternatives is an interesting future venue.
+
 
 
 
@@ -593,7 +599,15 @@ In general, the application workflow is as follows: users upload microscope imag
 \subsection{Conclusion and future work}
 
 
+\newpage
 \bibliography{biblio.bib}
+
+
+\newpage
+\appendix
+\onecolumn
+{\LARGE{Annexes for the first project -- An analytical theory ofconvolutional neural networks in imaging inverse problems}}
+\input{appendix.tex}
 
 
 \end{document}
