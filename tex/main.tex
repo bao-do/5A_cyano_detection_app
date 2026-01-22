@@ -304,9 +304,7 @@ See~\cref{sec:supp_local_trans_mmse} for proofs and~\cref{sec:supp_mass_concentr
         \end{itemize}
     \end{corollary}
 % \end{graybox}
-
 \subsubsection{Physics-agnostic and physics-aware estimators}\label{subsec:agnostic_vs_aware}
-
 The expectation of $\eta^2$ in~(\ref{eq:weights_signal_vs_noise}) is given by
 \begin{equation*}
     \mathbb{E}_{\ve}\left[\eta^2\right] = \norm{Q_n^+ \Delta_{n',n}(\bar x, x)}^2 + \sigma^2 \cdot \Tr \left( \mathrm{Cov}_{n',n}\right)
@@ -467,7 +465,7 @@ Through the lens of the MMSE estimator in the context of imaging inverse problem
 The strong quantitative and qualitative agreement between our theoretical formulas and trained neural networks validates our LE-MMSE estimator. 
     While being tractable and interpretable, our derived closed-form LE-MMSE offers valuable insights into the behavior of these networks under various settings: (1) the role of the forward operator $A$ and the pre-inverse $B$ in reconstruction, (2) memorization does not contradict generalization, i.e., how these networks can extrapolate to out-of-distribution data by memorizing local patches from the training set.
 Our analysis also leverages the strengths of neural networks in general by highlighting their ability to compress large datasets into considerably fewer parameters and then rearticulate these parameters efficiently to approximate the computationally intensive LE-MMSE estimator, enabling fast and efficient inference and explaining their practical success.
-These findings open new avenues for further research, such as incorporating additional constraints to model other neural network architectures. The Gaussian assumption can be relaxed (e.g., exponential-family distributions) by using the appropriate likelihood $p_{\vy \vert \vx}(y \vert x)$. 
+These findings open new avenues for further research, such as incorporating additional constraints to model other neural network architectures. The Gaussian assumption can be relaxed (e.g., exponential-family distributions) by using an appropriate likelihood $p_{\vy \vert \vx}(y \vert x)$. 
 Finally, beyond MSE, practical training often uses $\ell_1$ (yielding posterior median), perceptual, or mixed losses.
 Analyzing the MMSE analogs under these alternatives is an interesting future direction.
 
